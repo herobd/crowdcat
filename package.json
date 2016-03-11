@@ -1,0 +1,14 @@
+{
+  "name": "thesis-control-server",
+  "version": "0.0.1",
+  "description": "Server for Brian's thesis",
+  "dependencies": {
+  	"express": "*",
+  	"body-parser": "*",
+  	"multer": "*",
+  	"fs": "*",
+  	"request": "*",
+  	"passport": "*"
+   },
+  "engine": "node >=0.6.x"
+}
