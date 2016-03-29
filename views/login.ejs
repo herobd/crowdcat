@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CATTSS Login</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link href="main.css" rel="stylesheet" type="text/css" />
+
+
+<script>
+function show_create() {
+    document.getElementById("login_form").classList.toggle('closed');
+    document.getElementById("create_account_form").classList.toggle('closed');
+}
+function hide_create() {
+    document.getElementById("login_form").classList.toggle('closed');
+    document.getElementById("create_account_form").classList.toggle('closed');
+}
+
+
+</script>
+</head>
+
+<% if (was && was=='create_account') { %>
+<body onload="show_create()">
+<%} else {%>
+<body>
+<% } %>
+<% if (message && message.length>0) { %>
+<p class="flash"><%= message %></p>
+<% } %>
+<div id=login_form  class="slider">
+    <h2>Returning tester</h2>
+    <form action="/login" method="post" autocomplete="on">
+        <div>
+            <label>Email:</label>
+            <input type="text" name="email"/>
+        </div>
+        <div>
+            <input type="password" name="password" value="none" hidden=true/>
+        </div>
+        <div>
+            <input type="submit" value="Log in"/>
+        </div>
+    </form>
+    <br>
+    <button type="button" onclick="show_create()" id="show_create_button">New tester?</button><br>
+</div>
+
+
+<div id=create_account_form class="slider closed">
+    <h2>New tester</h2>
+    <form action="/create_account" method="post" autocomplete="on" >
+        <div>
+            <label>Email:</label>
+            <input type="text" name="email"/>
+        </div>
+        <div>
+            <input type="password" name="password" value="none" hidden=true/>
+        </div>
+        <div>
+            <label>Age:</label><br>
+            <input type="radio" name="age" value="<10" > less than 10<br>
+            <input type="radio" name="age" value="10-13" > 10-13<br>
+            <input type="radio" name="age" value="14-18"> 14-18<br>
+            <input type="radio" name="age" value="19-28"> 19-28<br>
+            <input type="radio" name="age" value="29-49"> 29-49<br>
+            <input type="radio" name="age" value="50+"> 50+<br>
+        </div>
+        <div>
+            <label>Previous experience with transcription/indexing:</label><br>
+            <input type="radio" name="experience" value="None" > None<br>
+            <input type="radio" name="experience" value="A little" > A little<br>
+            <input type="radio" name="experience" value="Some"> Some<br>
+            <input type="radio" name="experience" value="A fair amount"> A fair amount<br>
+            <input type="radio" name="experience" value="Very experienced"> Very experienced<br>
+        </div>
+        <div>
+            <input type="submit" value="Create account"/>
+        </div>
+    </form>
+    <button type="button" onclick="hide_create()" id="show_create_button">Cancel</button><br>
+</div>
+
+
+</body>
+</html>

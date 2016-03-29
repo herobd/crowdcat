@@ -3,12 +3,20 @@
   "version": "0.0.1",
   "description": "Server for Brian's thesis",
   "dependencies": {
-  	"express": "*",
-  	"body-parser": "*",
-  	"multer": "*",
-  	"fs": "*",
-  	"request": "*",
-  	"passport": "*"
-   },
+    "body-parser": "*",
+    "connect-flash": "*",
+    "cookie-parser": "*",
+    "ejs": "*",
+    "express": "*",
+    "express-session": "*",
+    "fs": "*",
+    "mongodb": "*",
+    "multer": "*",
+    "nan": "^2.2.1",
+    "passport": "*",
+    "passport-local": "*",
+    "request": "*",
+    "session": "*"
+  },
   "engine": "node >=0.6.x"
 }

@@ -1,0 +1,52 @@
+
+$red: #8e352e;
+$darkred: #c84c44;
+$altred: #a53d36;
+$black: #000000
+$lavender: #cc99ff
+
+body {
+	background: $black;
+	
+	font-family: Georgia, "Times New Roman", Times, serif;
+	font-size: 13px;
+	color: $red;
+}
+
+
+.container {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.window {
+    background: #cc99ff;
+    max-width: 500px;
+    width: 95%;
+    position: relative;
+    margin: auto;
+}
+
+.spotting {
+    background: #f0f0f0;
+    width: 95%;
+    height:35px;
+    position: relative;
+    margin: auto;
+    background-repeat: no-repeat;
+}
+
+.batch_0 {
+    background-image:url("generatedImage/batch+0.jpeg")
+    
+}
+
+.batch_0_image_0 {
+    height: 128px;
+    background-position: 0px 0px;
+}
+
+.batch_0_image_1 {
+    height: 128px;
+    background-position: 0px 128px;
+}

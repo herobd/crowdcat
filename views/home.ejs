@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>SSCAT</title>
+<title>CATTSS Home</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-
 <link href="main.css" rel="stylesheet" type="text/css" />
 </head>
-<body onload="setup()">
-<h1>This is the main page</h>
-<a href="/app">Go to app</a>
+<body>
+<div class="container">
+    <div id="title"><h1>Welcome</h1></div>
+    <p id=user_specific_message"><%= message %></p>
+    <a class="button" href="/app">Begin</a>
+    
+</div>
 </body>
 </html>

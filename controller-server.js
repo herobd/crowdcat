@@ -9,28 +9,12 @@ var express = require('express');
 var fs      = require('fs');
 var request = require('request');
 
-var bodyParser = require('body-parser');
-var multer = require('multer'); // v1.0.5
-var upload = multer();
+//var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser
+var Database = require('./database')();
 
 
-var passport = require('passport')
-  , LocalStrategy = require('passport-local').Strategy;
 
-passport.use(new LocalStrategy(
-  function(username, password, done) {
-    User.findOne({ username: username }, function (err, user) {
-      if (err) { return done(err); }
-      if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
-      }
-      if (!user.validPassword(password)) {
-        return done(null, false, { message: 'Incorrect password.' });
-      }
-      return done(null, user);
-    });
-  }
-));
 
 
 /**
@@ -40,7 +24,10 @@ var ControllerApp = function(port) {
 
     //  Scope.
     var self = this;
-    self.port=port;
+    if (isNaN(port))
+        self.port=13723;
+    else
+        self.port=port;
 
     /*  ================================================================  */
     /*  Helper functions.                                                 */
@@ -82,7 +69,7 @@ var ControllerApp = function(port) {
            console.log('%s: Received %s - terminating control app ...',
                        Date(Date.now()), sig);
            
-           //process.exit(1);
+           process.exit(1);
         }
         console.log('%s: Node server stopped.', Date(Date.now()) );
     };
@@ -115,10 +102,21 @@ var ControllerApp = function(port) {
         self.routes = { };
 
 
-        /*self.routes['/'] = function(req, res) {
-            res.setHeader('Content-Type', 'text/html');
-            res.send(self.cache_get('index.html') );
-        };*/
+        self.routes['/'] = function(req, res, next) {
+             passport.authenticate('local', { successRedirect: '/index.html',
+                                   failureRedirect: '/login',
+                                   failureFlash: true });
+            
+        };
+        
+        self.routes['/login'] = function(req, res, next) {
+             res.redirect('/login.html');
+            
+        };
+        self.routes['/info'] = function(req, res, next) {
+             res.redirect('/');
+            
+        };
         self.routes['/a-page'] = function(req, res) {
             res.setHeader('Content-Type', 'text/html');
             res.send(self.cache_get('a-page.html') );
@@ -153,11 +151,11 @@ var ControllerApp = function(port) {
     self.initializeServer = function() {
         self.createRoutes();
         self.app = express();//.createServer();
+        self.app.use(express.static('public')); //static file: images, css
         self.app.use(bodyParser.json()); // for parsing application/json
         self.app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
-        self.app.use(express.cookieParser('this is bad security333221'));
-        self.app.use(passport.initialize());
-        self.app.use(passport.session());
+        //self.app.use(cookieParser('this is bad security333221'));
+        
 
         //  Add handlers for the app (from the routes).
         for (var r in self.routes) {
@@ -193,18 +191,12 @@ var ControllerApp = function(port) {
             -batch_id
             -batch {spotting_id: true/false,...}
             */
-            
+            console.log(req);
         });
         
-        self.app.post('/login',
-          passport.authenticate('local', { successRedirect: '/',
-                                           failureRedirect: '/login',
-                                           failureFlash: true })
-        );
         
         
-        // Static file (images, css, etc)
-        self.app.use(express.static('public'));
+        
     };
 
 
@@ -215,13 +207,13 @@ var ControllerApp = function(port) {
         //self.setupVariables();
         self.populateCache();
         self.setupTerminationHandlers();
-
+        
+        
+        self.database=new Database('localhost:27017');
+        
+        
         // Create the express server and routes.
         self.initializeServer();
-        
-        
-        
-        
     };
 
 

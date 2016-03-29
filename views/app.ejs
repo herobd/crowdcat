@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CATTSS demo app</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<script type="text/javascript" src="app.js"></script>
+<script type="text/javascript" src="app_touch.js"></script>
+<link href="app.css" rel="stylesheet" type="text/css" />
+</head>
+<body onload="setup()">
+<div class="container">
+    <div id="title"><p>This is the app.</p></div>
+    <button type="button" onclick="undo()">Undo</button>
+    <button type="button" onclick="test()" id='test'>TEST</button>
+    <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
+    <div class="window">
+        <div class="spotting"><p>An image <div class="num">0</div></p></div>
+        <div class="spotting"><p>Another image <div class="num">0</div></p></div>
+        <div class="spotting"><p>And another image <div class="num">0</div></p></div>
+        <div class="spotting"><p>An image2 <div class="num">0</div></p></div>
+        <div class="spotting"><p>Another image2 <div class="num">0</div></p></div>
+        <div class="spotting"><p>And another image2 <div class="num">0</div></p></div>
+    </div>
+     <form action="/logout" method="post">
+            <input type="submit" value="Log out"/>
+    </form>
+</div>
+<div id="testImageHere"/>
+</body>
+</html>

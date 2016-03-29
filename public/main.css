@@ -14,23 +14,29 @@ body {
 }
 
 
-.container {
-    max-width: 100%;
-    max-height: 100%;
+.slider {
+	overflow-y: hidden;
+	max-height: 1000px; /* approximate max height */
+
+	transition-property: all;
+	transition-duration: .5s;
+	/*transition-timing-function: cubic-bezier(0, 1, 0.5, 1);*/
 }
 
-.window {
-    background: #cc99ff;
-    max-width: 500px;
-    width: 95%;
-    position: relative;
-    margin: auto;
+.slider.closed {
+	max-height: 0;
+	transition-duration: .25s;
 }
 
-.spotting {
-    background: #f0f0f0;
-    width: 95%;
-    height:35px;
-    position: relative;
-    margin: auto;
+.flash {
+    color: #8e352e;
+}
+
+.button {
+    -webkit-appearance: button;
+    -moz-appearance: button;
+    appearance: button;
+
+    text-decoration: none;
+    color: initial;
 }
