@@ -1,52 +1,92 @@
 
-$red: #8e352e;
-$darkred: #c84c44;
-$altred: #a53d36;
-$black: #000000
-$lavender: #cc99ff
-
 body {
-	background: $black;
 	
 	font-family: Georgia, "Times New Roman", Times, serif;
 	font-size: 13px;
-	color: $red;
+	margin:0;
+	overflow: hidden;
+	position: relative
+}
+
+h {
+    font-size: 24px;
+}
+
+button {
+  
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 22px;
+  background: #a15757;
+  padding: 10px 20px 10px 20px;
+  text-decoration: none;
+  
+  
+  text-align:center;
+}
+.text {
+    
+    padding: 2px 5px
+    width:50%;
+}
+.but {
+    
+}
+
+#title {
+    font-size: 18px;
+    color: #f4f4f4;
+    background: #380B61;
+    width: 100%;
+    min-height: 100px;
+    padding: 2px 5px
 }
 
 
 .container {
     max-width: 100%;
     max-height: 100%;
+    
 }
 
 .window {
     background: #cc99ff;
-    max-width: 500px;
-    width: 95%;
+    max-width: 700px;
+    width: 100%;
     position: relative;
     margin: auto;
+    background: #f0f0f0; /* For browsers that do not support gradients */
+    /* For Safari 5.1 to 6.0 
+    background: -webkit-linear-gradient(left,gray,red,green,gray);
+    /* For Opera 11.1 to 12.0 
+    background: -o-linear-gradient(left,gray,red,green,gray);
+    /* For Fx 3.6 to 15 
+    background: -moz-linear-gradient(left,gray,red,green,gray);
+    /* Standard syntax 
+    background: linear-gradient(to right, gray,red,green,gray); */
 }
 
 .spotting {
-    background: #f0f0f0;
-    width: 95%;
-    height:35px;
+    background: #fafaeb;
+    width: 100%;
+    min-height:35px;
     position: relative;
     margin: auto;
-    background-repeat: no-repeat;
+    padding-top: 1px;
+    padding-bottom: 1px;
 }
 
-.batch_0 {
-    background-image:url("generatedImage/batch+0.jpeg")
-    
+.spotting img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto
 }
 
-.batch_0_image_0 {
-    height: 128px;
-    background-position: 0px 0px;
+.spotting.batchHeader {
+    background: #94BD5E;
+    color: #090909;
+    text-align: center;
+    font-size: 24px;
 }
 
-.batch_0_image_1 {
-    height: 128px;
-    background-position: 0px 128px;
-}
+

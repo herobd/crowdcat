@@ -191,63 +191,18 @@ var ControllerApp = function(port) {
             }
         });
         
-        /*self.app.get('/login', function(req, res, next) {
-            
-             //passport.authenticate('local', { successRedirect: '/index.html',
-              //                     failureRedirect: '/login',
-                //                   failureFlash: true });
-            console.log('/login');
-            auth2(req,res, next, function(req,res) {
-                res.setHeader('Content-Type', 'text/html');
-                res.send(self.cache_get('login.html') );
-            });
-        },rewriter.rewrite('/app'), function(req,res){
-            res.setHeader('Content-Type', 'text/html');
-                res.send(self.cache_get('app.html') );
-        });
-        
-        self.app.get('/cached', function(req, res) {
-            res.setHeader('Content-Type', 'text/html');
-            res.send(self.cache_get('a-page.html') );
-            
-        });
-        
-        //self.app.get('/login', auth,function(req, res) {
-        //    res.setHeader('Content-Type', 'text/html');
-        //    res.send(self.cache_get('login.html') );
-        //});
-        
-        self.app.get('/lastParams', function(req, res) {
-            res.setHeader('Content-Type', 'application/json');
-            if (req.query.id === 'evaluator') {
-                database.getLastParams(req.query.id,function(err,params) {
-                    res.json({id:"controller",status:err, params:params});
+        self.app.get('/app/nextBatch', function(req, res) {
+            if (req.user || debug) {
+                spottingaddon.getNextBatch(+req.query.width,function (err,batchType,batchId,ngram,spottings) {
+                    res.send({batchType:batchType,batchId:batchId,ngram:ngram,spottings:spottings});
                 });
             } else {
-                res.json({id:"controller",status:"id not recognized"});
+                res.redirect('/login');
             }
         });
         
-        self.app.post('/app/submit_game', upload.array(), auth,function (req, res) {
-            //console.log(req.body);
-            //meta = JSON.parse(req.body.meta);//meta has id and score atleast
-            res.setHeader('Content-Type', 'application/json');
-            if (req.body.meta.id && req.body.meta.intrinsicScore && req.body.gdl && req.body.hlgdl)
-            {
-                self.database.storeGame(req.body.meta,req.body.gdl,req.body.hlgdl, function(err) {
-                    var err=self.gameCord.enqueue(req.body.meta);
-                
-                    res.json({id:req.body.meta.id, status:err});
-                });
-                
-            }
-            else
-            {
-                res.json({status:'malformed'});
-            }
-        });*/
         
-        self.app.post('/app/spotting-batch-finished', function (req, res) {
+        self.app.post('/app/submitBatch', function (req, res) {
             /*Things  I need
             -user_id = req.user.id
             -time_started
@@ -257,22 +212,16 @@ var ControllerApp = function(port) {
             -batch_id
             -batch {spotting_id: true/false,...}
             */
-            if (req.user) {
-                //TODO do stuff with req.body
-            }
-            res.json({});//probably send out the next batch
+            if (req.user || debug) {
+                spottingaddon.spottingBatchDone(req.body.batchId,req.body.labels,function (err) {
+                    //nothing
+                });
+                res.send('ok');
+            } else
+                res.redirect('/login');
         });
         
-        self.app.post('/app/get-first-batch', function (req, res) {
-            /*Things  I need
-            -user_id = req.user.id
-            
-            */
-            if (req.user) {
-                //TODO do stuff with req.body
-            }
-            res.json({});//send out the next batch
-        });
+
         
         self.app.post('/login',
           

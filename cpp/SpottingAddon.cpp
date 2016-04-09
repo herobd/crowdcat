@@ -7,13 +7,18 @@
 #include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
 
+#include "MasterQueue.h"
+
 
 using namespace Nan;
 using namespace std;
 using namespace v8;
 
-cv::Mat globalObject;
+#include "BatchRetrieveWorker.cpp"
+#include "SpottingBatchUpdateWorker.cpp"
 
+cv::Mat globalObject;
+MasterQueue* masterQueue;
 
 
 class ImageWorker : public AsyncWorker {
@@ -79,12 +84,36 @@ NAN_METHOD(getGlobalImage) {
     AsyncQueueWorker(new ImageWorker(callback, param));
 }
 
+NAN_METHOD(getNextBatch) {
+    int width = To<int>(info[0]).FromJust();
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,masterQueue));
+}
+
+NAN_METHOD(spottingBatchDone) {
+    //string batchId = To<string>(info[0]).FromJust();
+    //? labels = To<?>(info[1]).FromJust();
+    Callback *callback = new Callback(info[2].As<Function>());
+
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue));
+}
+
 
 NAN_MODULE_INIT(Init) {
     globalObject = cv::imread("./test.png");
+    masterQueue = new MasterQueue();
+    
     assert(globalObject.rows>0 && globalObject.cols>0);
     Nan::Set(target, New<String>("getTestImage").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getGlobalImage)).ToLocalChecked());
+    
+    
+    Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("spottingBatchDone").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(spottingBatchDone)).ToLocalChecked());
 }
 
 NODE_MODULE(SpottingAddon, Init)

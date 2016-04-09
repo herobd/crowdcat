@@ -32,20 +32,18 @@ function handleTouchMove(evt) {
 
     this.xDiff = xUp-this.xDown;
     this.style.left = this.xDiff+'px';
-    //var yDiff = yDown - yUp;
-    this.getElementsByClassName('num')[0].innerHTML='( '+xUp+' )'
-    /*if ( Math.abs( xDiff ) > Math.abs( yDiff ) ) {
-        if ( xDiff > 0 ) {
-            
-            console.log('xDiff: '+xDiff);
-            this.getElementsByClassName('num')[0].innerHTML='( '+evt.touches[0].clientX+' )'
-        } else {
-            
-            console.log('xDiff: '+xDiff);
-            this.getElementsByClassName('num')[0].innerHTML='( '+evt.touches[0].clientX+' )'
-        }
-    }*/
-    /* reset values */                                           
+    
+    //this.getElementsByClassName('num')[0].innerHTML='( '+xUp+' )'
+    if (this.xDiff>BAD_THRESH) {
+        this.parentNode.style.background='hsl(350,100%,40%)';
+    } else if (this.xDiff>0) {
+        this.parentNode.style.background='hsl(350,'+(60*(this.xDiff/(0.0+BAD_THRESH)))+'%,40%)';
+        //console.log((75*(this.xDiff/(0.0+OK_THRESH)))+'%');
+    } else if (this.xDiff<OK_THRESH) {
+        this.parentNode.style.background='hsl(130,100%,30%)';
+    } else if (this.xDiff<0) {
+        this.parentNode.style.background='hsl(130,'+(60*(this.xDiff/(0.0+OK_THRESH)))+'%,30%)';
+    }                           
 };
 
 function removeSpotting(OK) {
@@ -61,8 +59,10 @@ function removeSpotting(OK) {
     //this.parentNode.removeChild(this);
     this.hidden=true;
     
-    if (!OK)
-        isBad(this.id);
+    if (OK)
+        isGood(this);
+    else
+        isBad(this);
 }
 
 function undo() {
@@ -73,11 +73,12 @@ function undo() {
         //TODO do something with 
         lastRemovedOK.pop();
     }
+    //console.log('UNDO');
 }
 
 function handleTouchEnd(evt) {
     //var xUp = evt.touches[0].clientX;    
-    this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
+    //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
     
     this.xDown=null;
     this.style.left = '0px';
@@ -95,20 +96,23 @@ function handleTouchEnd(evt) {
 }
 
 function setup() {
-    var windows = document.getElementsByClassName('spotting');
+    var windows = document.getElementsByClassName('window');
     for (var i = 0; i < windows.length; i++) {
-        windows[i].addEventListener('touchstart', handleTouchStart, false);        
-        windows[i].addEventListener('touchmove', handleTouchMove, false);
-        windows[i].addEventListener('touchend', handleTouchEnd, false);
-        
-        windows[i].addEventListener('mousedown', handleTouchStart, false);        
-        windows[i].addEventListener('mousemove', handleTouchMove, false);
-        windows[i].addEventListener('mouseup', handleTouchEnd, false);
-        
-        //windows[i].addEventListener('click', function(){console.log('click')}, false);
-        windows[i].xDown=null
+        //initSlider(windows[i]);
+        windows[i].addEventListener('touchstart', function(e){ e.preventDefault(); });
+        windows[i].addEventListener('mousedown', function(e){ e.preventDefault(); });
     }
-    document.getElementById('title').addEventListener('click', function(){console.log('click title')}, false);
-    
     begin();
+}
+
+
+function initSlider(ele) {
+    ele.addEventListener('touchstart', handleTouchStart, false);        
+    ele.addEventListener('touchmove', handleTouchMove, false);
+    ele.addEventListener('touchend', handleTouchEnd, false);
+    
+    ele.addEventListener('mousedown', handleTouchStart, false);        
+    ele.addEventListener('mousemove', handleTouchMove, false);
+    ele.addEventListener('mouseup', handleTouchEnd, false);
+    ele.xDown=null;
 }

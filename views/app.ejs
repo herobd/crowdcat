@@ -11,21 +11,18 @@
 </head>
 <body onload="setup()">
 <div class="container">
-    <div id="title"><p>This is the app.</p></div>
-    <button type="button" onclick="undo()">Undo</button>
-    <button type="button" onclick="test()" id='test'>TEST</button>
+    <div id="title">
+        <h>Subword user correction UI demo</h><br>
+        <label>Swipe left for correct and right for incorrect.</label>
+        <button type="button" id="undoButton" onclick="undo()">undo</button>
+        <form action="/logout" method="post" hidden>
+                <input type="submit" value="Log out"/>
+        </form>
+    </div>
     <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
     <div class="window">
-        <div class="spotting"><p>An image <div class="num">0</div></p></div>
-        <div class="spotting"><p>Another image <div class="num">0</div></p></div>
-        <div class="spotting"><p>And another image <div class="num">0</div></p></div>
-        <div class="spotting"><p>An image2 <div class="num">0</div></p></div>
-        <div class="spotting"><p>Another image2 <div class="num">0</div></p></div>
-        <div class="spotting"><p>And another image2 <div class="num">0</div></p></div>
     </div>
-     <form action="/logout" method="post">
-            <input type="submit" value="Log out"/>
-    </form>
+     
 </div>
 <div id="testImageHere"/>
 </body>
