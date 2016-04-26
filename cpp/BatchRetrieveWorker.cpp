@@ -31,16 +31,17 @@ class BatchRetrieveWorker : public AsyncWorker {
             compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
             compression_params.push_back(9);
             
-            Spottings batch = masterQueue->getBatch(5,width);
-            batchId=batch.batchId;
-            ngram=batch.ngram;
-            int batchSize = batch.instances.size();
+            SpottingsBatch* batch = masterQueue->getBatch(5,width);
+            batchId=to_string(batch->batchId);
+            resultsId=to_string(batch->spottingResultsId);
+            ngram=batch->ngram;
+            int batchSize = batch->size();
             retData.resize(batchSize);
             retId.resize(batchSize);
             for (int index=0; index<batchSize; index++) {
-                retId[index]=batch.instances[index].id;
+                retId[index]=to_string(batch->at(index).id);
                 vector<uchar> outBuf;
-                cv::imencode(".png",batch.instances[index].img,outBuf,compression_params);
+                cv::imencode(".png",batch->at(index).img,outBuf,compression_params);
                 stringstream ss;
                 ss.write((char*)outBuf.data(),outBuf.size());
                 stringstream encoded;
@@ -49,7 +50,7 @@ class BatchRetrieveWorker : public AsyncWorker {
                 retData[index]=dataBase64;
             }
             
-            
+            delete batch;
             //info.GetReturnValue().Set(arr);
         }
 
@@ -67,6 +68,7 @@ class BatchRetrieveWorker : public AsyncWorker {
                 Nan::Null(),
                 Nan::New("spottings").ToLocalChecked(),
                 Nan::New(batchId).ToLocalChecked(),
+                Nan::New(resultsId).ToLocalChecked(),
                 Nan::New(ngram).ToLocalChecked(),
                 Nan::New(arr)
             };
@@ -86,6 +88,7 @@ class BatchRetrieveWorker : public AsyncWorker {
         vector<string> retData;
         vector<string> retId;
         string batchId;
+        string resultsId;
         string ngram;
         
         //input

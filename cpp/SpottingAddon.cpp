@@ -91,12 +91,33 @@ NAN_METHOD(getNextBatch) {
     AsyncQueueWorker(new BatchRetrieveWorker(callback, width,masterQueue));
 }
 
-NAN_METHOD(spottingBatchDone) {
+NAN_METHOD(spottingBatchDone) {//TODO
     //string batchId = To<string>(info[0]).FromJust();
-    //? labels = To<?>(info[1]).FromJust();
+    string resultsId = To<string>(info[0]).FromJust();
+    
+    vector<string> ids;
+    vector<int> labels;
+    Handle<Value> val;
+    if (info[1]->IsArray()) {
+      Handle<Array> jsArray = Handle<Array>::Cast(info[1]);
+      for (unsigned int i = 0; i < jsArray->Length(); i++) {
+        val = jsArray->Get(i);
+        ids.push_back(string(*String::Utf8Value(val)));
+        //Nan::Set(arr, i, val);
+      }
+    }
+    if (info[2]->IsArray()) {
+      Handle<Array> jsArray = Handle<Array>::Cast(info[2]);
+      for (unsigned int i = 0; i < jsArray->Length(); i++) {
+        val = jsArray->Get(i);
+        labels.push_back(string(*Integer::Uint32Value(val)));
+        //Nan::Set(arr, i, val);
+      }
+    }
+    
     Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue));
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels));
 }
 
 

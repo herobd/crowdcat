@@ -44,12 +44,12 @@ function httpPostAsync(theUrl, theData, callback)
 }
 
 function isBad(widget) {
-    batches[widget.batch].spottings[widget.id]=false;
+    batches[widget.batch].spottings[widget.id]=0;
     isBatchDone(widget.batch,widget.parentNode);
 }
 
 function isGood(widget) {
-    batches[widget.batch].spottings[widget.id]=true;
+    batches[widget.batch].spottings[widget.id]=1;
     isBatchDone(widget.batch,widget.parentNode);
 }
 
@@ -77,7 +77,7 @@ function getNextBatch(window,toload) {
 		if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
                      batchHeader.hidden=true
 		}
-		batchQueue.push({ngram:jres.ngram, id:jres.batchId})
+		batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId})
                 window.appendChild(batchHeader);
                 for (i of jres.spottings) {
                     var im = new Image();
@@ -107,13 +107,20 @@ function isBatchDone(batchId,window) {
                 return;
         batches[batchId].sent=true;
 	var ngram = batchQueue[0].ngram;
+	var resultsId = batchQueue[0].rid;
 	batchQueue=batchQueue.slice(1)
 	if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
             document.getElementById(batchQueue[0].id).hidden=false;
 	}
         var header = document.getElementById(batchId);
         window.removeChild(header);
-        httpPostAsync('/app/submitBatch',{batchId:batchId,labels:batches[batchId].spottings},function (res){
+        
+        var ids = batches[batchId].spottings.keys();
+        var labels = [];
+        for (var id of ids) {
+            labels.push(batches[batchId].spottings[id]);
+        }
+        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,ids:ids,labels:lables},function (res){
             //if(--test_batchesToDo > 0) {
                 getNextBatch(window);
             //} else {

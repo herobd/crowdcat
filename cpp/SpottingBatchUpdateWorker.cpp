@@ -13,14 +13,17 @@ using namespace v8;
 
 class SpottingBatchUpdateWorker : public AsyncWorker {
     public:
-        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue)
+        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, string resultsId, vector<string> ids, vector<int> labels)
         : AsyncWorker(callback), masterQueue(masterQueue) {}
 
         ~SpottingBatchUpdateWorker() {}
 
 
         void Execute () {
-            //
+            
+            vector<spotting>* toAdd = masterQueue->feedback(stoul(resutlsId),ids,labels);
+            //TODO update global spottings
+            delete toAdd;
         }
 
         // We have the results, and we're back in the event loop.
@@ -35,4 +38,8 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
         }
     private:
         MasterQueue* masterQueue;
+        string resultsId;
+        vector<string> ids;
+        vector<int> labels;
+        
 };

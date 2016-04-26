@@ -193,8 +193,8 @@ var ControllerApp = function(port) {
         
         self.app.get('/app/nextBatch', function(req, res) {
             if (req.user || debug) {
-                spottingaddon.getNextBatch(+req.query.width,function (err,batchType,batchId,ngram,spottings) {
-                    res.send({batchType:batchType,batchId:batchId,ngram:ngram,spottings:spottings});
+                spottingaddon.getNextBatch(+req.query.width,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                    res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
                 });
             } else {
                 res.redirect('/login');
@@ -213,7 +213,7 @@ var ControllerApp = function(port) {
             -batch {spotting_id: true/false,...}
             */
             if (req.user || debug) {
-                spottingaddon.spottingBatchDone(req.body.batchId,req.body.labels,function (err) {
+                spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,function (err) {
                     //nothing
                 });
                 res.send('ok');
