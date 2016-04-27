@@ -74,10 +74,10 @@ function getNextBatch(window,toload) {
                 batchHeader.classList.toggle('batchHeader');
                 batchHeader.id=jres.batchId
                 batchHeader.innerHTML=jres.ngram;
-		if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-                     batchHeader.hidden=true
-		}
-		batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId})
+                if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
+                    batchHeader.hidden=true
+                }
+		        batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId})
                 window.appendChild(batchHeader);
                 for (i of jres.spottings) {
                     var im = new Image();
@@ -115,12 +115,15 @@ function isBatchDone(batchId,window) {
         var header = document.getElementById(batchId);
         window.removeChild(header);
         
-        var ids = batches[batchId].spottings.keys();
+        var ids = []
+        for (var prop in batches[batchId].spottings)
+            ids.push(prop);
         var labels = [];
         for (var id of ids) {
             labels.push(batches[batchId].spottings[id]);
         }
-        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,ids:ids,labels:lables},function (res){
+        
+        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,ids:ids,labels:labels},function (res){
             //if(--test_batchesToDo > 0) {
                 getNextBatch(window);
             //} else {

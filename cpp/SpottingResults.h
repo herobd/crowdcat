@@ -1,8 +1,126 @@
+#ifndef SPOTTINGRESULTS_H
+#define SPOTTINGRESULTS_H
 
-#include <multiset>
-#include <multimap>
-#include <Spotting>
-#include <SpottingsBatch>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <vector>
+#include <set>
+#include <map>
+
+#include <iostream>
+
+using namespace std;
+
+class Spotting {
+public:
+    Spotting() :
+        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1) {}
+    
+    Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score)
+    {
+        id = _id++;
+    }
+    
+    Spotting(const Spotting& s) : 
+        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score)
+    {
+        id = s.id;
+    }
+    
+    int tlx, tly, brx, bry, pageId;
+    const cv::Mat* pagePnt;
+    string ngram;
+    float score;
+    unsigned long id;
+    virtual cv::Mat img()
+    {
+        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+    }
+private:
+    static unsigned long _id;
+};
+
+class SpottingImage : public Spotting {
+public:
+    SpottingImage(const Spotting& s, int maxWidth) : 
+        Spotting(s)
+    {
+        int oneSide = maxWidth/2;
+        int sideFromR = (oneSide- (brx-tlx)/2);
+        int left = tlx-sideFromR;
+        int right = brx+sideFromR;
+        //cout <<"getting image window..."<<endl;
+        if (left>=0 && right<s.pagePnt->cols)
+        {   
+            //cout <<"normal: "<<left<<" "<<tly<<" "<<right-left<<" "<<bry-tly<<endl;
+            image = (*s.pagePnt)(cv::Rect(left,tly,right-left,bry-tly));
+        }
+        else
+        {
+            image = cv::Mat(bry-tly,maxWidth,s.pagePnt->type());
+            if (image.channels()==1)
+                image.setTo(cv::Scalar(10));
+            else
+                image.setTo(cv::Scalar(10,10,10));
+            int leftOff = left>=0?0 : -1*(left+1);
+            int newLeft=left<0?0:left;
+            if (right>=s.pagePnt->cols)
+                right = s.pagePnt->cols-1;
+            //cout <<"adjusted from: "<<newLeft<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
+            //cout <<"adjusted to: "<<leftOff<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
+            (*s.pagePnt)(cv::Rect(newLeft,tly,right-newLeft,bry-tly)).copyTo(image(cv::Rect(leftOff,0,right-newLeft,bry-tly)));
+        }
+        //cout <<"done, now coloring..."<<endl;
+        if (image.channels()==1)
+            cv::cvtColor(image, image, CV_GRAY2RGB);
+        for (int r=0; r<=bry-tly; r++)
+            for (int c=sideFromR; c<=sideFromR+brx-tlx; c++)
+            {
+                cv::Vec3b pix = image.at<cv::Vec3b>(r,c);
+                image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(30+(int)(pix[1]*1.05),255),pix[2]*0.75);
+            }
+        //cout <<"done"<<endl;
+    }
+    virtual cv::Mat img()
+    {
+        return image;
+    }
+private:
+    cv::Mat image;
+};
+
+
+
+
+class SpottingsBatch {
+public:
+    
+    SpottingsBatch(string ngram, unsigned long spottingResultsId) : 
+        ngram(ngram), spottingResultsId(spottingResultsId)
+    {
+        batchId = _batchId++;
+    }
+    string ngram;
+    unsigned long batchId;
+    unsigned long spottingResultsId;
+    
+    
+    void push_back(SpottingImage im) {
+        if (im.img().cols>0)
+		instances.push_back(im);
+    }
+    SpottingImage operator [](int i) const    {return instances[i];}
+    SpottingImage & operator [](int i) {return instances[i];}
+    SpottingImage at(int i) const    {return instances.at(i);}
+    SpottingImage & at(int i) {return instances.at(i);}
+    unsigned int size() const { return instances.size();}
+private:
+    static unsigned long _batchId;
+    vector<SpottingImage> instances;
+};
+
 
 class scoreComp
 {
@@ -10,10 +128,10 @@ class scoreComp
 public:
   scoreComp(const bool& revparam=false)
     {reverse=revparam;}
-  bool operator() (const Spotting& lhs, const Spotting& rhs) const
+  bool operator() (const Spotting* lhs, const Spotting* rhs) const
   {
-    if (reverse) return (lhs.score>rhs.score);
-    else return (lhs.score<rhs.score);
+    if (reverse) return (lhs->score>rhs->score);
+    else return (lhs->score<rhs->score);
   }
 };
 
@@ -31,26 +149,7 @@ public:
  */
 class SpottingResults {
 public:
-    SpottingResults(string ngram, double acceptThreshold, double rejectThreshold) : 
-        ngram(ngram), acceptThreshold(acceptThreshold), rejectThreshold(rejectThreshold)
-    {
-        id = _id++;
-        sem_init(&mutexSem,false,1);
-        numBatches=0;
-        allBatchesSent=false;
-        
-        numberClassifiedTrue=0;
-        numberClassifiedFalse=0;
-        numberAccepted=0;
-        numberRejected=0;
-        maxScore=-999999;
-        
-        
-        trueMean=0;//How to initailize?
-        trueVariance=0.1;
-        falseMean=maxScore;
-        falseVariance=0.1;
-    }
+    SpottingResults(string ngram, double acceptThreshold, double rejectThreshold);
     string ngram;
     
     
@@ -67,78 +166,13 @@ public:
         return id;
     }
     
-    void add(Spotting spotting) {
-        //sem_wait(&mutexSem);
-        instancesById[spotting.id]=spotting;
-        instancesByScore.insert(&instancesById[spotting.id]);
-        tracer = instancesByScore.begin();
-        if (spotting.score>maxScore)
-        {
-            if (falseMean==maxScore && falseVariance==0.1)
-                falseMean=spotting.score;
-            maxScore=spotting.score;
-        }
-        //sem_post(&mutexSem);
-    }
-    SpottingsBatch* getBatch(bool* done, unsigned int num, unsigned int maxWidth=0) {
-        SpottingsBatch ret = new SpottingsBatch(ngram,id);
-        //sem_wait(&mutexSem);
-        unsigned int toRet = ((((signed int)instancesByScore.size())-(signed int) num)>3)?num:instancesByScore.size();
-        
-        for (unsigned int i=0; i<toRet && !*done; i++) {
-            ret.instances.push_back(getNextSpottingImage(done, maxWidth));
-            
-        }
-        if (*done)
-            allBatchesSent=true;
-        //sem_post(&mutexSem);
-        numBatches++;
-        return ret;
-    }
+    void add(Spotting spotting);
+    SpottingsBatch* getBatch(bool* done, unsigned int num, unsigned int maxWidth);
     
-    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications)
-    {
-        
-        
-        vector<Spotting>* ret = new vector<Spotting>();
-        
-        for (int i=0; i< ids.size(); i++)
-        {
-            unsigned long id = stoul(ids[i]);
-            ret->push_back(instancesById[id]);
-            // adjust threshs
-            if (userClassifications[i])
-            {
-                numberClassifiedTrue++;
-                classById[id]=true;
-            }
-            else
-            {
-                numberClassifiedFalse++;
-                classById[id]=false;
-            }
-        }
-        EMThresholds();
-        
-        if (--numBatches==0 && allBatchesSent)
-        {
-            *done=true;
-            
-            tracer = instancesByScore.begin();
-            while (tracer->score < acceptThreshold)
-            {
-                ret->push_back(*tracer);
-                tracer++;
-                numberAccepted++;
-            }
-            numberRejcted = instancesByScore.end()-tracer;
-            
-        }
-        return ret;
-    }
+    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications);
     
 private:
-    static unsigned long _id=0;
+    static unsigned long _id;
     
     unsigned long id;
     double acceptThreshold;
@@ -152,6 +186,7 @@ private:
     float falseVariance;
     
     float maxScore;
+    float minScore;
     
     //This multiset orders the spotting results to ease the extraction of batches
     multiset<Spotting*,scoreComp> instancesByScore;
@@ -159,105 +194,11 @@ private:
     map<unsigned long,bool> classById;
     
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
-    multiset<Spotting,scoreComp>::iterator tracer;
+    multiset<Spotting*,scoreComp>::iterator tracer;
     
-    SpottingImage getNextSpottingImage(bool* done, int maxWidth)
-    {
-        float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0
-        if ((*tracer)->score < midScore)
-            while((*tracer)->score<midScore)
-                tracer++;
-        else
-            while((*tracer)->score>midScore)
-                tracer--;
-        
-        //if(tracer->score<midScore)
-        //    tracer++;
-        
-        if (tracer->score > rejectThreshold)
-            tracer--;
-        
-        SpottingImage toRet(**tracer,maxWidth);
-        tracer = instancesByScore.remove(tracer);
-        if (tracer != instancesByScore.begin())
-        {
-            tracer--;
-        }
-        
-        
-        if (tracer == instancesByScore.end())
-            {
-                *done=true;
-                return toRet;
-            }
-        
-        if ((*tracer)->score < acceptThreshold)
-            tracer++;
-        if ((*tracer)->score > rejectThreshold)
-            *done = true;
-        
-        
-        return toRet;
-    }
+    SpottingImage getNextSpottingImage(bool* done, int maxWidth);
     
-    void EMThresholds()
-    {
-        /*This will likely predict very narrow and ditinct distributions
-         *initailly. This should be fine as we sample from the middle of
-         *the thresholds outward.
-         */
-        //expectation
-        
-        //map<unsigned long, bool> expected;
-        vector<float> expectedTrue;
-        float sumTrue=0;
-        vector<float> expectedFalse;
-        flaot sumFalse=0;
-        for (unsigned long id : instancesById.keys())
-        {
-            if (classById.hasKey(id))
-            {
-                if (classById[id])
-                {
-                    expectedTrue.push_back(instancesById[id].score);
-                    sumTrue+=instancesById[id].score;
-                else
-                {
-                    expectedFalse.push_back(instancesById[id].score);
-                    sumFalse+=instancesById[id].score;
-                }
-            }
-            else
-            {
-                double trueProb = exp(-1*pow(instancesById[id].score - trueMean)/(2*trueVariance));
-                double falseProb = exp(-1*pow(instancesById[id].score - falseMean)/(2*falseVariance));
-                if (trueProp>falseProb)
-                {
-                    sumTrue+=instancesById[id].score;
-                    expectedTrue.push_back(instancesById[id].score);
-                }
-                else
-                {
-                    expectedFalse.push_back(instancesById[id].score);
-                    sumFalse+=instancesById[id].score;
-                }
-            }
-        }
-        
-        //maximization
-        trueMean=sumTrue/expectedTrue.size();
-        falseMean=sumFalse/expectedFalse.size();
-        trueVariance=0;
-        for (float score : expectedTrue)
-            trueVariance = (score-trueMean)*(score-trueMean);
-        trueVariance/=expectedTrue.size();
-        falseVariance=0;
-        for (float score : expectedFalse)
-            falseVariance = (score-falseMean)*(score-falseMean);
-        falseVariance/=expectedFalse.size();
-        
-        //set new thresholds
-        acceptThreshold = falseMean-2*sqrt(falseVariance);
-        rejectThreshold = trueMean+2*sqrt(trueVariance);
-    }
+    void EMThresholds();
 };
+
+#endif

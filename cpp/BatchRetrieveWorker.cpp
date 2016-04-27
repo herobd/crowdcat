@@ -27,31 +27,41 @@ class BatchRetrieveWorker : public AsyncWorker {
             //retireve subimages and base64 encode them
             //then
             base64::encoder E;
-            vector<int> compression_params;
-            compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-            compression_params.push_back(9);
+            vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
             
             SpottingsBatch* batch = masterQueue->getBatch(5,width);
-            batchId=to_string(batch->batchId);
-            resultsId=to_string(batch->spottingResultsId);
-            ngram=batch->ngram;
-            int batchSize = batch->size();
-            retData.resize(batchSize);
-            retId.resize(batchSize);
-            for (int index=0; index<batchSize; index++) {
-                retId[index]=to_string(batch->at(index).id);
-                vector<uchar> outBuf;
-                cv::imencode(".png",batch->at(index).img,outBuf,compression_params);
-                stringstream ss;
-                ss.write((char*)outBuf.data(),outBuf.size());
-                stringstream encoded;
-                E.encode(ss, encoded);
-                string dataBase64 = encoded.str();
-                retData[index]=dataBase64;
+            if (batch != NULL)
+            {
+                batchId=to_string(batch->batchId);
+                resultsId=to_string(batch->spottingResultsId);
+                ngram=batch->ngram;
+                int batchSize = batch->size();
+                retData.resize(batchSize);
+                retId.resize(batchSize);
+                for (int index=0; index<batchSize; index++) {
+                    retId[index]=to_string(batch->at(index).id);
+                    vector<uchar> outBuf;
+                    //cout <<"encoding..."<<endl;
+                    cv::imencode(".png",batch->at(index).img(),outBuf,compression_params);
+                    //cout <<"done"<<endl;
+                    stringstream ss;
+                    ss.write((char*)outBuf.data(),outBuf.size());
+                    stringstream encoded;
+                    E.encode(ss, encoded);
+                    string dataBase64 = encoded.str();
+                    retData[index]=dataBase64;
+                }
+                //cout <<"readied batch of size "<<batchSize<<endl;
+                
+                delete batch;
             }
-            
-            delete batch;
-            //info.GetReturnValue().Set(arr);
+            else
+            {
+                batchId="No more batches.";
+                resultsId="No more batches.";
+                ngram="No more batches.";
+                
+            }
         }
 
         // We have the results, and we're back in the event loop.
@@ -80,7 +90,7 @@ class BatchRetrieveWorker : public AsyncWorker {
             argv[4] = Nan::New(retArr);*/
             
 
-            callback->Call(5, argv);
+            callback->Call(6, argv);
 
         }
     private:
@@ -97,3 +107,5 @@ class BatchRetrieveWorker : public AsyncWorker {
         
         
 };
+
+

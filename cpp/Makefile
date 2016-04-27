@@ -4,12 +4,12 @@ CXX_FLAGS =  -g  -std=c++11 #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -p
 
 LIBS += -lpthread
 
-LIBS += -lopencv_core -lopencv_highgui 
+LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 
 
 PROGRAM_NAME = test
 
-OBJECTS = obj/test.o obj/MasterQueue.o
+OBJECTS = obj/test.o obj/MasterQueue.o obj/SpottingResults.o
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME)
@@ -27,7 +27,10 @@ $(PROGRAM_NAME):  $(OBJECTS)
 obj/test.o: test.cpp MasterQueue.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
 
-obj/MasterQueue.o: MasterQueue.h MasterQueue.cpp 
+obj/MasterQueue.o: MasterQueue.h MasterQueue.cpp SpottingResults.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/MasterQueue.o MasterQueue.cpp $(LIBS)
+
+obj/SpottingResults.o: SpottingResults.h SpottingResults.cpp 
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/SpottingResults.o SpottingResults.cpp $(LIBS)
 	
 
