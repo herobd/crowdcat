@@ -48,6 +48,7 @@ void SpottingResults::add(Spotting spotting) {
     //sem_post(&mutexSem);
 }
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned int maxWidth) {
+    //cout <<"getBatch"<<endl;
     if (acceptThreshold==rejectThreshold)
         EMThresholds();
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
@@ -55,14 +56,15 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned
     unsigned int toRet = ((((signed int)instancesByScore.size())-(signed int) num)>3)?num:instancesByScore.size();
     
     for (unsigned int i=0; i<toRet && !*done; i++) {
-        ret->push_back(getNextSpottingImage(done, maxWidth));
+        SpottingImage tmp = getNextSpottingImage(done, maxWidth);
+        ret->push_back(tmp);
         
     }
     if (*done)
         allBatchesSent=true;
     //sem_post(&mutexSem);
     numBatches++;
-    cout <<"sent batch, have "<<instancesByScore.size()<<" left"<<endl;
+    //cout <<"sent batch, have "<<instancesByScore.size()<<" left"<<endl;
     return ret;
 }
 
@@ -96,6 +98,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     if (--numBatches==0 && allBatchesSent)
     {
         *done=true;
+        //cout <<"all batches sent, cleaning up"<<endl;
         
         tracer = instancesByScore.begin();
         while (tracer!=instancesByScore.end() && (*tracer)->score < acceptThreshold)
@@ -104,6 +107,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
             tracer++;
             numberAccepted++;
         }
+        //cout << "hit end "<<(tracer==instancesByScore.end())<<endl;
         numberRejected = distance(tracer,instancesByScore.end());
         
     }
@@ -114,6 +118,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     
 SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
 {
+    //cout <<"getNextSpottingImage"<<endl;
     float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
     if ((*tracer)->score < midScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<midScore)
@@ -122,19 +127,28 @@ SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
         while((*tracer)->score>midScore && tracer!=instancesByScore.begin())
             tracer--;
     
+    //cout <<"1 getNextSpottingImage"<<endl;
+    
     if(tracer==instancesByScore.end())
         tracer--;
     
     if ((*tracer)->score > rejectThreshold && tracer!=instancesByScore.begin())
         tracer--;
     
+    //cout <<"2 getNextSpottingImage: "<<*tracer<<endl;
+    
     SpottingImage toRet(**tracer,maxWidth);
+    //cout <<"2.25 getNextSpottingImage"<<endl;
+    
     tracer = instancesByScore.erase(tracer);
+    //cout <<"2.5 getNextSpottingImage"<<endl;
     if (instancesByScore.size()==0)
     {
         *done=true;
         return toRet;
     }
+    
+    //cout <<"3 getNextSpottingImage"<<endl;
     
     if (tracer != instancesByScore.begin())
     {
@@ -147,13 +161,17 @@ SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
         *done=true;
         return toRet;
     }
+    //cout <<"4 getNextSpottingImage"<<endl;
     
     if ((*tracer)->score < acceptThreshold)
         tracer++;
-    if ((*tracer)->score > rejectThreshold)
+    
+    //cout <<"5 getNextSpottingImage"<<endl;
+    
+    if (tracer==instancesByScore.end() || (*tracer)->score > rejectThreshold)
         *done = true;
     
-    
+    //cout <<"fin getNextSpottingImage"<<endl;
     return toRet;
 }
 
@@ -178,12 +196,14 @@ void SpottingResults::EMThresholds()
             if (classById[id])
             {
                 expectedTrue.push_back(instancesById[id].score);
-                sumTrue+=instancesById[id].score;
+                expectedTrue.push_back(instancesById[id].score);
+                sumTrue+=2*instancesById[id].score;
             }
             else
             {
                 expectedFalse.push_back(instancesById[id].score);
-                sumFalse+=instancesById[id].score;
+                expectedFalse.push_back(instancesById[id].score);
+                sumFalse+=2*instancesById[id].score;
             }
         }
         else
@@ -220,12 +240,12 @@ void SpottingResults::EMThresholds()
         falseVariance/=expectedFalse.size();
     
     //set new thresholds
-    float numStdDevs = 1 + (instancesById.size()/(0.0+classById.size()));
+    float numStdDevs = 1 + ((1.0+min(instancesById.size(),50))/(1.0+min(classById.size(),50)));//Use less as more are classified, we are more confident. Capped to reduce effect of many returned instances bogging us down.
     acceptThreshold = falseMean-numStdDevs*sqrt(falseVariance);
     rejectThreshold = trueMean+numStdDevs*sqrt(trueVariance);
     cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
     cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
-    cout <<"adjusted threshs, now "<<acceptThreshold<<" "<<rejectThreshold<<endl;
+    
     cout <<"expected true: ";
     for (float v : expectedTrue)
         cout <<v<<", ";
@@ -234,7 +254,17 @@ void SpottingResults::EMThresholds()
     for (float v : expectedFalse)
         cout <<v<<", ";
     cout <<endl;
+    cout <<"adjusted threshs, now "<<acceptThreshold<<" "<<rejectThreshold<<endl;
     
-    assert(acceptThreshold<rejectThreshold);
+    if(acceptThreshold>rejectThreshold) {//This is the case where the distributions are so far apart they "don't overlap"
+        if (instancesById.size()/3 < classById.size()){//Be sure we aren't hitting this too early
+            float mid = rejectThreshold + (acceptThreshold-rejectThreshold)/2.0;
+            acceptThreshold = rejectThreshold = mid;//We finish here, by accepting and rejecting everything left.
+        } 
+        else {
+            acceptThreshold = trueMean;//This is an overcorrection, allowing a alater batch to fix us.
+            rejectThreshold = falseMean;
+        }
+    }
 }
 

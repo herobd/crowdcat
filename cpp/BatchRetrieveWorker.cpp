@@ -58,7 +58,7 @@ class BatchRetrieveWorker : public AsyncWorker {
             else
             {
                 batchId="No more batches.";
-                resultsId="No more batches.";
+                resultsId="";
                 ngram="No more batches.";
                 
             }

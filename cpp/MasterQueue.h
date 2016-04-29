@@ -28,6 +28,8 @@ private:
     
     int atID;
     //map<unsigned long,unsigned long> batchToResults;
+    
+    cv::Mat page;
 public:
     MasterQueue();
     SpottingsBatch* getBatch(unsigned int numberOfInstances, unsigned int maxWidth);

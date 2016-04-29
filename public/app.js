@@ -9,7 +9,7 @@ function begin() {
     document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
     var windows = document.getElementsByClassName('window');
     for (var i=0; i<windows.length; i++) {
-        getNextBatch(windows[i],3);
+        getNextBatch(windows[i],1);//TODO 3
         
     }
     
@@ -45,11 +45,13 @@ function httpPostAsync(theUrl, theData, callback)
 
 function isBad(widget) {
     batches[widget.batch].spottings[widget.id]=0;
+    //console.log(widget.batch+':'+widget.id+' is bad.');
     isBatchDone(widget.batch,widget.parentNode);
 }
 
 function isGood(widget) {
     batches[widget.batch].spottings[widget.id]=1;
+    //console.log(widget.batch+':'+widget.id+' is good.');
     isBatchDone(widget.batch,widget.parentNode);
 }
 
@@ -62,39 +64,50 @@ function test() {
 }
 var batchQueue=[]
 function getNextBatch(window,toload) {
+    //TODO spinner show
     httpGetAsync('/app/nextBatch?width='+imgWidth,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
-            if (jres.batchType=='spottings') {
-                //console.log("got batch "+jres.batchId);
-                batches[jres.batchId]={sent:false, spottings:{}};
-                //TODO jres.ngram
-                var batchHeader = document.createElement("div");
-                batchHeader.classList.toggle('spotting');
-                batchHeader.classList.toggle('batchHeader');
-                batchHeader.id=jres.batchId
-                batchHeader.innerHTML=jres.ngram;
-                if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-                    batchHeader.hidden=true
+            if (jres.resultsId.length>0) {
+                if (jres.batchType=='spottings') {
+                    //console.log("got batch "+jres.batchId);
+                    batches[jres.batchId]={sent:false, spottings:{}};
+                    //TODO jres.ngram
+                    var batchHeader = document.createElement("div");
+                    batchHeader.classList.toggle('spotting');
+                    batchHeader.classList.toggle('batchHeader');
+                    batchHeader.id='b'+jres.batchId
+                    batchHeader.innerHTML=jres.ngram;
+                    if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
+                        batchHeader.hidden=true
+                    }
+		            batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId})
+                    window.appendChild(batchHeader);
+                    for (i of jres.spottings) {
+                        var im = new Image();
+                        im.src='data:image/png;base64,'+i.data;
+                        var widget = document.createElement("div");
+                        widget.classList.toggle('spotting');
+                        widget.appendChild(im);
+                        widget.id=i.id;
+                        widget.batch=jres.batchId;
+                        window.appendChild(widget);
+                        initSlider(widget);
+                        batches[jres.batchId].spottings[i.id]=null;
+                    }
                 }
-		        batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId})
-                window.appendChild(batchHeader);
-                for (i of jres.spottings) {
-                    var im = new Image();
-                    im.src='data:image/png;base64,'+i.data;
-                    var widget = document.createElement("div");
-                    widget.classList.toggle('spotting');
-                    widget.appendChild(im);
-                    widget.id=i.id;
-                    widget.batch=jres.batchId;
-                    window.appendChild(widget);
-                    initSlider(widget);
-                    batches[jres.batchId].spottings[i.id]=null;
-                }
+                if (toload!==undefined && --toload>0)
+                    getNextBatch(window,toload);
+                
+                //TODO spinner hide
+            } else { //wait and try again
+                //TODO showMessage("no more batches available");
+                setTimeout(getNextBatch(window,toload),3000);
             }
-            if (toload!==undefined && --toload>0)
-                getNextBatch(window,toload);
+        } else {
+            //TODO showMessage(jres.err);
         }
+        
         
         
     });
@@ -105,14 +118,15 @@ function isBatchDone(batchId,window) {
         for (spottingId in batches[batchId].spottings)
             if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
                 return;
+        //console.log('batch '+batchId+ ' is done');
         batches[batchId].sent=true;
-	var ngram = batchQueue[0].ngram;
-	var resultsId = batchQueue[0].rid;
-	batchQueue=batchQueue.slice(1)
-	if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
-            document.getElementById(batchQueue[0].id).hidden=false;
-	}
-        var header = document.getElementById(batchId);
+	    var ngram = batchQueue[0].ngram;
+	    var resultsId = batchQueue[0].rid;
+	    batchQueue=batchQueue.slice(1)
+	    if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
+                document.getElementById('b'+batchQueue[0].id).hidden=false;
+	    }
+        var header = document.getElementById('b'+batchId);
         window.removeChild(header);
         
         var ids = []
@@ -132,6 +146,7 @@ function isBatchDone(batchId,window) {
         });
     } else {
         //TODO handle UNDO case
+        console.log('UNDO case, as batch '+batchId+' has been sent: '+batches[batchId].sent);
         assert(false);
     }
 }

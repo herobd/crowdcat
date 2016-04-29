@@ -32,7 +32,7 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
             Local<Value> argv[] = {
                 Nan::Null()
             };
-
+            //cout <<"calling back"<<endl;
             callback->Call(1, argv);
 
         }

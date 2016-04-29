@@ -51,11 +51,11 @@ public:
         int sideFromR = (oneSide- (brx-tlx)/2);
         int left = tlx-sideFromR;
         int right = brx+sideFromR;
-        //cout <<"getting image window..."<<endl;
+        //cout <<"getting image window... sideFromR="<<sideFromR<<", oneSide="<<oneSide<<", tlx="<<tlx<<", brx="<<brx<<", left="<<left<<", right="<<right<<endl;
         if (left>=0 && right<s.pagePnt->cols)
         {   
             //cout <<"normal: "<<left<<" "<<tly<<" "<<right-left<<" "<<bry-tly<<endl;
-            image = (*s.pagePnt)(cv::Rect(left,tly,right-left,bry-tly));
+            image = ((*s.pagePnt)(cv::Rect(left,tly,right-left,bry-tly))).clone();
         }
         else
         {
@@ -69,20 +69,47 @@ public:
             if (right>=s.pagePnt->cols)
                 right = s.pagePnt->cols-1;
             //cout <<"adjusted from: "<<newLeft<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
-            //cout <<"adjusted to: "<<leftOff<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
+            //cout <<"adjusted to: "<<leftOff<<" "<<0<<" "<<right-newLeft<<" "<<bry-tly<<endl;
             (*s.pagePnt)(cv::Rect(newLeft,tly,right-newLeft,bry-tly)).copyTo(image(cv::Rect(leftOff,0,right-newLeft,bry-tly)));
         }
         //cout <<"done, now coloring..."<<endl;
         if (image.channels()==1)
             cv::cvtColor(image, image, CV_GRAY2RGB);
-        for (int r=0; r<=bry-tly; r++)
-            for (int c=sideFromR; c<=sideFromR+brx-tlx; c++)
+        
+        //if (left==1117 && tly==186)
+        //{
+         //   cv::imshow("rer", image);
+          //  cv::waitKey();
+        //}
+        for (int r=0; r<bry-tly; r++)
+            for (int c=sideFromR; c<sideFromR+brx-tlx; c++)
             {
-                cv::Vec3b pix = image.at<cv::Vec3b>(r,c);
-                image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(30+(int)(pix[1]*1.05),255),pix[2]*0.75);
+                //if (left==1117 && tly==186 && (r==10 || r==5) && c==300)
+                //{
+                  //  cv::imshow("rer", image);
+                  //  cv::waitKey(1);
+                //}
+                //cout <<" ("<<r<<" "<<c;
+                //cout.flush();
+                cv::Vec3b& pix = image.at<cv::Vec3b>(r,c);
+                //cout <<"):";
+                //cout.flush();
+                //cout<<(int)pix[0];
+                //cout.flush();
+                //image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(20+(int)(pix[1]*1.05),255),pix[2]*0.75);
+                pix[0]*=0.75;
+                pix[1] =min(20+(int)(pix[1]*1.05),255);
+                pix[2]*=0.75;
             }
+        //cout<<endl;
         //cout <<"done"<<endl;
     }
+    
+    SpottingImage(const SpottingImage& s) : Spotting(s)
+    {
+        image=s.image;
+    }
+    
     virtual cv::Mat img()
     {
         return image;
@@ -152,6 +179,10 @@ public:
     SpottingResults(string ngram, double acceptThreshold, double rejectThreshold);
     string ngram;
     
+    ~SpottingResults() 
+    {
+        cout <<"results "<<id<<", numberClassifiedTrue: "<<numberClassifiedTrue<<", numberClassifiedFalse: "<<numberClassifiedFalse<<", numberAccepted: "<<numberAccepted<<", numberRejected: "<<numberRejected<<endl;
+    }
     
     //sem_t mutexSem;
     
