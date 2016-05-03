@@ -15,8 +15,8 @@ using namespace v8;
 
 class BatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, int width, MasterQueue* masterQueue)
-        : AsyncWorker(callback), width(width), masterQueue(masterQueue) {}
+        BatchRetrieveWorker(Callback *callback, int width, int num, MasterQueue* masterQueue)
+        : AsyncWorker(callback), width(width), num(num), masterQueue(masterQueue) {}
 
         ~BatchRetrieveWorker() {}
 
@@ -31,7 +31,13 @@ class BatchRetrieveWorker : public AsyncWorker {
             compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
             compression_params.push_back(9);
             
-            Spottings batch = masterQueue->getBatch(5,width);
+            bool hard=true;
+            if (num==-1) {
+                num=5;
+                hard=false;
+            }
+            
+            Spottings batch = masterQueue->getBatch(num,hard,width);
             batchId=batch.batchId;
             ngram=batch.ngram;
             int batchSize = batch.instances.size();
@@ -90,6 +96,7 @@ class BatchRetrieveWorker : public AsyncWorker {
         
         //input
         int width;
+        int num;
         MasterQueue* masterQueue;
         
         

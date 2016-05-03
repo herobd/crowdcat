@@ -51,12 +51,12 @@ public:
         if (im.img.cols>0)
 		instances.push_back(im);
     }
-    vector<SpottingImage> getSpottings(unsigned int num, unsigned int maxWidth=0) {
+    vector<SpottingImage> getSpottings(unsigned int num, bool hard, unsigned int maxWidth=0) {
         vector<SpottingImage> ret;
         //cout << "num:"<<num << endl;
         //cout << "inst:"<<instances.size() << endl;
         //cout << "exp:"<<((((signed int)instances.size())-num)>3) << " :: "<<(instances.size()-num)<< endl;
-        unsigned int toRet = ((((signed int)instances.size())-(signed int) num)>3)?num:instances.size();
+        unsigned int toRet = (hard&&instances.size()>=num)||((((signed int)instances.size())-(signed int) num)>3)?num:instances.size();
         //cout << "toRet:"<<toRet << endl;
         
         for (unsigned int i=0; i<toRet; i++) {
@@ -89,7 +89,7 @@ private:
     int atID;
 public:
     MasterQueue();
-    Spottings getBatch(unsigned int numberOfInstances, unsigned int maxWidth=0);
+    Spottings getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth=0);
     
 };
 #endif

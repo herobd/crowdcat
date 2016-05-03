@@ -128,10 +128,10 @@ MasterQueue::MasterQueue() {
     spottingsQueue.push(th2);
 }
 
-Spottings MasterQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth) {
+Spottings MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth) {
     sem_wait(&mutexSem);
     Spottings batch(spottingsQueue.front().ngram,"test_batch_"+to_string(atID++)+"_"+spottingsQueue.front().ngram);
-    batch.instances = spottingsQueue.front().getSpottings(numberOfInstances,maxWidth);
+    batch.instances = spottingsQueue.front().getSpottings(numberOfInstances,hard,maxWidth);
     if (spottingsQueue.front().instances.size()==0) {
         Spottings tmp = spottingsQueue.front();
         

@@ -5,15 +5,14 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<script type="text/javascript" src="app.js"></script>
-<script type="text/javascript" src="app_touch.js"></script>
+<script type="text/javascript" src="<%= app_version %>.js"></script>
 <link href="app.css" rel="stylesheet" type="text/css" />
 </head>
 <body onload="setup()">
 <div class="container">
     <div id="title">
         <h>Subword user correction UI demo</h><br>
-        <label>Swipe left for correct and right for incorrect.</label>
+        <label id='instructions'>Swipe right for correct and left for incorrect.</label>
         <button type="button" id="undoButton" onclick="undo()">undo</button>
         <form action="/logout" method="post" hidden>
                 <input type="submit" value="Log out"/>
@@ -21,6 +20,7 @@
     </div>
     <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
     <div class="window">
+        <div id="spinner" class="loader">Loading...</div>
     </div>
      
 </div>
