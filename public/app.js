@@ -6,6 +6,11 @@ var lastRemoved=[];
 var lastRemovedOK=[];
 var spinner;
 
+var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
+var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
+//var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
+var colorIndex=0;
+
 function handleTouchStart(evt) {
     if (evt.touches)                                     
         this.xDown = evt.touches[0].clientX;  
@@ -114,6 +119,8 @@ function createSlider(im,id,batchId) {
     genDiv.id=id;
     genDiv.batch=batchId;
     initSlider(genDiv);
+    genDiv.style.background=spottingColors[colorIndex];
+    genDiv.colorIndex=colorIndex;
     return genDiv;
 }
 
@@ -132,12 +139,13 @@ function initSlider(ele) {
 
 var batches={};
 var maxImgWidth=700;
-var imgWidth;
+var imgWidth=null;
 
 var test_batchesToDo=3;
 
 function begin() {
-    imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
+    while (!imgWidth)
+        imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
     document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
     var windows = document.getElementsByClassName('window');
     for (var i=0; i<windows.length; i++) {
@@ -198,7 +206,6 @@ function getNextBatch(window,toload) {
         var jres=JSON.parse(res);
         if (jres.err==null) {
             if (jres.batchType=='spottings') {
-                //console.log("got batch "+jres.batchId);
                 batches[jres.batchId]={sent:false, spottings:{}};
                 
                 var batchHeader = document.createElement("div");
@@ -208,10 +215,15 @@ function getNextBatch(window,toload) {
                 batchHeader.innerHTML=jres.ngram;
 		        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
                              batchHeader.hidden=true
-		        }
+		        } else {
+		            colorIndex = (++colorIndex)%headerColors.length;
+		            lastNgram=jres.ngram;
+	            }
+	            batchHeader.style.background=headerColors[colorIndex];
 		        batchQueue.push({ngram:jres.ngram, id:jres.batchId})
                 window.appendChild(batchHeader);
-                for (i of jres.spottings) {
+                for (var index=0; index<jres.spottings.length; index++) {
+                    var i=jres.spottings[index];
                     var im = new Image();
                     im.src='data:image/png;base64,'+i.data;
                     //var widget = document.createElement("div");

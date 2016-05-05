@@ -4,6 +4,12 @@ var BAD_THRESH=100;
 var spinner;
 var lastRemoved=[];
 var lastRemovedInfo=[];
+
+var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
+var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
+//var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
+var colorIndex=0;
+
 /*function handleTouchStart(evt) {
     if (evt.touches)                                     
         this.xDown = evt.touches[0].clientX;  
@@ -69,6 +75,7 @@ function undo() {
 }
 
 function handleTouchEnd(evt) {
+    //console.log(evt);
     toggleIsBad(this);
     this.classList.toggle('crossed');
 }
@@ -84,7 +91,7 @@ function setup() {
         doneButton.classList.toggle('donebutton');
         doneButton.innerHTML='Submit';
         doneButton.addEventListener('mouseup', batchDone, false);
-        doneButton.addEventListener('touchend', batchDone, false);
+        //doneButton.addEventListener('touchend', batchDone, false);
         windows[i].appendChild(doneButton);
     }
     /*var containers = document.getElementsByClassName('container');
@@ -112,16 +119,14 @@ function createTapped(im,id,batchId) {
     stikethrough.classList.toggle('stikethrough');
     stikethrough.hidden=true;
     genDiv.appendChild(stikethrough);
+    genDiv.style.background=spottingColors[colorIndex];
+    genDiv.colorIndex=colorIndex;
     return genDiv;
 }
 
 function initTapped(ele) {
-    //ele.addEventListener('touchstart', handleTouchStart, false);        
-    //ele.addEventListener('touchmove', handleTouchMove, false);
-    ele.addEventListener('touchend', handleTouchEnd, false);
+    //ele.addEventListener('touchend', handleTouchEnd, false);
     
-    //ele.addEventListener('mousedown', handleTouchStart, false);        
-    //ele.addEventListener('mousemove', handleTouchMove, false);
     ele.addEventListener('mouseup', handleTouchEnd, false);
     //ele.xDown=null;
 }
@@ -130,16 +135,23 @@ function initTapped(ele) {
 
 var batches={};
 var maxImgWidth=700;
-var imgWidth;
+var imgWidth=null;
 var numBatch;
 
 var test_batchesToDo=3;
 
 function begin() {
-    imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
-    numBatch=Math.floor((document.defaultView.outerHeight-document.getElementById('title').offsetHeight-50)/86)-1;
-    console.log ('numBatch='+numBatch+' full='+document.defaultView.outerHeight+' top='+document.getElementById('title').offsetHeight);
-    document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
+    var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    x = w.innerWidth || e.clientWidth || g.clientWidth,
+    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+    while (!imgWidth)
+        imgWidth=Math.min(x,maxImgWidth);
+    numBatch=Math.floor((y-document.getElementById('title').offsetHeight-50)/84)-1;
+    console.log ('numBatch='+numBatch+' full='+y+' top='+document.getElementById('title').offsetHeight);
+    document.onresize=function(){imgWidth=Math.min(x,maxImgWidth);};
     var windows = document.getElementsByClassName('window');
     for (var i=0; i<windows.length; i++) {
         getNextBatch(windows[i],3);
@@ -198,7 +210,8 @@ function test() {
 
 
 
-var batchQueue=[]
+var batchQueue=[];
+var lastNgram='';
 function getNextBatch(window,toload) {
     httpGetAsync('/app/nextBatch?num='+numBatch+'&width='+imgWidth,function (res){
         var jres=JSON.parse(res);
@@ -213,10 +226,16 @@ function getNextBatch(window,toload) {
                 batchHeader.classList.toggle('spotting');
                 batchHeader.classList.toggle('batchHeader');
                 batchHeader.innerHTML=jres.ngram;
+                if (lastNgram!=jres.ngram) {
+		            colorIndex = (++colorIndex)%headerColors.length;
+		            lastNgram=jres.ngram;
+	            }
+		        batchHeader.style.background=headerColors[colorIndex];
 		        
 		        batchContainer.appendChild(batchHeader);
                 
-                for (i of jres.spottings) {
+                for (var index=0; index<jres.spottings.length; index++) {
+                    var i=jres.spottings[index];
                     var im = new Image();
                     im.src='data:image/png;base64,'+i.data;
                     var widget = createTapped(im,i.id,jres.batchId);
@@ -243,7 +262,7 @@ function batchDone(evt) {
     if (batchQueue.length==0)
         return;
     var batchId=batchQueue[0].id;
-    console.log(batchId);
+    //console.log(batchId);
     var window = this.parentNode;
     //if (!batches[batchId].sent) {
         batches[batchId].sent=true;

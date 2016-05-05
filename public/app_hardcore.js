@@ -14,7 +14,7 @@ var theWindow;
 
 var batches={};
 var maxImgWidth=700;
-var imgWidth;
+var imgWidth=null;
 
 var test_batchesToDo=3;
 
@@ -143,14 +143,17 @@ function setup() {
     theWindow=windows[0];
     //for (var i = 0; i < windows.length; i++) {
     //    //initSlider(windows[i]);
-    //windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
-    //windows[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
+    windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
+    windows[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
         
     //}
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
+    containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
+    containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
     
-    imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
+    while (!imgWidth)
+        imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
     document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
     getNextBatch(3,function() { 
         highlightLast();
@@ -219,13 +222,13 @@ function httpPostAsync(theUrl, theData, callback)
 function isBad() {
     batches[ondeck.batch].spottings[ondeck.id]=false;
     isBatchDone(ondeck.batch);
-    console.log('is bad');
+    //console.log('is bad');
 }
 
 function isGood() {
     batches[ondeck.batch].spottings[ondeck.id]=true;
     isBatchDone(ondeck.batch);
-    console.log('is good');
+    //console.log('is good');
 }
 
 function test() {
@@ -236,13 +239,13 @@ function test() {
     });
 }
 var batchQueue=[]
-var lastNgram='';
+//var lastNgram='';
 function getNextBatch(toload,callback) {
     httpGetAsync('/app/nextBatch?width='+imgWidth,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
             if (jres.batchType=='spottings') {
-                //console.log("got batch "+jres.batchId);
+                console.log("got batch "+jres.batchId);
                 batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
                 
                 var batchHeader = document.createElement("div");
@@ -251,17 +254,22 @@ function getNextBatch(toload,callback) {
                 batchHeader.id='b'+jres.batchId
                 batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
 		        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-                             batchHeader.hidden=true
-		        }
-		        if (lastNgram!=jres.ngram) {
+                    batchHeader.hidden=true
+                    
+		        } else {
 		            colorIndex = (++colorIndex)%headerColors.length;
 		            lastNgram=jres.ngram;
 	            }
+		        /*if (lastNgram!=jres.ngram) {
+		            colorIndex = (++colorIndex)%headerColors.length;
+		            lastNgram=jres.ngram;
+	            }*/
 		        batchHeader.style.background=headerColors[colorIndex];
 		        
 		        batchQueue.push({ngram:jres.ngram, id:jres.batchId})
                 theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
-                for (i of jres.spottings) {
+                for (var index=0; index<jres.spottings.length; index++) {
+                    var i=jres.spottings[index];
                     var im = new Image();
                     im.src='data:image/png;base64,'+i.data;
                     //var widget = document.createElement("div");
