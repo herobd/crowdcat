@@ -40,3 +40,7 @@ body {
     text-decoration: none;
     color: initial;
 }
+
+#apps a {
+    font-size: 25px;
+}

@@ -1,17 +1,16 @@
-var OK_THRESH=100;
-var BAD_THRESH=-100;
+var OK_THRESH=-100;
+var BAD_THRESH=100;
 
-//var lastRemovedParent=[];
-var lastRemoved=[];
-var lastRemovedOK=[];
 var spinner;
+var lastRemoved=[];
+var lastRemovedInfo=[];
 
 var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
 var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
 //var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
 var colorIndex=0;
 
-function handleTouchStart(evt) {
+/*function handleTouchStart(evt) {
     if (evt.touches)                                     
         this.xDown = evt.touches[0].clientX;  
     else
@@ -24,30 +23,21 @@ function handleTouchMove(evt) {
         return;
     }
     
-    var xUp;
-    if (evt.touches)
-        xUp = evt.touches[0].clientX; 
-    else {
-        if (evt.buttons%2!=1) {
-            handleTouchEnd.call(this,evt);
-            return;
-        }
-        xUp = evt.clientX; 
-    }                              
+                                
     //var yUp = evt.touches[0].clientY;
 
     this.xDiff = xUp-this.xDown;
     this.style.left = this.xDiff+'px';
     
     //this.getElementsByClassName('num')[0].innerHTML='( '+xUp+' )'
-    if (this.xDiff<BAD_THRESH) {
+    if (this.xDiff>BAD_THRESH) {
         this.parentNode.style.background='hsl(350,100%,40%)';
-    } else if (this.xDiff<0) {
+    } else if (this.xDiff>0) {
         this.parentNode.style.background='hsl(350,'+(60*(this.xDiff/(0.0+BAD_THRESH)))+'%,40%)';
         //console.log((75*(this.xDiff/(0.0+OK_THRESH)))+'%');
-    } else if (this.xDiff>OK_THRESH) {
+    } else if (this.xDiff<OK_THRESH) {
         this.parentNode.style.background='hsl(130,100%,30%)';
-    } else if (this.xDiff>0) {
+    } else if (this.xDiff<0) {
         this.parentNode.style.background='hsl(130,'+(60*(this.xDiff/(0.0+OK_THRESH)))+'%,30%)';
     }                           
 };
@@ -69,70 +59,76 @@ function removeSpotting(OK) {
         isGood(this);
     else
         isBad(this);
-}
+}*/
 
 function undo() {
     if (lastRemoved.length>0) {
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         lastRemoved.pop().hidden=false;
+        var container = document.getElementById('b'+batchQueue[0].id);
+        container.hidden=true;
+        batchQueue = [lastRemovedInfo.pop()].concat(batchQueue);
         //TODO do something with 
-        lastRemovedOK.pop();
     }
     //console.log('UNDO');
 }
 
 function handleTouchEnd(evt) {
-    //var xUp = evt.touches[0].clientX;    
-    //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
-    
-    this.xDown=null;
-    this.style.left = '0px';
-    //var xDiff = this.xDown - xUp;
-    if (this.xDiff>OK_THRESH) {
-        removeSpotting.call(this,true);
-        
-    } else if (this.xDiff<BAD_THRESH) {
-        removeSpotting.call(this,false);
-    } else {
-    
-        
-    }
-    this.xDiff=0;
+    //console.log(evt);
+    toggleIsBad(this);
+    this.classList.toggle('crossed');
 }
 
 function setup() {
     spinner = document.getElementById("spinner");
     var windows = document.getElementsByClassName('window');
     for (var i = 0; i < windows.length; i++) {
-        //initSlider(windows[i]);
-        windows[i].addEventListener('touchstart', function(e){ e.preventDefault(); });
-        windows[i].addEventListener('mousedown', function(e){ e.preventDefault(); });
+       //initSlider(windows[i]);
+        //windows[i].addEventListener('touchstart', function(e){ e.preventDefault(); });
+        //windows[i].addEventListener('mousedown', function(e){ e.preventDefault(); });
+        var doneButton = document.createElement("button");
+        doneButton.classList.toggle('donebutton');
+        doneButton.innerHTML='Submit';
+        doneButton.addEventListener('mouseup', batchDone, false);
+        //doneButton.addEventListener('touchend', batchDone, false);
+        windows[i].appendChild(doneButton);
     }
+    /*var containers = document.getElementsByClassName('container');
+    for (var i = 0; i < containers.length; i++) {
+        var doneButton = document.createElement("button");
+        doneButton.classList.toggle('donebutton');
+        doneButton.innerHTML='Submit';
+        doneButton.addEventListener('mouseup', batchDone, false);
+        doneButton.addEventListener('touchend', batchDone, false);
+        containers[i].appendChild(doneButton);
+    }*/
+    document.getElementById("instructions").innerHTML='Select incorrect images.';
     begin();
 }
 
-function createSlider(im,id,batchId) {
+function createTapped(im,id,batchId) {
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('spotting');
     genDiv.appendChild(im);
     genDiv.id=id;
     genDiv.batch=batchId;
-    initSlider(genDiv);
+    initTapped(genDiv);
+    
+    var stikethrough = document.createElement("div");
+    stikethrough.classList.toggle('stikethrough');
+    stikethrough.hidden=true;
+    genDiv.appendChild(stikethrough);
     genDiv.style.background=spottingColors[colorIndex];
     genDiv.colorIndex=colorIndex;
     return genDiv;
 }
 
-function initSlider(ele) {
-    ele.addEventListener('touchstart', handleTouchStart, false);        
-    ele.addEventListener('touchmove', handleTouchMove, false);
-    ele.addEventListener('touchend', handleTouchEnd, false);
+function initTapped(ele) {
+    //ele.addEventListener('touchend', handleTouchEnd, false);
     
-    ele.addEventListener('mousedown', handleTouchStart, false);        
-    ele.addEventListener('mousemove', handleTouchMove, false);
     ele.addEventListener('mouseup', handleTouchEnd, false);
-    ele.xDown=null;
+    //ele.xDown=null;
 }
 
 //////////////////////
@@ -140,13 +136,22 @@ function initSlider(ele) {
 var batches={};
 var maxImgWidth=700;
 var imgWidth=null;
+var numBatch;
 
 var test_batchesToDo=3;
 
 function begin() {
+    var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    x = w.innerWidth || e.clientWidth || g.clientWidth,
+    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     while (!imgWidth)
-        imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
-    document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
+        imgWidth=Math.min(x,maxImgWidth);
+    numBatch=Math.floor((y-document.getElementById('title').offsetHeight-50)/84)-1;
+    console.log ('numBatch='+numBatch+' full='+y+' top='+document.getElementById('title').offsetHeight);
+    document.onresize=function(){imgWidth=Math.min(x,maxImgWidth);};
     var windows = document.getElementsByClassName('window');
     for (var i=0; i<windows.length; i++) {
         getNextBatch(windows[i],3);
@@ -183,15 +188,17 @@ function httpPostAsync(theUrl, theData, callback)
     xmlHttp.send(JSON.stringify(theData));
 }
 
-function isBad(widget) {
-    batches[widget.batch].spottings[widget.id]=false;
-    isBatchDone(widget.batch,widget.parentNode);
+function toggleIsBad(widget) {
+    batches[widget.batch].spottings[widget.id]=!batches[widget.batch].spottings[widget.id];
+    //isBatchDone(widget.batch,widget.parentNode.parentNode);
+    for(var i in widget.childNodes) {
+        if (widget.childNodes.hasOwnProperty(i)) {
+            stikethrough=widget.childNodes[i];
+            stikethrough.hidden=!stikethrough.hidden;
+        }
+    }
 }
 
-function isGood(widget) {
-    batches[widget.batch].spottings[widget.id]=true;
-    isBatchDone(widget.batch,widget.parentNode);
-}
 
 function test() {
     httpGetAsync('/app/test_image?quality=9',function (res){
@@ -200,42 +207,47 @@ function test() {
         document.getElementById('testImageHere').appendChild(myImage);
     });
 }
-var batchQueue=[]
+
+
+
+var batchQueue=[];
+var lastNgram='';
 function getNextBatch(window,toload) {
-    httpGetAsync('/app/nextBatch?width='+imgWidth,function (res){
+    httpGetAsync('/app/nextBatch?num='+numBatch+'&width='+imgWidth,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
             if (jres.batchType=='spottings') {
+                //console.log("got batch "+jres.batchId);
                 batches[jres.batchId]={sent:false, spottings:{}};
+                var batchContainer = document.createElement("div");
+                batchContainer.id='b'+jres.batchId;
                 
                 var batchHeader = document.createElement("div");
                 batchHeader.classList.toggle('spotting');
                 batchHeader.classList.toggle('batchHeader');
-                batchHeader.id='b'+jres.batchId
                 batchHeader.innerHTML=jres.ngram;
-		        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-                             batchHeader.hidden=true
-		        } else {
+                if (lastNgram!=jres.ngram) {
 		            colorIndex = (++colorIndex)%headerColors.length;
 		            lastNgram=jres.ngram;
 	            }
-	            batchHeader.style.background=headerColors[colorIndex];
-		        batchQueue.push({ngram:jres.ngram, id:jres.batchId})
-                window.appendChild(batchHeader);
+		        batchHeader.style.background=headerColors[colorIndex];
+		        
+		        batchContainer.appendChild(batchHeader);
+                
                 for (var index=0; index<jres.spottings.length; index++) {
                     var i=jres.spottings[index];
                     var im = new Image();
                     im.src='data:image/png;base64,'+i.data;
-                    //var widget = document.createElement("div");
-                    //widget.classList.toggle('spotting');
-                    //widget.appendChild(im);
-                    //widget.id=i.id;
-                    //widget.batch=jres.batchId;
-                    var widget = createSlider(im,i.id,jres.batchId);
-                    window.appendChild(widget);
-                    //initSlider(widget);
-                    batches[jres.batchId].spottings[i.id]=null;
+                    var widget = createTapped(im,i.id,jres.batchId);
+                    batchContainer.appendChild(widget);
+                    batches[jres.batchId].spottings[i.id]=1;//assume good
                 }
+                
+                window.insertBefore(batchContainer,window.childNodes[0]);
+                if (batchQueue.length>0) {
+                             batchContainer.hidden=true
+		        }
+                batchQueue.push({ngram:jres.ngram, id:jres.batchId});
                 spinner.hidden=true;
             }
             if (toload!==undefined && --toload>0)
@@ -246,21 +258,31 @@ function getNextBatch(window,toload) {
     });
 }
 
-function isBatchDone(batchId,window) {
+function batchDone(evt) {
+    if (batchQueue.length==0)
+        return;
+    var batchId=batchQueue[0].id;
+    //console.log(batchId);
+    var window = this.parentNode;
     //if (!batches[batchId].sent) {
-        for (spottingId in batches[batchId].spottings)
-            if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
-                return;
         batches[batchId].sent=true;
-	    var ngram = batchQueue[0].ngram;
+        var info = batchQueue[0];
+	    var ngram = info.ngram;
 	    batchQueue=batchQueue.slice(1)
-	    if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
+	    if (batchQueue.length>0) {
                 document.getElementById('b'+batchQueue[0].id).hidden=false;
-	    } else if (batchQueue.length==0){
+	    } else {
 	        spinner.hidden=false;
 	    }
-        var header = document.getElementById('b'+batchId);
-        window.removeChild(header);
+        var container = document.getElementById('b'+batchId);
+        //window.removeChild(container);
+        container.hidden=true;
+        lastRemoved.push(container);
+        lastRemovedInfo.push(info);
+        if (lastRemoved.length>2) {
+            lastRemoved.shift();
+            lastRemovedInfo.shift();
+        }
         httpPostAsync('/app/submitBatch',{batchId:batchId,labels:batches[batchId].spottings},function (res){
             //if(--test_batchesToDo > 0) {
                 getNextBatch(window);

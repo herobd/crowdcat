@@ -86,9 +86,10 @@ NAN_METHOD(getGlobalImage) {
 
 NAN_METHOD(getNextBatch) {
     int width = To<int>(info[0]).FromJust();
-    Callback *callback = new Callback(info[1].As<Function>());
+    int num = To<int>(info[1]).FromJust();
+    Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,num,masterQueue));
 }
 
 NAN_METHOD(spottingBatchDone) {

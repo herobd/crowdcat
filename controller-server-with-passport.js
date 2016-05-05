@@ -145,7 +145,31 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 var appName = self.getTestApp(req.user);
-                res.render(appName, { message: req.flash('error') });
+                res.render(appName, {app_version:'app', message: req.flash('error') });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        
+        self.app.get('/app-tap', function(req, res) {
+            if (req.user || debug) {
+                //console.log('[app] user:'+req.user.id+' hit app');
+                //res.setHeader('Content-Type', 'text/html');
+                //res.send(self.cache_get('app.html') );
+                var appName = self.getTestApp(req.user);
+                res.render(appName, {app_version:'app_tap', message: req.flash('error') });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        
+        self.app.get('/app-hardcore', function(req, res) {
+            if (req.user || debug) {
+                //console.log('[app] user:'+req.user.id+' hit app');
+                //res.setHeader('Content-Type', 'text/html');
+                //res.send(self.cache_get('app.html') );
+                var appName = 'app_hardcore';
+                res.render(appName, {app_version:'app_hardcore', message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -192,9 +216,17 @@ var ControllerApp = function(port) {
         });
         
         self.app.get('/app/nextBatch', function(req, res) {
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1.
+            res.setHeader("Pragma", "no-cache"); // HTTP 1.0.
+            res.setHeader("Expires", "0"); // Proxies.
             if (req.user || debug) {
-                spottingaddon.getNextBatch(+req.query.width,function (err,batchType,batchId,ngram,spottings) {
+                var num=-1;
+                if (req.query.num!==undefined)
+                    num=+req.query.num;
+                spottingaddon.getNextBatch(+req.query.width,num,function (err,batchType,batchId,ngram,spottings) {
+                    //setTimeout(function(){
                     res.send({batchType:batchType,batchId:batchId,ngram:ngram,spottings:spottings});
+                    //},2000);
                 });
             } else {
                 res.redirect('/login');
