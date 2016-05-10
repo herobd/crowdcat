@@ -10,6 +10,8 @@
 
 #include <iostream>
 
+#define FUZZY 15
+
 using namespace std;
 
 class Spotting {
@@ -82,7 +84,7 @@ public:
           //  cv::waitKey();
         //}
         for (int r=0; r<bry-tly; r++)
-            for (int c=sideFromR; c<sideFromR+brx-tlx; c++)
+            for (int c=sideFromR-FUZZY; c<sideFromR+brx-tlx+FUZZY; c++)
             {
                 //if (left==1117 && tly==186 && (r==10 || r==5) && c==300)
                 //{
@@ -91,15 +93,23 @@ public:
                 //}
                 //cout <<" ("<<r<<" "<<c;
                 //cout.flush();
-                cv::Vec3b& pix = image.at<cv::Vec3b>(r,c);
-                //cout <<"):";
-                //cout.flush();
-                //cout<<(int)pix[0];
-                //cout.flush();
-                //image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(20+(int)(pix[1]*1.05),255),pix[2]*0.75);
-                pix[0]*=0.75;
-                pix[1] =min(20+(int)(pix[1]*1.05),255);
-                pix[2]*=0.75;
+                if (c>=0 && c<image.cols)
+                {
+                    cv::Vec3b& pix = image.at<cv::Vec3b>(r,c);
+                    //cout <<"):";
+                    //cout.flush();
+                    //cout<<(int)pix[0];
+                    //cout.flush();
+                    //image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(20+(int)(pix[1]*1.05),255),pix[2]*0.75);
+                    float fuzzyMult = 1;
+                    if (c<sideFromR+FUZZY)
+                        fuzzyMult=(c-sideFromR+FUZZY)/(2.0*FUZZY);
+                    else if (c>sideFromR+brx-tlx-FUZZY)
+                        fuzzyMult=(sideFromR+brx-tlx+FUZZY-c)/(2.0*FUZZY);
+                    pix[0]*=1.0-0.25*fuzzyMult;
+                    pix[1] =min((int)(20*fuzzyMult+(pix[1]*(1.0+fuzzyMult*0.05))),255);
+                    pix[2]*=1.0-0.25*fuzzyMult;
+                }
             }
         //cout<<endl;
         //cout <<"done"<<endl;
@@ -176,7 +186,7 @@ public:
  */
 class SpottingResults {
 public:
-    SpottingResults(string ngram, double acceptThreshold, double rejectThreshold);
+    SpottingResults(string ngram, double splitThreshold, double momentumTerm=4);
     string ngram;
     
     ~SpottingResults() 
@@ -211,10 +221,15 @@ private:
     int numBatches;
     bool allBatchesSent;
     
+    double momentumTerm;
+    
     float trueMean;
     float trueVariance;
     float falseMean;
     float falseVariance;
+    
+    float pullFromScore;
+    float delta;
     
     float maxScore;
     float minScore;
@@ -229,7 +244,7 @@ private:
     
     SpottingImage getNextSpottingImage(bool* done, int maxWidth);
     
-    void EMThresholds();
+    void EMThresholds(bool init=false);
 };
 
 #endif

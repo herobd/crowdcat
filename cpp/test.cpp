@@ -6,8 +6,12 @@ int main() {
     //TEST
     
     MasterQueue q;
-    vector<SpottingsBatch*> todo;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
+        q.test_autoBatch();
+    }
+    /*vector<SpottingsBatch*> todo;
+    for (int iter=0; iter<100; iter++) {
+        cout <<"batch"<<endl;
         SpottingsBatch* s = q.getBatch(5,300);
         if (s==NULL)
             break;
@@ -38,7 +42,7 @@ int main() {
     }
     
     MasterQueue q2;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
         SpottingsBatch* s = q2.getBatch(5,300);
         if (s!=NULL)
         {
@@ -91,7 +95,7 @@ int main() {
     }
     
     MasterQueue q4;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
         SpottingsBatch* s = q4.getBatch(5,300);
         if (s!=NULL)
         {
@@ -114,7 +118,7 @@ int main() {
     }
     
     MasterQueue q5;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
         SpottingsBatch* s = q5.getBatch(5,300);
         if (s!=NULL)
         {
@@ -138,7 +142,7 @@ int main() {
     
     
     MasterQueue q6;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
         todo.clear();
         for (int i=0; i<3; i++) {
             SpottingsBatch* s = q6.getBatch(5,300);
@@ -169,7 +173,7 @@ int main() {
     }
     
     MasterQueue q7;
-    while(true) {
+    for (int iter=0; iter<100; iter++) {
         todo.clear();
         for (int i=0; i<3; i++) {
             SpottingsBatch* s = q7.getBatch(5,700);
@@ -197,7 +201,7 @@ int main() {
                 delete res;
                 delete s;
                 SpottingsBatch* s2 = q7.getBatch(5,700);
-                if (s2!=NULL)
+                if (s2!=NULL && i<120)
                     todo.push_back(s2);
             }
         }
@@ -207,7 +211,7 @@ int main() {
     #pragma omp parallel num_threads(3)
     {
         SpottingsBatch* s;
-        do {
+        for (int iter=0; iter<100 && s!=NULL; iter++) {
             vector<string> ids;
             vector<int> labels;
             //#pragma omp barrier
@@ -231,6 +235,6 @@ int main() {
                 delete res;
                 delete s;
             }
-        } while (s!=NULL);
-    }
+        } 
+    }*/
 }

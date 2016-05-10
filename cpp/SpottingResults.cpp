@@ -6,8 +6,8 @@ unsigned long Spotting::_id=0;
 unsigned long SpottingsBatch::_batchId=0;
 unsigned long SpottingResults::_id=0;
 
-SpottingResults::SpottingResults(string ngram, double acceptThreshold, double rejectThreshold) : 
-    ngram(ngram), acceptThreshold(acceptThreshold), rejectThreshold(rejectThreshold)
+SpottingResults::SpottingResults(string ngram, double splitThreshold, double momentumTerm) : 
+    ngram(ngram), momentumTerm(momentumTerm)
 {
     id = _id++;
     //sem_init(&mutexSem,false,1);
@@ -26,6 +26,13 @@ SpottingResults::SpottingResults(string ngram, double acceptThreshold, double re
     trueVariance=1.0;
     falseMean=maxScore;
     falseVariance=1.0;
+    
+    acceptThreshold=-1;
+    rejectThreshold=-1;
+    
+    pullFromScore=splitThreshold;
+    delta=0;
+    //haveRe
 }
 
 void SpottingResults::add(Spotting spotting) {
@@ -48,9 +55,9 @@ void SpottingResults::add(Spotting spotting) {
     //sem_post(&mutexSem);
 }
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned int maxWidth) {
-    //cout <<"getBatch"<<endl;
-    if (acceptThreshold==rejectThreshold)
-        EMThresholds();
+    cout <<"getBatch"<<endl;
+    if (acceptThreshold==-1 && rejectThreshold==-1)
+        EMThresholds(true);
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     unsigned int toRet = ((((signed int)instancesByScore.size())-(signed int) num)>3)?num:instancesByScore.size();
@@ -58,13 +65,14 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned
     for (unsigned int i=0; i<toRet && !*done; i++) {
         SpottingImage tmp = getNextSpottingImage(done, maxWidth);
         ret->push_back(tmp);
-        
+        if (classById.size()<20)
+            *done=false;
     }
     if (*done)
         allBatchesSent=true;
     //sem_post(&mutexSem);
     numBatches++;
-    //cout <<"sent batch, have "<<instancesByScore.size()<<" left"<<endl;
+    cout <<"["<<id<<"] sent batch of size "<<ret->size()<<", have "<<instancesByScore.size()<<" left"<<endl;
     return ret;
 }
 
@@ -111,6 +119,10 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         numberRejected = distance(tracer,instancesByScore.end());
         
     }
+    else 
+    {
+        
+    }
     return ret;
 }
     
@@ -119,7 +131,8 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
 SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
 {
     //cout <<"getNextSpottingImage"<<endl;
-    float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
+    //float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
+    float midScore = pullFromScore;
     if ((*tracer)->score < midScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<midScore)
             tracer++;
@@ -175,8 +188,9 @@ SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
     return toRet;
 }
 
-void SpottingResults::EMThresholds()
+void SpottingResults::EMThresholds(bool init)
 {
+    float oldMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
     /*This will likely predict very narrow and ditinct distributions
      *initailly. This should be fine as we sample from the middle of
      *the thresholds outward.
@@ -210,6 +224,11 @@ void SpottingResults::EMThresholds()
         {
             double trueProb = exp(-1*pow(instancesById[id].score - trueMean,2)/(2*trueVariance));
             double falseProb = exp(-1*pow(instancesById[id].score - falseMean,2)/(2*falseVariance));
+            if (init)
+            {
+                trueProb = instancesById[id].score<pullFromScore;
+                falseProb = instancesById[id].score>pullFromScore;
+            }
             if (trueProb>falseProb)
             {
                 sumTrue+=instancesById[id].score;
@@ -240,31 +259,46 @@ void SpottingResults::EMThresholds()
         falseVariance/=expectedFalse.size();
     
     //set new thresholds
-    float numStdDevs = 1 + ((1.0+min(instancesById.size(),50))/(1.0+min(classById.size(),50)));//Use less as more are classified, we are more confident. Capped to reduce effect of many returned instances bogging us down.
-    acceptThreshold = falseMean-numStdDevs*sqrt(falseVariance);
-    rejectThreshold = trueMean+numStdDevs*sqrt(trueVariance);
+    float numStdDevs = 1;// + ((1.0+min((int)instancesById.size(),50))/(1.0+min((int)classById.size(),50)));//Use less as more are classified, we are more confident. Capped to reduce effect of many returned instances bogging us down.
+    float acceptThreshold1 = falseMean-numStdDevs*sqrt(falseVariance);
+    float rejectThreshold1 = trueMean+numStdDevs*sqrt(trueVariance);
+    float acceptThreshold2 = trueMean-numStdDevs*sqrt(trueVariance);
+    float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
+    acceptThreshold = min(acceptThreshold1,acceptThreshold2);
+    rejectThreshold = max(rejectThreshold1,rejectThreshold2);
     cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
     cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
     
-    cout <<"expected true: ";
+    /*cout <<"expected true: ";
     for (float v : expectedTrue)
         cout <<v<<", ";
     cout <<endl;
     cout <<"expected false: ";
     for (float v : expectedFalse)
         cout <<v<<", ";
-    cout <<endl;
-    cout <<"adjusted threshs, now "<<acceptThreshold<<" "<<rejectThreshold<<endl;
+    cout <<endl;*/
+    cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
     
     if(acceptThreshold>rejectThreshold) {//This is the case where the distributions are so far apart they "don't overlap"
         if (instancesById.size()/3 < classById.size()){//Be sure we aren't hitting this too early
             float mid = rejectThreshold + (acceptThreshold-rejectThreshold)/2.0;
             acceptThreshold = rejectThreshold = mid;//We finish here, by accepting and rejecting everything left.
+            cout<<"cross threshed, finisheing"<<endl;
         } 
         else {
             acceptThreshold = trueMean;//This is an overcorrection, allowing a alater batch to fix us.
             rejectThreshold = falseMean;
+            cout<<"cross threshed, correcting"<<endl;
         }
+    }
+    
+    if (!init)
+    {
+        float newMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
+        cout<<"oldMid: "<<oldMidScore<<" newmid: "<<newMidScore<<endl;
+        delta = newMidScore-oldMidScore + delta*momentumTerm;
+        pullFromScore += delta;
+        cout << "pullFromScore: "<<pullFromScore<<"   delta: "<<delta<<endl;
     }
 }
 
