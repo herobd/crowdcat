@@ -46,6 +46,8 @@ private:
     map<unsigned long, int> test_totalPos;
     map<unsigned long, int> test_numTruePos;
     map<unsigned long, int> test_numFalsePos;
+    double accuracyAvg, recallAvg, manualAvg, effortAvg;
+    int done;
 public:
     MasterQueue();
     SpottingsBatch* getBatch(unsigned int numberOfInstances, unsigned int maxWidth);
@@ -54,6 +56,15 @@ public:
     
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
-    void test_autoBatch();
+    bool test_autoBatch();
+    ~MasterQueue()
+    {
+        cout << "***********"<<endl;
+        cout << "* accuracy: "<<accuracyAvg/done<<endl;
+        cout << "* recall: "<<recallAvg/done<<endl;
+        cout << "* manual: "<<manualAvg/done<<endl;
+        cout << "* effort: "<<effortAvg/done<<endl;
+        cout << "***********"<<endl;
+    }
 };
 #endif

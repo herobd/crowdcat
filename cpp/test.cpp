@@ -6,9 +6,7 @@ int main() {
     //TEST
     
     MasterQueue q;
-    for (int iter=0; iter<100; iter++) {
-        q.test_autoBatch();
-    }
+    while (q.test_autoBatch()){}
     /*vector<SpottingsBatch*> todo;
     for (int iter=0; iter<100; iter++) {
         cout <<"batch"<<endl;

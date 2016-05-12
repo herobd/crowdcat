@@ -186,12 +186,15 @@ public:
  */
 class SpottingResults {
 public:
-    SpottingResults(string ngram, double splitThreshold, double momentumTerm=4);
+    SpottingResults(string ngram);
     string ngram;
     
     ~SpottingResults() 
     {
         cout <<"results "<<id<<", numberClassifiedTrue: "<<numberClassifiedTrue<<", numberClassifiedFalse: "<<numberClassifiedFalse<<", numberAccepted: "<<numberAccepted<<", numberRejected: "<<numberRejected<<endl;
+        float effortR=numberAccepted/(0.0+numberClassifiedTrue+numberClassifiedFalse);
+        cout<<"* effort reduction: "<<effortR<<endl;
+        //assert(effortR>0);
     }
     
     //sem_t mutexSem;
@@ -221,7 +224,6 @@ private:
     int numBatches;
     bool allBatchesSent;
     
-    double momentumTerm;
     
     float trueMean;
     float trueVariance;

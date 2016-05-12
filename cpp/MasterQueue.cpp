@@ -74,6 +74,8 @@ MasterQueue::MasterQueue() {
     
     testIter=0;	
     addTestSpottings();
+    accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
+    done=0;
     ///end testing
 }
 
@@ -86,8 +88,12 @@ void MasterQueue::addTestSpottings()
     map<string,SpottingResults*> spottingResults;
     
     
-    ifstream in("./data/GW_spottings_fold1_0.100000.csv");
+    ifstream in("./data/GW_agSpottings_fold1_0.100000.csv");
     string line;
+    
+    //std::getline(in,line);
+    float initSplit=0;//stof(line);//-0.52284769;
+    
     while(std::getline(in,line))
     {
         vector<string> strV;
@@ -98,11 +104,13 @@ void MasterQueue::addTestSpottings()
             strV.push_back(item);
         }
         
+        
+        
         string ngram = strV[0];
         string spottingId = strV[0]+strV[1]+":"+to_string(testIter);
         if (spottingResults.find(spottingId)==spottingResults.end())
         {
-            spottingResults[spottingId] = new SpottingResults(ngram,-0.52284769);
+            spottingResults[spottingId] = new SpottingResults(ngram,initSplit);
         }
         
         string page = strV[2];
@@ -143,9 +151,11 @@ void MasterQueue::addTestSpottings()
     testIter++;
 }
 
-void MasterQueue::test_autoBatch()
+bool MasterQueue::test_autoBatch()
 {
     SpottingsBatch* b = getBatch(5, 300);
+    if (b==NULL)
+        return false;
     vector<string> ids;
     vector<int> userClassifications;
     for (int i=0; i<b->size(); i++)
@@ -159,6 +169,7 @@ void MasterQueue::test_autoBatch()
     }
     vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
     delete tmp;
+    return true;
 }
 SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth) 
 {
@@ -209,15 +220,15 @@ SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, unsigned i
     }
     else //test
     {   
-        cout<<"batch: ";
+        /*cout<<"batch: ";
         for (int i=0; i<batch->size(); i++)
         {
             if (test_groundTruth[batch->spottingResultsId][batch->at(i).id])
-                cout << "true ";
+                cout << "true\t";
             else
-                cout << "false ";
+                cout << "false\t";
         }   
-        cout<<endl;
+        cout<<endl;*/
     }
     return batch;
 }
@@ -241,7 +252,14 @@ void MasterQueue::test_showResults(unsigned long id,string ngram)
     cout << "* accuracy: "<<(0.0+test_numTruePos[id])/(test_numTruePos[id]+test_numFalsePos[id])<<endl;
     cout << "* recall: "<<(0.0+test_numTruePos[id])/(test_totalPos[id])<<endl;
     cout << "* manual: "<<test_numDone[id]/(0.0+test_total[id])<<endl;
+    cout << "* effort: "<<(0.0+test_numTruePos[id])/test_numDone[id]<<endl;
     cout << "* true pos: "<<test_numTruePos[id]<<" false pos: "<<test_numFalsePos[id]<<" total true: "<<test_totalPos[id]<<" total all: "<<test_total[id]<<endl;
+    
+    accuracyAvg+=(0.0+test_numTruePos[id])/(test_numTruePos[id]+test_numFalsePos[id]);
+    recallAvg+=(0.0+test_numTruePos[id])/(test_totalPos[id]);
+    manualAvg+=test_numDone[id]/(0.0+test_total[id]);
+    effortAvg+=(0.0+test_numTruePos[id])/test_numDone[id];
+    done++;
 }
 
 //not thread safe
