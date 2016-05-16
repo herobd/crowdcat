@@ -1,12 +1,44 @@
 
 #include "MasterQueue.h"
+#include "TestQueue.h"
 #include <assert.h>
 
 int main() {
     //TEST
     
-    MasterQueue q;
-    while (q.test_autoBatch()){}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	TestQueue t;
+    int numUsers=8;
+    for (int n=0; n<t.numTestBatches; n++)
+    {
+        vector<int> first(numUsers);
+        //#pragma omp parallel for num_threads(4)
+        for (int i=0; i<numUsers; i++)
+        {
+            SpottingsBatch* b = t.getBatch(5, 400+i, i);
+            first[i]=b->at(0).tlx;
+            
+            vector<string> ids;
+            vector<int> labels;
+            for (int ii=0; ii<b->size(); ii++)
+            {
+                ids.push_back(to_string(b->at(ii).id));
+                labels.push_back(ii%2);
+                
+            }
+            int fp, fn;
+            assert(t.feedback(b->spottingResultsId,ids,labels,i, &fp, &fn) || n<t.numTestBatches-1);
+        }
+        
+        for (int i=1; i<numUsers; i++)
+        {
+            assert(first[i-1] == first[i]);
+        }
+    }
+    //MasterQueue q;
+    //while (q.test_autoBatch()){}
+    
+    
+    
     /*vector<SpottingsBatch*> todo;
     for (int iter=0; iter<100; iter++) {
         cout <<"batch"<<endl;

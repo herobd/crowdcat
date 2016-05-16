@@ -92,7 +92,7 @@ void MasterQueue::addTestSpottings()
     string line;
     
     //std::getline(in,line);
-    float initSplit=0;//stof(line);//-0.52284769;
+    //float initSplit=0;//stof(line);//-0.52284769;
     
     while(std::getline(in,line))
     {
@@ -110,7 +110,7 @@ void MasterQueue::addTestSpottings()
         string spottingId = strV[0]+strV[1]+":"+to_string(testIter);
         if (spottingResults.find(spottingId)==spottingResults.end())
         {
-            spottingResults[spottingId] = new SpottingResults(ngram,initSplit);
+            spottingResults[spottingId] = new SpottingResults(ngram);
         }
         
         string page = strV[2];
@@ -158,15 +158,22 @@ bool MasterQueue::test_autoBatch()
         return false;
     vector<string> ids;
     vector<int> userClassifications;
+    
+    cout<<b->ngram<<": ";
+    
     for (int i=0; i<b->size(); i++)
     {
+        
         unsigned long id = b->at(i).id;
         ids.push_back(to_string(id));
         if (test_groundTruth[b->spottingResultsId][id])
             userClassifications.push_back(1);
         else
             userClassifications.push_back(0);
+        
+        cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
     }
+    cout<<endl;
     vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
     delete tmp;
     return true;
