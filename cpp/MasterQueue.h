@@ -8,142 +8,63 @@
 #include <queue>
 #include <iostream>
 #include "semaphore.h"
+#include <pthread.h>
+#include "SpottingResults.h"
 
+#include <fstream>
 
 using namespace std;
 
-class Spotting {
-public:
-    Spotting(int tlx, int tly, int brx, int bry, string ngram, float score) : 
-        tlx(tlx), tly(tly), brx(brx), bry(bry), ngram(ngram), score(score) {}
-    int tlx, tly, brx, bry;
-    string ngram;
-    float score;
-};
 
 
 
-class SpottingImage {
-public:
-    SpottingImage(string id, string ngram, cv::Mat img) : 
-        id(id), ngram(ngram), img(img) {}
-    SpottingImage(const SpottingImage& o) : 
-        id(o.id), ngram(o.ngram), img(o.img) {}
-        
-    
-    
-    string id;
-    string ngram;
-    cv::Mat img;
-};
 
-class Spottings {
-public:
-    Spottings(string ngram) : 
-        ngram(ngram),  batchId("") {}
-    Spottings(string ngram, string batchId) : 
-        ngram(ngram),  batchId(batchId) {}
-    string ngram;
-    string batchId;
-    
-    vector<SpottingImage> instances;
-    void push_back(SpottingImage im) {
-        if (im.img.cols>0)
-		instances.push_back(im);
-    }
-    vector<SpottingImage> getSpottings(unsigned int num, bool hard, unsigned int maxWidth=0) {
-        vector<SpottingImage> ret;
-        //cout << "num:"<<num << endl;
-        //cout << "inst:"<<instances.size() << endl;
-        //cout << "exp:"<<((((signed int)instances.size())-num)>3) << " :: "<<(instances.size()-num)<< endl;
-        unsigned int toRet = (hard&&instances.size()>=num)||((((signed int)instances.size())-(signed int) num)>3)?num:instances.size();
-        //cout << "toRet:"<<toRet << endl;
-        
-        for (unsigned int i=0; i<toRet; i++) {
-            SpottingImage img=instances.back();
-            if (maxWidth!=0 && img.img.cols>maxWidth) {
-                int crop = (img.img.cols-maxWidth)/2;
-                img.img=img.img(cv::Rect(crop,0,maxWidth,img.img.rows));
-            }
-            ret.push_back(img);
-            _done.push(instances.back());
-            instances.pop_back();
-            //cout << "popped inst:"<<instances.size() << endl;
-        }
-        return ret;
-    }
-    void _reset() {
-        while (_done.size()>0) {
-            instances.push_back(_done.front());
-            _done.pop();
-        }
-    }
-private:
-    queue<SpottingImage> _done;
-};
 
-/*class scoreComp
-{
-  bool reverse;
-public:
-  scoreComp(const bool& revparam=false)
-    {reverse=revparam;}
-  bool operator() (const Spotting& lhs, const Spotting& rhs) const
-  {
-    if (reverse) return (lhs.score>rhs.score);
-    else return (lhs.score<rhs.score);
-  }
-};*/
-
-class SpottingResults {
-public:
-    SpottingResults(string ngram) : 
-        ngram(ngram) {}
-    string ngram;
-    
-    multimap<float,Spotting,vector<Spotting>> instances;
-    void push_back(Spotting spotting) {
-        instances.insert(spotting.score,spotting);
-    }
-    vector<SpottingImage> getSpottings(unsigned int num, unsigned int maxWidth=0) {
-        vector<SpottingImage> ret;
-        //cout << "num:"<<num << endl;
-        //cout << "inst:"<<instances.size() << endl;
-        //cout << "exp:"<<((((signed int)instances.size())-num)>3) << " :: "<<(instances.size()-num)<< endl;
-        unsigned int toRet = ((((signed int)instances.size())-(signed int) num)>3)?num:instances.size();
-        //cout << "toRet:"<<toRet << endl;
-        
-        for (unsigned int i=0; i<toRet; i++) {
-            SpottingImage img=instances.back();
-            if (maxWidth!=0 && img.img.cols>maxWidth) {
-                int crop = (img.img.cols-maxWidth)/2;
-                img.img=img.img(cv::Rect(crop,0,maxWidth,img.img.rows));
-            }
-            ret.push_back(img);
-            _done.push(instances.back());
-            instances.pop_back();
-            //cout << "popped inst:"<<instances.size() << endl;
-        }
-        return ret;
-    }
-    void _reset() {
-        while (_done.size()>0) {
-            instances.push_back(_done.front());
-            _done.pop();
-        }
-    }
-private:
-    queue<SpottingImage> _done;
-};
 
 class MasterQueue {
 private:
-    sem_t mutexSem;
-    queue< Spottings > spottingsQueue;
-    int atID;
+    pthread_rwlock_t semResultsQueue;
+    pthread_rwlock_t semResults;
+    
+    map<unsigned long, pair<sem_t*,SpottingResults*> > results;
+    map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
+    
+    //int atID;
+    //map<unsigned long,unsigned long> batchToResults;
+    
+    //testing stuff
+    //cv::Mat page;
+    int testIter;
+    map<string,cv::Mat> pages;
+    void addTestSpottings();
+    void test_showResults(unsigned long id,string ngram);
+    void test_finish();
+    
+    map<unsigned long, map<unsigned long,bool> > test_groundTruth;
+    map<unsigned long, int> test_total;
+    map<unsigned long, int> test_numDone;
+    map<unsigned long, int> test_totalPos;
+    map<unsigned long, int> test_numTruePos;
+    map<unsigned long, int> test_numFalsePos;
+    double accuracyAvg, recallAvg, manualAvg, effortAvg;
+    int done;
 public:
     MasterQueue();
-    Spottings getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth=0);
+    SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth);
+    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
+    void addSpottingResults(SpottingResults* res);
     
+    //test
+    vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
+    bool test_autoBatch();
+    ~MasterQueue()
+    {
+        cout << "***********"<<endl;
+        cout << "* accuracy: "<<accuracyAvg/done<<endl;
+        cout << "* recall: "<<recallAvg/done<<endl;
+        cout << "* manual: "<<manualAvg/done<<endl;
+        cout << "* effort: "<<effortAvg/done<<endl;
+        cout << "***********"<<endl;
+    }
 };
 #endif

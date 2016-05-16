@@ -144,8 +144,8 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = self.getTestApp(req.user);
-                res.render(appName, {app_version:'app', message: req.flash('error') });
+                var appName = 'app';
+                res.render(appName, {app_version:'app', testMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -156,8 +156,8 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = self.getTestApp(req.user);
-                res.render(appName, {app_version:'app_tap', message: req.flash('error') });
+                var appName = 'app';
+                res.render(appName, {app_version:'app_tap', testMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -169,7 +169,7 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 var appName = 'app_hardcore';
-                res.render(appName, {app_version:'app_hardcore', message: req.flash('error') });
+                res.render(appName, {app_version:'app_hardcore', testMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -180,6 +180,24 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 res.render('home', { message: self.getTestInstructions(req.user) });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        
+        var userCount=0;
+        self.app.get('/app-test', function(req, res) {
+            if (req.sessionID) {
+                if (!self.userSessionMap[req.sessionID])
+                    self.userSessionMap[req.sessionID]=userCount++;
+                //console.log('[app] user-ses:'+req.sessionID+' hit app');
+                //res.setHeader('Content-Type', 'text/html');
+                //res.send(self.cache_get('app.html') );
+                var appName = self.getTestApp(req.user);
+                var num = +req.query.num;
+                if (num==undefined)
+                    num=1;
+                res.render(appName, {app_version:appName, testMode:true, testNum:num, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -223,11 +241,21 @@ var ControllerApp = function(port) {
                 var num=-1;
                 if (req.query.num!==undefined)
                     num=+req.query.num;
-                spottingaddon.getNextBatch(+req.query.width,num,function (err,batchType,batchId,ngram,spottings) {
-                    //setTimeout(function(){
-                    res.send({batchType:batchType,batchId:batchId,ngram:ngram,spottings:spottings});
-                    //},2000);
-                });
+                
+                if (req.query.test) {
+                    spottingaddon.getNextTestBatch(+req.query.width,num,self.userSessionMap[req.sessionID],function (err,batchType,batchId,resultsId,ngram,spottings) {
+                        //setTimeout(function(){
+                        res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                        //},2000);
+                    });
+                } else {
+                    spottingaddon.getNextBatch(+req.query.width,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                        //setTimeout(function(){
+                        res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                        //},2000);
+                    });
+                }
+                
             } else {
                 res.redirect('/login');
             }
@@ -245,9 +273,18 @@ var ControllerApp = function(port) {
             -batch {spotting_id: true/false,...}
             */
             if (req.user || debug) {
-                spottingaddon.spottingBatchDone(req.body.batchId,req.body.labels,function (err) {
-                    //nothing
-                });
+                
+                if (req.query.test) {
+                    spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,self.userSessionMap[req.sessionID],function (err,done,fPos,fNeg) {
+                        if (fPos>=0 && fNeg>=0) {
+                            //TODO something with the tracking info.
+                        }
+                    });
+                } else {
+                    spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,function (err) {
+                        
+                    });
+                }
                 res.send('ok');
             } else
                 res.redirect('/login');
@@ -356,7 +393,22 @@ var ControllerApp = function(port) {
             
             
         });
+        self.resetTestUsers();
     };
+    
+    
+    self.resetTestUsers = function() {
+        
+        //This could cuase bad things if people are using it right now. But hopefully nobody's up this late...
+        spottingaddon.clearTestUsers(function(){self.userSessionMap={};});
+
+        var now = new Date();
+        var millisTillTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 2, 0, 0, 0) - now;
+        if (millisTillTime < 0) {
+             millisTillTime += 86400000; // it's after 2am, try 2am tomorrow.
+        }
+        setTimeout(resetTestUsers, millisTillTime);
+    }
     
     
     //////////////////////////////additional functions

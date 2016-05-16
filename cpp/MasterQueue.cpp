@@ -1,145 +1,350 @@
 #include "MasterQueue.h"
 
+
+
 MasterQueue::MasterQueue() {
-    sem_init(&mutexSem,false,1);
-    atID=0;
-    //For demo
-    Spottings an1("an");
-    an1.push_back(SpottingImage("test_an_0","an",cv::imread("test/bigramExamples/an/wordimg_7.png")));
-    an1.push_back(SpottingImage("test_an_1","an",cv::imread("test/bigramExamples/an/wordimg_15.png")));
-    an1.push_back(SpottingImage("test_an_2","an",cv::imread("test/bigramExamples/an/wordimg_66.png")));
-    an1.push_back(SpottingImage("test_an_3","an",cv::imread("test/bigramExamples/an/wordimg_77.png")));
-    an1.push_back(SpottingImage("test_an_4","an",cv::imread("test/bigramExamples/an/wordimg_145.png")));
-    an1.push_back(SpottingImage("test_an_5","an",cv::imread("test/bigramExamples/an/wordimg_194.png")));
-    an1.push_back(SpottingImage("test_an_6","an",cv::imread("test/bigramExamples/an/wordimg_208.png")));
-    an1.push_back(SpottingImage("test_an_7","an",cv::imread("test/bigramExamples/an/wordimg_247.png")));
-    an1.push_back(SpottingImage("test_an_8","an",cv::imread("test/bigramExamples/an/wordimg_263.png")));
-    an1.push_back(SpottingImage("test_an_9","an",cv::imread("test/bigramExamples/an/wordimg_291.png")));
-    spottingsQueue.push(an1);
+    //sem_init(&semResultsQueue,false,1);
+    //sem_init(&semResults,false,1);
+    pthread_rwlock_init(&semResultsQueue,NULL);
+    pthread_rwlock_init(&semResults,NULL);
+    //atID=0;
     
-    Spottings ed1("ed");
-    ed1.push_back(SpottingImage("test_ed_0","an",cv::imread("test/bigramExamples/ed/wordimg_46.png")));
-    ed1.push_back(SpottingImage("test_ed_1","an",cv::imread("test/bigramExamples/ed/wordimg_58.png")));
-    ed1.push_back(SpottingImage("test_ed_2","an",cv::imread("test/bigramExamples/ed/wordimg_91.png")));
-    ed1.push_back(SpottingImage("test_ed_3","an",cv::imread("test/bigramExamples/ed/wordimg_100.png")));
-    ed1.push_back(SpottingImage("test_ed_4","an",cv::imread("test/bigramExamples/ed/wordimg_131.png")));
-    ed1.push_back(SpottingImage("test_ed_5","an",cv::imread("test/bigramExamples/ed/wordimg_159.png")));
-    ed1.push_back(SpottingImage("test_ed_6","an",cv::imread("test/bigramExamples/ed/wordimg_225.png")));
-    ed1.push_back(SpottingImage("test_ed_7","an",cv::imread("test/bigramExamples/ed/wordimg_291.png")));
-    ed1.push_back(SpottingImage("test_ed_8","an",cv::imread("test/bigramExamples/ed/wordimg_324.png")));
-    ed1.push_back(SpottingImage("test_ed_9","an",cv::imread("test/bigramExamples/ed/wordimg_358.png")));
-    spottingsQueue.push(ed1);
+    ///testing
     
-    Spottings th1("th");
-    th1.push_back(SpottingImage("test_th_0","an",cv::imread("test/bigramExamples/th/wordimg_5.png")));
-    th1.push_back(SpottingImage("test_th_1","an",cv::imread("test/bigramExamples/th/wordimg_13.png")));
-    th1.push_back(SpottingImage("test_th_2","an",cv::imread("test/bigramExamples/th/wordimg_16.png")));
-    th1.push_back(SpottingImage("test_th_3","an",cv::imread("test/bigramExamples/th/wordimg_18.png")));
-    th1.push_back(SpottingImage("test_th_4","an",cv::imread("test/bigramExamples/th/wordimg_25.png")));
-    th1.push_back(SpottingImage("test_th_5","an",cv::imread("test/bigramExamples/th/wordimg_28.png")));
-    th1.push_back(SpottingImage("test_th_6","an",cv::imread("test/bigramExamples/th/wordimg_32.png")));
-    th1.push_back(SpottingImage("test_th_7","an",cv::imread("test/bigramExamples/th/wordimg_35.png")));
-    th1.push_back(SpottingImage("test_th_8","an",cv::imread("test/bigramExamples/th/wordimg_39.png")));
-    th1.push_back(SpottingImage("test_th_9","an",cv::imread("test/bigramExamples/th/wordimg_42.png")));
-    th1.push_back(SpottingImage("test_th_10","an",cv::imread("test/bigramExamples/th/wordimg_60.png")));
-    th1.push_back(SpottingImage("test_th_11","an",cv::imread("test/bigramExamples/th/wordimg_87.png")));
-    th1.push_back(SpottingImage("test_th_12","an",cv::imread("test/bigramExamples/th/wordimg_113.png")));
-    th1.push_back(SpottingImage("test_th_13","an",cv::imread("test/bigramExamples/th/wordimg_125.png")));
-    th1.push_back(SpottingImage("test_th_14","an",cv::imread("test/bigramExamples/th/wordimg_130.png")));
-    th1.push_back(SpottingImage("test_th_15","an",cv::imread("test/bigramExamples/th/wordimg_132.png")));
-    th1.push_back(SpottingImage("test_th_16","an",cv::imread("test/bigramExamples/th/wordimg_148.png")));
-    th1.push_back(SpottingImage("test_th_17","an",cv::imread("test/bigramExamples/th/wordimg_151.png")));
-    th1.push_back(SpottingImage("test_th_18","an",cv::imread("test/bigramExamples/th/wordimg_186.png")));
-    th1.push_back(SpottingImage("test_th_19","an",cv::imread("test/bigramExamples/th/wordimg_196.png")));
-    spottingsQueue.push(th1);
+    /*
+    //cv::Mat* &page = new cv::Mat();
+    page = cv::imread("/home/brian/intel_index/data/gw_20p_wannot/2700270.tif");//,CV_LOAD_IMAGE_GRAYSCALE
     
-    Spottings he1("he");
-    he1.push_back(SpottingImage("test_he_0","an",cv::imread("test/bigramExamples/he/wordimg_13.png")));
-    he1.push_back(SpottingImage("test_he_1","an",cv::imread("test/bigramExamples/he/wordimg_16.png")));
-    he1.push_back(SpottingImage("test_he_2","an",cv::imread("test/bigramExamples/he/wordimg_19.png")));
-    he1.push_back(SpottingImage("test_he_3","an",cv::imread("test/bigramExamples/he/wordimg_25.png")));
-    he1.push_back(SpottingImage("test_he_4","an",cv::imread("test/bigramExamples/he/wordimg_28.png")));
-    he1.push_back(SpottingImage("test_he_5","an",cv::imread("test/bigramExamples/he/wordimg_35.png")));
-    he1.push_back(SpottingImage("test_he_6","an",cv::imread("test/bigramExamples/he/wordimg_42.png")));
-    spottingsQueue.push(he1);
+    SpottingResults* r0 = new SpottingResults("an",-1,-1);//0.1,0.9);
     
-    Spottings an2("an");
-    an2.push_back(SpottingImage("test_an_10","an",cv::imread("test/bigramExamples/an/wordimg_334.png")));
-    an2.push_back(SpottingImage("test_an_11","an",cv::imread("test/bigramExamples/an/wordimg_346.png")));
-    an2.push_back(SpottingImage("test_an_12","an",cv::imread("test/bigramExamples/an/wordimg_348.png")));
-    an2.push_back(SpottingImage("test_an_13","an",cv::imread("test/bigramExamples/an/wordimg_393.png")));
-    an2.push_back(SpottingImage("test_an_14","an",cv::imread("test/bigramExamples/an/wordimg_422.png")));
-    an2.push_back(SpottingImage("test_an_15","an",cv::imread("test/bigramExamples/an/wordimg_433.png")));
-    an2.push_back(SpottingImage("test_an_16","an",cv::imread("test/bigramExamples/an/wordimg_435.png")));
-    an2.push_back(SpottingImage("test_an_17","an",cv::imread("test/bigramExamples/an/wordimg_450.png")));
-    an2.push_back(SpottingImage("test_an_18","an",cv::imread("test/bigramExamples/an/wordimg_465.png")));
-    an2.push_back(SpottingImage("test_an_19","an",cv::imread("test/bigramExamples/an/wordimg_483.png")));
-    spottingsQueue.push(an2);
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.5));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.4));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.45));
     
-    Spottings en2("en");
-    en2.push_back(SpottingImage("test_en_0","en",cv::imread("test/bigramExamples/en/wordimg_2.png")));
-    en2.push_back(SpottingImage("test_en_1","en",cv::imread("test/bigramExamples/en/wordimg_40.png")));
-    en2.push_back(SpottingImage("test_en_2","en",cv::imread("test/bigramExamples/en/wordimg_47.png")));
-    en2.push_back(SpottingImage("test_en_3","en",cv::imread("test/bigramExamples/en/wordimg_66.png")));
-    en2.push_back(SpottingImage("test_en_4","en",cv::imread("test/bigramExamples/en/wordimg_77.png")));
-    en2.push_back(SpottingImage("test_en_5","en",cv::imread("test/bigramExamples/en/wordimg_85.png")));
-    en2.push_back(SpottingImage("test_en_6","en",cv::imread("test/bigramExamples/en/wordimg_106.png")));
-    en2.push_back(SpottingImage("test_en_7","en",cv::imread("test/bigramExamples/en/wordimg_136.png")));
-    en2.push_back(SpottingImage("test_en_8","en",cv::imread("test/bigramExamples/en/wordimg_150.png")));
-    en2.push_back(SpottingImage("test_en_9","en",cv::imread("test/bigramExamples/en/wordimg_195.png")));
-    en2.push_back(SpottingImage("test_en_10","en",cv::imread("test/bigramExamples/en/wordimg_231.png")));
-    en2.push_back(SpottingImage("test_en_11","en",cv::imread("test/bigramExamples/en/wordimg_257.png")));
-    en2.push_back(SpottingImage("test_en_12","en",cv::imread("test/bigramExamples/en/wordimg_348.png")));
-    en2.push_back(SpottingImage("test_en_13","en",cv::imread("test/bigramExamples/en/wordimg_402.png")));
-    en2.push_back(SpottingImage("test_en_14","en",cv::imread("test/bigramExamples/en/wordimg_408.png")));
-    en2.push_back(SpottingImage("test_en_15","en",cv::imread("test/bigramExamples/en/wordimg_497.png")));
-    spottingsQueue.push(en2);
+    r0->add(Spotting(801, 189, 927, 231, 0, &page, "an", 0.2));
+    r0->add(Spotting(693, 618, 837, 657, 0, &page, "an", 0.3));
+    r0->add(Spotting(1563, 612, 1677, 651, 0, &page, "an", 0.35));
+    r0->add(Spotting(1260, 702, 1356, 735, 0, &page, "an", 0.41));
     
-    Spottings st1("st");
-    st1.push_back(SpottingImage("test_st_0","an",cv::imread("test/bigramExamples/st/wordimg_118.png")));
-    st1.push_back(SpottingImage("test_st_1","an",cv::imread("test/bigramExamples/st/wordimg_124.png")));
-    st1.push_back(SpottingImage("test_st_2","an",cv::imread("test/bigramExamples/st/wordimg_283.png")));
-    st1.push_back(SpottingImage("test_st_3","an",cv::imread("test/bigramExamples/st/wordimg_366.png")));
-    st1.push_back(SpottingImage("test_st_4","an",cv::imread("test/bigramExamples/st/wordimg_762.png")));
-    st1.push_back(SpottingImage("test_st_5","an",cv::imread("test/bigramExamples/st/wordimg_813.png")));
-    st1.push_back(SpottingImage("test_st_6","an",cv::imread("test/bigramExamples/st/wordimg_1010.png")));
-    st1.push_back(SpottingImage("test_st_7","an",cv::imread("test/bigramExamples/st/wordimg_1013.png")));
-    st1.push_back(SpottingImage("test_st_8","an",cv::imread("test/bigramExamples/st/wordimg_1023.png")));
-    spottingsQueue.push(st1);
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.55));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.44));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.47));
     
-    Spottings th2("th");
-    th2.push_back(SpottingImage("test_th_20","an",cv::imread("test/bigramExamples/th/wordimg_220.png")));
-    th2.push_back(SpottingImage("test_th_21","an",cv::imread("test/bigramExamples/th/wordimg_223.png")));
-    th2.push_back(SpottingImage("test_th_22","an",cv::imread("test/bigramExamples/th/wordimg_228.png")));
-    th2.push_back(SpottingImage("test_th_23","an",cv::imread("test/bigramExamples/th/wordimg_239.png")));
-    th2.push_back(SpottingImage("test_th_24","an",cv::imread("test/bigramExamples/th/wordimg_242.png")));
-    th2.push_back(SpottingImage("test_th_25","an",cv::imread("test/bigramExamples/th/wordimg_249.png")));
-    th2.push_back(SpottingImage("test_th_26","an",cv::imread("test/bigramExamples/th/wordimg_270.png")));
-    th2.push_back(SpottingImage("test_th_27","an",cv::imread("test/bigramExamples/th/wordimg_282.png")));
-    th2.push_back(SpottingImage("test_th_28","an",cv::imread("test/bigramExamples/th/wordimg_285.png")));
-    th2.push_back(SpottingImage("test_th_29","an",cv::imread("test/bigramExamples/th/wordimg_307.png")));
-    th2.push_back(SpottingImage("test_th_30","an",cv::imread("test/bigramExamples/th/wordimg_322.png")));
-    th2.push_back(SpottingImage("test_th_31","an",cv::imread("test/bigramExamples/th/wordimg_337.png")));
-    th2.push_back(SpottingImage("test_th_32","an",cv::imread("test/bigramExamples/th/wordimg_344.png")));
-    th2.push_back(SpottingImage("test_th_33","an",cv::imread("test/bigramExamples/th/wordimg_353.png")));
-    th2.push_back(SpottingImage("test_th_34","an",cv::imread("test/bigramExamples/th/wordimg_367.png")));
-    th2.push_back(SpottingImage("test_th_35","an",cv::imread("test/bigramExamples/th/wordimg_371.png")));
-    th2.push_back(SpottingImage("test_th_36","an",cv::imread("test/bigramExamples/th/wordimg_349.png")));
-    spottingsQueue.push(th2);
+    r0->add(Spotting(801, 189, 927, 231, 0, &page, "an", 0.22));
+    r0->add(Spotting(693, 618, 837, 657, 0, &page, "an", 0.33));
+    r0->add(Spotting(1563, 612, 1677, 651, 0, &page, "an", 0.42));
+    r0->add(Spotting(1260, 702, 1356, 735, 0, &page, "an", 0.46));
+    
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.7));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.64));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.445));
+    
+    r0->add(Spotting(801, 189, 927, 231, 0, &page, "an", 0.1));
+    r0->add(Spotting(693, 618, 837, 657, 0, &page, "an", 0.15));
+    r0->add(Spotting(1563, 612, 1677, 651, 0, &page, "an", 0.35));
+    r0->add(Spotting(1260, 702, 1356, 735, 0, &page, "an", 0.433));
+    
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.665));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.477));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.475));
+    
+    r0->add(Spotting(801, 189, 927, 231, 0, &page, "an", 0.19));
+    r0->add(Spotting(693, 618, 837, 657, 0, &page, "an", 0.222));
+    r0->add(Spotting(1563, 612, 1677, 651, 0, &page, "an", 0.399));
+    r0->add(Spotting(1260, 702, 1356, 735, 0, &page, "an", 0.388));
+    
+    //boundary cases
+    r0->add(Spotting(24, 3180, 72, 3234, 0, &page, "an", 0.401));
+    r0->add(Spotting(1935, 951, 1992, 1005, 0, &page, "an", 0.402));
+    
+    //false
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.88));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.423));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.77));
+    
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.555));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.433));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.444));
+    
+    r0->add(Spotting(1416, 186, 1518, 225, 0, &page, "an", 0.631));
+    r0->add(Spotting(258, 360, 342, 399, 0, &page, "an", 0.51));
+    r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.53));
+    
+    addSpottingResults(r0);*/
+    
+    testIter=0;	
+    addTestSpottings();
+    accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
+    done=0;
+    ///end testing
 }
 
-Spottings MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth) {
-    sem_wait(&mutexSem);
-    Spottings batch(spottingsQueue.front().ngram,"test_batch_"+to_string(atID++)+"_"+spottingsQueue.front().ngram);
-    batch.instances = spottingsQueue.front().getSpottings(numberOfInstances,hard,maxWidth);
-    if (spottingsQueue.front().instances.size()==0) {
-        Spottings tmp = spottingsQueue.front();
+
+
+void MasterQueue::addTestSpottings()
+{
+    string pageLocation = "/home/brian/intel_index/data/gw_20p_wannot/";
+    
+    map<string,SpottingResults*> spottingResults;
+    
+    
+    ifstream in("./data/GW_agSpottings_fold1_0.100000.csv");
+    string line;
+    
+    //std::getline(in,line);
+    //float initSplit=0;//stof(line);//-0.52284769;
+    
+    while(std::getline(in,line))
+    {
+        vector<string> strV;
+        //split(line,',',strV);
+        std::stringstream ss(line);
+        std::string item;
+        while (std::getline(ss, item, ',')) {
+            strV.push_back(item);
+        }
         
-        spottingsQueue.pop();
         
-        tmp._reset();
-        spottingsQueue.push(tmp);
+        
+        string ngram = strV[0];
+        string spottingId = strV[0]+strV[1]+":"+to_string(testIter);
+        if (spottingResults.find(spottingId)==spottingResults.end())
+        {
+            spottingResults[spottingId] = new SpottingResults(ngram);
+        }
+        
+        string page = strV[2];
+        size_t startpos = page.find_first_not_of(" \t");
+        if( string::npos != startpos )
+        {
+            page = page.substr( startpos );
+        }
+        if (pages.find(page)==pages.end())
+        {
+            pages[page] = cv::imread(pageLocation+page);
+            assert(pages[page].cols!=0);
+        }
+        
+        int tlx=stoi(strV[3]);
+        int tly=stoi(strV[4]);
+        int brx=stoi(strV[5]);
+        int bry=stoi(strV[6]);
+        
+        float score=-1*stof(strV[7]);
+        bool truth = strV[8].find("true")!= string::npos?true:false;
+        
+        Spotting spotting(tlx, tly, brx, bry, 0, &pages[page], ngram, score);
+        spottingResults[spottingId]->add(spotting);
+        test_groundTruth[spottingResults[spottingId]->getId()][spotting.id]=truth;
+        test_total[spottingResults[spottingId]->getId()]++;
+        if (truth)
+            test_totalPos[spottingResults[spottingId]->getId()]++;
     }
-    sem_post(&mutexSem);
+    
+    for (auto p : spottingResults)
+    {
+        addSpottingResults(p.second);
+        //cout << "added "<<p.first<<endl;
+    }
+    
+    
+    testIter++;
+}
+
+bool MasterQueue::test_autoBatch()
+{
+    SpottingsBatch* b = getBatch(5, false, 300);
+    if (b==NULL)
+        return false;
+    vector<string> ids;
+    vector<int> userClassifications;
+    
+    cout<<b->ngram<<": ";
+    
+    for (int i=0; i<b->size(); i++)
+    {
+        
+        unsigned long id = b->at(i).id;
+        ids.push_back(to_string(id));
+        if (test_groundTruth[b->spottingResultsId][id])
+            userClassifications.push_back(1);
+        else
+            userClassifications.push_back(0);
+        
+        cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
+    }
+    cout<<endl;
+    vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
+    delete tmp;
+    return true;
+}
+SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth) 
+{
+    SpottingsBatch* batch=NULL;
+    //cout<<"getting rw lock"<<endl;
+    pthread_rwlock_rdlock(&semResultsQueue);
+    //cout<<"got rw lock"<<endl;
+    for (auto ele : resultsQueue)
+    {
+        sem_t* sem = ele.second.first;
+        SpottingResults* res = ele.second.second;
+        bool succ = 0==sem_trywait(sem);
+        if (succ)
+        {
+            
+            pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
+            
+            bool done=false;
+            batch = res->getBatch(&done,numberOfInstances,hard,maxWidth);
+            if (done)
+            {   //cout <<"done in queue "<<endl;
+                //TODO return the results that are above the accept threhsold
+                
+                pthread_rwlock_wrlock(&semResultsQueue);
+                resultsQueue.erase(res->getId());
+                
+                
+                
+                pthread_rwlock_unlock(&semResultsQueue);
+                
+                ///test
+                //test_finish();
+                ///test
+            }
+            sem_post(sem);
+            break;
+            
+        }
+        //else
+        //{
+        //    cout <<"couldn't get lock"<<endl;
+        //}
+    }
+    if (batch==NULL)
+    {
+        pthread_rwlock_unlock(&semResultsQueue);//just in case
+        //cout<<"null b"<<endl;
+    }
+    else //test
+    {   
+        /*cout<<"batch: ";
+        for (int i=0; i<batch->size(); i++)
+        {
+            if (test_groundTruth[batch->spottingResultsId][batch->at(i).id])
+                cout << "true\t";
+            else
+                cout << "false\t";
+        }   
+        cout<<endl;*/
+    }
     return batch;
+}
+
+void MasterQueue::test_finish()
+{
+    if (resultsQueue.size()==0)
+    {
+        
+        test_numDone.clear();
+        test_totalPos.clear();
+        test_numTruePos.clear();
+        test_numFalsePos.clear();
+        addTestSpottings();
+    }
+    
+}
+void MasterQueue::test_showResults(unsigned long id,string ngram)
+{
+    cout << "*for "<<id<<" "<<ngram<<endl;
+    cout << "* accuracy: "<<(0.0+test_numTruePos[id])/(test_numTruePos[id]+test_numFalsePos[id])<<endl;
+    cout << "* recall: "<<(0.0+test_numTruePos[id])/(test_totalPos[id])<<endl;
+    cout << "* manual: "<<test_numDone[id]/(0.0+test_total[id])<<endl;
+    cout << "* effort: "<<(0.0+test_numTruePos[id])/test_numDone[id]<<endl;
+    cout << "* true pos: "<<test_numTruePos[id]<<" false pos: "<<test_numFalsePos[id]<<" total true: "<<test_totalPos[id]<<" total all: "<<test_total[id]<<endl;
+    
+    accuracyAvg+=(0.0+test_numTruePos[id])/(test_numTruePos[id]+test_numFalsePos[id]);
+    recallAvg+=(0.0+test_numTruePos[id])/(test_totalPos[id]);
+    manualAvg+=test_numDone[id]/(0.0+test_total[id]);
+    effortAvg+=(0.0+test_numTruePos[id])/test_numDone[id];
+    done++;
+}
+
+//not thread safe
+vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
+{
+    
+    test_numDone[id]+=ids.size();
+    vector<Spotting>* res = feedback(id, ids, userClassifications);
+    for (Spotting s : *res)
+    {
+        
+        if (test_groundTruth[id][s.id])
+        {
+            test_numTruePos[id]++;
+        }
+        else
+        {
+            test_numFalsePos[id]++;
+        }
+    }
+    
+    if (res->size()>ids.size())
+        test_showResults(id,"");
+    return res;
+}
+
+vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
+{
+    vector<Spotting>* ret = NULL;
+    bool succ=false;
+    while (!succ)
+    {
+        pthread_rwlock_rdlock(&semResults);
+        if (results.find(id)!=results.end())
+        {
+            sem_t* sem=results[id].first;
+            SpottingResults* res = results[id].second;
+            succ = 0==sem_trywait(sem);
+            pthread_rwlock_unlock(&semResults);
+            if (succ)
+            {
+                bool done=false;
+                ret = res->feedback(&done,ids,userClassifications);
+                
+                if (done)
+                {cout <<"done done "<<endl;
+                    
+                    pthread_rwlock_wrlock(&semResults);
+                    results.erase(res->getId());
+                    
+                    pthread_rwlock_unlock(&semResults);
+                    delete res;
+                    sem_destroy(sem);
+                    delete sem;
+                }
+                else
+                    sem_post(sem);
+            }
+        }
+        else
+        {
+            pthread_rwlock_unlock(&semResults);
+            break;
+        }
+    }
+    return ret;
+}
+
+void MasterQueue::addSpottingResults(SpottingResults* res)
+{
+    sem_t* sem = new sem_t();
+    sem_init(sem,false,1);
+    auto p = make_pair(sem,res);
+    pthread_rwlock_wrlock(&semResultsQueue);
+    resultsQueue[res->getId()] = p;
+    pthread_rwlock_unlock(&semResultsQueue);
+    //This may be a race condition, but would require someone to get and finish a batch between here...
+    pthread_rwlock_wrlock(&semResults);
+    results[res->getId()] = p;
+    pthread_rwlock_unlock(&semResults);
 }

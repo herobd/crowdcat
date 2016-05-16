@@ -247,7 +247,7 @@ function getNextBatch(window,toload) {
                 if (batchQueue.length>0) {
                              batchContainer.hidden=true
 		        }
-                batchQueue.push({ngram:jres.ngram, id:jres.batchId});
+                batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
                 spinner.hidden=true;
             }
             if (toload!==undefined && --toload>0)
@@ -268,6 +268,7 @@ function batchDone(evt) {
         batches[batchId].sent=true;
         var info = batchQueue[0];
 	    var ngram = info.ngram;
+	    var resultsId = info.rid;
 	    batchQueue=batchQueue.slice(1)
 	    if (batchQueue.length>0) {
                 document.getElementById('b'+batchQueue[0].id).hidden=false;
@@ -283,7 +284,7 @@ function batchDone(evt) {
             lastRemoved.shift();
             lastRemovedInfo.shift();
         }
-        httpPostAsync('/app/submitBatch',{batchId:batchId,labels:batches[batchId].spottings},function (res){
+        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,labels:batches[batchId].spottings},function (res){
             //if(--test_batchesToDo > 0) {
                 getNextBatch(window);
             //} else {

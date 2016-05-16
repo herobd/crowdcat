@@ -149,7 +149,7 @@ function begin() {
     document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
     var windows = document.getElementsByClassName('window');
     for (var i=0; i<windows.length; i++) {
-        getNextBatch(windows[i],3);
+        getNextBatch(windows[i],1);//TODO 3
         
     }
     
@@ -184,12 +184,14 @@ function httpPostAsync(theUrl, theData, callback)
 }
 
 function isBad(widget) {
-    batches[widget.batch].spottings[widget.id]=false;
+    batches[widget.batch].spottings[widget.id]=0;
+    //console.log(widget.batch+':'+widget.id+' is bad.');
     isBatchDone(widget.batch,widget.parentNode);
 }
 
 function isGood(widget) {
-    batches[widget.batch].spottings[widget.id]=true;
+    batches[widget.batch].spottings[widget.id]=1;
+    //console.log(widget.batch+':'+widget.id+' is good.');
     isBatchDone(widget.batch,widget.parentNode);
 }
 
@@ -202,6 +204,7 @@ function test() {
 }
 var batchQueue=[]
 function getNextBatch(window,toload) {
+    //TODO spinner show
     httpGetAsync('/app/nextBatch?width='+imgWidth,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
@@ -220,7 +223,7 @@ function getNextBatch(window,toload) {
 		            lastNgram=jres.ngram;
 	            }
 	            batchHeader.style.background=headerColors[colorIndex];
-		        batchQueue.push({ngram:jres.ngram, id:jres.batchId})
+		        batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
                 window.appendChild(batchHeader);
                 for (var index=0; index<jres.spottings.length; index++) {
                     var i=jres.spottings[index];
@@ -238,9 +241,10 @@ function getNextBatch(window,toload) {
                 }
                 spinner.hidden=true;
             }
-            if (toload!==undefined && --toload>0)
-                getNextBatch(window,toload);
+        } else {
+            //TODO showMessage(jres.err);
         }
+        
         
         
     });
@@ -251,9 +255,11 @@ function isBatchDone(batchId,window) {
         for (spottingId in batches[batchId].spottings)
             if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
                 return;
+        //console.log('batch '+batchId+ ' is done');
         batches[batchId].sent=true;
 	    var ngram = batchQueue[0].ngram;
-	    batchQueue=batchQueue.slice(1)
+	    var resultsId = batchQueue[0].rid;
+	    batchQueue=batchQueue.slice(1);
 	    if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
                 document.getElementById('b'+batchQueue[0].id).hidden=false;
 	    } else if (batchQueue.length==0){
@@ -261,7 +267,16 @@ function isBatchDone(batchId,window) {
 	    }
         var header = document.getElementById('b'+batchId);
         window.removeChild(header);
-        httpPostAsync('/app/submitBatch',{batchId:batchId,labels:batches[batchId].spottings},function (res){
+        
+        var ids = []
+        for (var prop in batches[batchId].spottings)
+            ids.push(prop);
+        var labels = [];
+        for (var id of ids) {
+            labels.push(batches[batchId].spottings[id]);
+        }
+        
+        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,ids:ids,labels:labels},function (res){
             //if(--test_batchesToDo > 0) {
                 getNextBatch(window);
             //} else {
