@@ -46,13 +46,13 @@ private:
 
 class SpottingImage : public Spotting {
 public:
-    SpottingImage(const Spotting& s, int maxWidth) : 
+    SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram) : 
         Spotting(s)
     {
         int oneSide = maxWidth/2;
         int sideFromR = (oneSide- (brx-tlx)/2);
         int left = tlx-sideFromR;
-        int right = brx+sideFromR;
+        int right = brx+sideFromR-1;
         //cout <<"getting image window... sideFromR="<<sideFromR<<", oneSide="<<oneSide<<", tlx="<<tlx<<", brx="<<brx<<", left="<<left<<", right="<<right<<endl;
         if (left>=0 && right<s.pagePnt->cols)
         {   
@@ -83,6 +83,10 @@ public:
          //   cv::imshow("rer", image);
           //  cv::waitKey();
         //}
+        if (prevNgram.compare(ngram)!=0)
+        {
+            color++;//=(color+1)%5;
+        }
         for (int r=0; r<bry-tly; r++)
             for (int c=sideFromR-FUZZY; c<sideFromR+brx-tlx+FUZZY; c++)
             {
@@ -106,9 +110,11 @@ public:
                         fuzzyMult=(c-sideFromR+FUZZY)/(2.0*FUZZY);
                     else if (c>sideFromR+brx-tlx-FUZZY)
                         fuzzyMult=(sideFromR+brx-tlx+FUZZY-c)/(2.0*FUZZY);
-                    pix[0]*=1.0-0.25*fuzzyMult;
-                    pix[1] =min((int)(20*fuzzyMult+(pix[1]*(1.0+fuzzyMult*0.05))),255);
-                    pix[2]*=1.0-0.25*fuzzyMult;
+                    
+                    
+                    pix[color%3]*=1.0-0.25*fuzzyMult;
+                    pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
+                    pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
                 }
             }
         //cout<<endl;
@@ -211,9 +217,9 @@ public:
     }
     
     void add(Spotting spotting);
-    SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth);
+    SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
-    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications);
+    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     
 private:
     static unsigned long _id;
@@ -244,7 +250,7 @@ private:
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;
     
-    SpottingImage getNextSpottingImage(bool* done, int maxWidth);
+    SpottingImage getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram);
     
     void EMThresholds(bool init=false);
 };

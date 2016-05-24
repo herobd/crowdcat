@@ -15,8 +15,8 @@ using namespace v8;
 
 class BatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, int width, int num, MasterQueue* masterQueue)
-        : AsyncWorker(callback), width(width), num(num), masterQueue(masterQueue) {}
+        BatchRetrieveWorker(Callback *callback, int width, int color, string prevNgram, int num, MasterQueue* masterQueue)
+        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), masterQueue(masterQueue) {}
 
         ~BatchRetrieveWorker() {}
 
@@ -36,7 +36,7 @@ class BatchRetrieveWorker : public AsyncWorker {
                 hard=false;
             }
             
-            SpottingsBatch* batch = masterQueue->getBatch(num,hard,width);
+            SpottingsBatch* batch = masterQueue->getBatch(num,hard,width,color,prevNgram);
             if (batch != NULL)
             {
                 batchId=to_string(batch->batchId);
@@ -110,6 +110,8 @@ class BatchRetrieveWorker : public AsyncWorker {
         
         //input
         int width;
+        int color;
+        string prevNgram;
         int num;
         MasterQueue* masterQueue;
         

@@ -11,7 +11,7 @@ int main() {
     for (int n=0; n<t.numTestBatches; n++)
     {
         vector<int> first(numUsers);
-        //#pragma omp parallel for num_threads(4)
+        #pragma omp parallel for num_threads(4)
         for (int i=0; i<numUsers; i++)
         {
             SpottingsBatch* b = t.getBatch(5, 400+i, i);
@@ -27,6 +27,7 @@ int main() {
             }
             int fp, fn;
             assert(t.feedback(b->spottingResultsId,ids,labels,i, &fp, &fn) || n<t.numTestBatches-1);
+            delete b;
         }
         
         for (int i=1; i<numUsers; i++)

@@ -171,6 +171,8 @@ button {
     z-index: 3;
     text-align: center;
     border-width:0px;
+    
+    
 }
 
 .spotting img {
@@ -193,6 +195,34 @@ button {
     min-height:30px;
 }
 
+.collapser {
+    /*transition: collapse 0.8s ease-in-out;*/
+    animation-duration: 0.2s;
+    animation-name: collapse;
+    opacity: 0;
+}
+
+@keyframes collapse {
+    from {max-height:100px;
+          min-height:70px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+
+.collapserH {
+    /*transition: collapse 0.8s ease-in-out;*/
+    animation-duration: 0.3s;
+    animation-name: collapseH;
+    opacity: 0;
+}
+
+@keyframes collapseH {
+    from {max-height:100px;
+          min-height:40px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+
 .spotting.redo {
     /*background: #94BD5E;*/
     color: #0E0E0E;
@@ -203,7 +233,7 @@ button {
     color: #090909;
     text-align: center;
     font-size: 24px;
-    min-height:30px;
+    min-height:40px;
 }
 .batchHeader.ondeck div {
     position: relative;
@@ -241,18 +271,6 @@ button {
 .batchHeader.ondeck {
     height:80px !important;
     font-size: 30px;
-}
-
-.stikethrough {
-    background: #d10000;
-    width: 80%;
-    position: absolute;
-    height: 10px;
-    margin: 0 auto;
-    left: 10%;
-    top: 42%;
-    opacity: 0.7;
-    border-radius: 50px;
 }
 
 

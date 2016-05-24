@@ -16,6 +16,7 @@ using namespace v8;
 #include "SpottingBatchUpdateWorker.cpp"
 #include "TestBatchRetrieveWorker.cpp"
 #include "SpottingTestBatchUpdateWorker.cpp"
+#include "ClearTestUsersWorker.cpp"
 
 MasterQueue* masterQueue;
 TestQueue* testQueue;
@@ -24,10 +25,24 @@ TestQueue* testQueue;
 
 NAN_METHOD(getNextBatch) {
     int width = To<int>(info[0]).FromJust();
-    int num = To<int>(info[1]).FromJust();
-    Callback *callback = new Callback(info[2].As<Function>());
+    int color = To<int>(info[1]).FromJust();
+    //string prevNgram = To<string>(info[2]).FromJust();
+    //String::Utf8Value str(args[0]->ToString());
+    string prevNgram;
+    if (info[2]->IsString())
+    {
+        String::Utf8Value str(info[2]->ToString());
+        prevNgram = string(*str);
+        
+    }
+    
+    //String::Utf8Value str = To<String::Utf8Value>(info[2]).FromJust();
+    
+    int num = To<int>(info[3]).FromJust();
+    
+    Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,num,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue));
 }
 
 NAN_METHOD(spottingBatchDone) {//TODO
@@ -55,22 +70,24 @@ NAN_METHOD(spottingBatchDone) {//TODO
         //Nan::Set(arr, i, val);
       }
     }
-    
-    Callback *callback = new Callback(info[2].As<Function>());
+    int resent = To<int>(info[3]).FromJust();
+    Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels));
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels,resent));
 }
 
 NAN_METHOD(getNextTestBatch) {
     int width = To<int>(info[0]).FromJust();
-    int num = To<int>(info[1]).FromJust();
-    int userId = To<int>(info[2]).FromJust();
-    Callback *callback = new Callback(info[3].As<Function>());
+    int color = To<int>(info[1]).FromJust();
+    int num = To<int>(info[2]).FromJust();
+    int userId = To<int>(info[3]).FromJust();
+    Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new TestBatchRetrieveWorker(callback, width,num,userId,testQueue));
+    AsyncQueueWorker(new TestBatchRetrieveWorker(callback, width,color,num,userId,testQueue));
 }
 
 NAN_METHOD(spottingTestBatchDone) {
+    
     String::Utf8Value resultsIdNAN(info[0]);
     string resultsId = string(*resultsIdNAN);
     
@@ -84,6 +101,7 @@ NAN_METHOD(spottingTestBatchDone) {
         ids.push_back(string(*String::Utf8Value(val)));
       }
     }
+    
     if (info[2]->IsArray()) {
       Handle<Array> jsArray = Handle<Array>::Cast(info[2]);
       for (unsigned int i = 0; i < jsArray->Length(); i++) {
@@ -91,16 +109,17 @@ NAN_METHOD(spottingTestBatchDone) {
         labels.push_back(val->Uint32Value());
       }
     }
-    int userId = To<int>(info[2]).FromJust();
-    Callback *callback = new Callback(info[3].As<Function>());
+    int resent = To<int>(info[3]).FromJust();
+    int userId = To<int>(info[4]).FromJust();
+    Callback *callback = new Callback(info[5].As<Function>());
 
-    AsyncQueueWorker(new SpottingTestBatchUpdateWorker(callback,testQueue,resultsId,ids,labels,userId));
+    AsyncQueueWorker(new SpottingTestBatchUpdateWorker(callback,testQueue,resultsId,ids,labels,resent,userId));
 }
 
-NAN_METHOD(resetTestUsers) {
+NAN_METHOD(clearTestUsers) {
     
     Callback *callback = new Callback(info[0].As<Function>());
-    AsyncQueueWorker(new ResetTestUsersWorker(callback,testQueue));
+    AsyncQueueWorker(new ClearTestUsersWorker(callback,testQueue));
 }
 
 NAN_MODULE_INIT(Init) {
@@ -117,13 +136,13 @@ NAN_MODULE_INIT(Init) {
     testQueue = new TestQueue();
     
     Nan::Set(target, New<String>("getNextTestBatch").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
+        GetFunction(New<FunctionTemplate>(getNextTestBatch)).ToLocalChecked());
     
     Nan::Set(target, New<String>("spottingTestBatchDone").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(spottingBatchDone)).ToLocalChecked());
+        GetFunction(New<FunctionTemplate>(spottingTestBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("resetTestUsers").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(resetTestUsers)).ToLocalChecked());
+    Nan::Set(target, New<String>("clearTestUsers").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(clearTestUsers)).ToLocalChecked());
 }
 
 NODE_MODULE(SpottingAddon, Init)

@@ -13,16 +13,16 @@ using namespace v8;
 
 class SpottingBatchUpdateWorker : public AsyncWorker {
     public:
-        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, string resultsId, vector<string> ids, vector<int> labels)
-        : AsyncWorker(callback), masterQueue(masterQueue), resultsId(resultsId), ids(ids), labels(labels) {}
+        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, string resultsId, vector<string> ids, vector<int> labels, int resent)
+        : AsyncWorker(callback), masterQueue(masterQueue), resultsId(resultsId), ids(ids), labels(labels), resent(resent) {}
 
         ~SpottingBatchUpdateWorker() {}
 
 
         void Execute () {
             
-            vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels);
-            //TODO update global spottings
+            vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent);
+            //TODO update global spottings, fix resends
             delete toAdd;
         }
 
@@ -41,5 +41,6 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
         string resultsId;
         vector<string> ids;
         vector<int> labels;
+        int resent;
         
 };

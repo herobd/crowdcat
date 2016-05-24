@@ -3,33 +3,24 @@
 var OK_THRESH=100;
 var BAD_THRESH=-100;
 
-//var lastRemovedParent=[];
-var lastRemoved=[];
+
 var lastRemovedEle=[];
-var lastRemovedOK=[];
 var spinner;
 
 var ondeck;
 var theWindow;
 
-var batches={};
-var maxImgWidth=700;
-var imgWidth=null;
+var toBeInQueue=3;
 
-var test_batchesToDo=3;
 
-//pink,green, orange, pink, blue
-var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
-var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
-var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
-var colorIndex=0;
+
 
 function handleTouchStart(evt) {
     if (evt.touches)                                     
         this.xDown = evt.touches[0].clientX;  
     else
            this.xDown = evt.clientX;                                 
-    //yDown = evt.touches[0].clientY;                                      
+                                         
 };                                                
 
 function handleTouchMove(evt) {
@@ -47,17 +38,17 @@ function handleTouchMove(evt) {
         }
         xUp = evt.clientX; 
     }                              
-    //var yUp = evt.touches[0].clientY;
+    
 
     this.xDiff = xUp-this.xDown;
     ondeck.style.left = this.xDiff+'px';
     
-    //this.getElementsByClassName('num')[0].innerHTML='( '+xUp+' )'
+    
     if (this.xDiff<BAD_THRESH) {
         theWindow.style.background='hsl(350,100%,40%)';
     } else if (this.xDiff<0) {
         theWindow.style.background='hsl(350,'+(60*(this.xDiff/(0.0+BAD_THRESH)))+'%,40%)';
-        //console.log((75*(this.xDiff/(0.0+OK_THRESH)))+'%');
+        
     } else if (this.xDiff>OK_THRESH) {
         theWindow.style.background='hsl(130,100%,30%)';
     } else if (this.xDiff>0) {
@@ -66,26 +57,21 @@ function handleTouchMove(evt) {
 };
 
 function removeSpotting(OK) {
-    lastRemoved.push(this);
     lastRemovedEle.push(ondeck);
-    //lastRemovedParent.push(this.parentNode);
     
-    lastRemovedOK.push(OK);
-    if (lastRemoved.length>10) {
-        lastRemoved.shift();
-        //lastRemovedParent.shift();
-        lastRemovedOK.shift();
-        lastRemovedEle.shift();
+    if (lastRemovedEle.length>10) {
+        var removedBatch=lastRemovedEle.shift();
+        if (removedBatch!=lastRemovedBatchInfo[lastRemovedBatchInfo.length-1])
+            lastRemovedBatchInfo.shift();
     }
-    //this.parentNode.removeChild(this);
-    //this.hidden=true;
-    theWindow.removeChild(ondeck);
     
     
-    if (OK)
-        isGood();
-    else
-        isBad();
+    ondeck.classList.toggle('spotting');
+    ondeck.classList.toggle('collapser');
+    
+    
+    batches[ondeck.batch].spottings[ondeck.id]=OK;
+    isBatchDone(ondeck.batch);
     
     highlightLast();
 }
@@ -98,11 +84,13 @@ function createInlineLabel(label) {
 }
 
 function undo() {
-    if (lastRemoved.length>0) {
+    if (lastRemovedEle.length>0) {
         ondeck.classList.toggle('ondeck');
+        var ondeckHeader = document.getElementById('b'+batchQueue[0].id)
+            if (ondeckHeader)
+                ondeckHeader.classList.toggle('ondeck');
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
-        lastRemoved.pop().hidden=false;
         ondeck=lastRemovedEle.pop();
         if (ondeck.childNodes.length<2) {
             ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngram),ondeck.childNodes[0]);
@@ -110,12 +98,19 @@ function undo() {
             //colorIndex = (++colorIndex)%headerColors.length;
             ondeck.style.background=spottingColors[ondeck.colorIndex];
         }
-            
+        ondeck.classList.toggle('spotting');
+        ondeck.classList.toggle('collapser');
+        batches[ondeck.batch].spottings[ondeck.id]=null
+        
+        if (lastRemovedBatchInfo.length>0){
+            var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
+            //console.log(pastInfo +' ?= '+batchQueue[0].id)
+            if (pastInfo!=batchQueue[0].id)
+                batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
+        }   
         theWindow.appendChild(ondeck);
-        //TODO do something with 
-        lastRemovedOK.pop();
     }
-    //console.log('UNDO');
+    
 }
 
 function handleTouchEnd(evt) {
@@ -153,9 +148,10 @@ function setup() {
     containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
     
     while (!imgWidth)
-        imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);
-    document.onresize=function(){imgWidth=Math.min(document.defaultView.outerWidth,maxImgWidth);};
-    getNextBatch(3,function() { 
+        imgWidth=Math.min(document.defaultView.innerWidth,maxImgWidth);
+    console.log(imgWidth);
+    document.onresize=function(){imgWidth=Math.min(document.defaultView.innerWidth,maxImgWidth);};
+    getNextBatch(toBeInQueue,function() { 
         highlightLast();
         var headers = theWindow.getElementsByClassName('batchHeader');
         headers[headers.length-1].classList.toggle('ondeck');
@@ -172,6 +168,7 @@ function createSlider(im,id,batchId) {
     //initSlider(genDiv);
     genDiv.style.background=spottingColors[colorIndex];
     genDiv.colorIndex=colorIndex;
+    genDiv.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
     return genDiv;
 }
 
@@ -191,45 +188,7 @@ function initSlider(ele) {
 
 
 
-function httpGetAsync(theUrl, callback)
-{
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
-        else if (xmlHttp.readyState == 4)
-            callback(xmlHttp.status);
-            
-    }
-    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
-    xmlHttp.send(null);
-}
-function httpPostAsync(theUrl, theData, callback)
-{
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
-        else if (xmlHttp.readyState == 4)
-            callback(xmlHttp.status);
-            
-    }
-    xmlHttp.open("POST", theUrl, true); // true for asynchronous 
-    xmlHttp.setRequestHeader("Content-type", 'application/json');
-    xmlHttp.send(JSON.stringify(theData));
-}
 
-function isBad() {
-    batches[ondeck.batch].spottings[ondeck.id]=false;
-    isBatchDone(ondeck.batch);
-    //console.log('is bad');
-}
-
-function isGood() {
-    batches[ondeck.batch].spottings[ondeck.id]=true;
-    isBatchDone(ondeck.batch);
-    //console.log('is good');
-}
 
 function test() {
     httpGetAsync('/app/test_image?quality=9',function (res){
@@ -241,11 +200,22 @@ function test() {
 var batchQueue=[]
 //var lastNgram='';
 function getNextBatch(toload,callback) {
-    httpGetAsync('/app/nextBatch?width='+imgWidth,function (res){
+    //console.log('getting '+allReceived);
+    if (allReceived) {
+        console.log('ERROR allrecieved, but sending for more')
+        return
+    }
+    var query='';
+    var prevNgram='.';
+    if (batchQueue.length>0)
+        prevNgram=batchQueue[batchQueue.length-1].ngram;
+    if (testMode)
+        query='&test='+testNum;
+    httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
             if (jres.batchType=='spottings') {
-                console.log("got batch "+jres.batchId);
+                //console.log("got batch "+jres.batchId);
                 batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
                 
                 var batchHeader = document.createElement("div");
@@ -253,20 +223,28 @@ function getNextBatch(toload,callback) {
                 batchHeader.classList.toggle('batchHeader');
                 batchHeader.id='b'+jres.batchId
                 batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
-		        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
+	            if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
                     batchHeader.hidden=true
                     
-		        } else {
-		            colorIndex = (++colorIndex)%headerColors.length;
-		            lastNgram=jres.ngram;
-	            }
-		        /*if (lastNgram!=jres.ngram) {
-		            colorIndex = (++colorIndex)%headerColors.length;
-		            lastNgram=jres.ngram;
-	            }*/
-		        batchHeader.style.background=headerColors[colorIndex];
-		        
-		        batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+	            } else {
+	                colorIndex = (++colorIndex)%headerColors.length;
+	                lastNgram=jres.ngram;
+                }
+	            /*if (lastNgram!=jres.ngram) {
+	                colorIndex = (++colorIndex)%headerColors.length;
+	                lastNgram=jres.ngram;
+                }*/
+	            batchHeader.style.background=headerColors[colorIndex];
+	            
+	            if (jres.resultsId!=='X') {
+	                batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+	                //console.log("got "+jres.resultsId)
+                } else {
+                    allReceived=true;
+                    //console.log("all recieved")
+                }
+                //console.log('gott '+allReceived);
+                
                 theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
                 for (var index=0; index<jres.spottings.length; index++) {
                     var i=jres.spottings[index];
@@ -283,6 +261,7 @@ function getNextBatch(toload,callback) {
                     batches[jres.batchId].spottings[i.id]=null;
                 }
                 spinner.hidden=true;
+                
             }
             if (toload!==undefined && --toload>0)
                 getNextBatch(toload,callback);
@@ -299,39 +278,39 @@ function getNextBatch(toload,callback) {
 function highlightLast() {
     var spottings = theWindow.getElementsByClassName('spotting');
     ondeck=spottings[spottings.length-1];
-    ondeck.classList.toggle('ondeck');
-    //console.log('toggle');
-    ondeck.style.background=ondeckColors[ondeck.colorIndex];
+    if (ondeck) {
+        ondeck.classList.toggle('ondeck');
+    
+        ondeck.style.background=ondeckColors[ondeck.colorIndex];
+    }
 }
 
 function isBatchDone(batchId) {
-    if (!batches[batchId].sent) {
-        for (spottingId in batches[batchId].spottings)
-            if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
-                return;
-        batches[batchId].sent=true;
-	    var ngram = batchQueue[0].ngram;
-	    var resultsId = batchQueue[0].rid;
-	    batchQueue=batchQueue.slice(1)
-	    if (batchQueue.length>0 && ngram==batchQueue[0].ngram) {
-                document.getElementById('b'+batchQueue[0].id).hidden=false;
-	    } else if (batchQueue.length==0){
-	        spinner.hidden=false;
-	    }
-	    document.getElementById('b'+batchQueue[0].id).classList.toggle('ondeck');
-        var header = document.getElementById('b'+batchId);
-        if (header)
+    
+    for (spottingId in batches[batchId].spottings)
+        if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
+            return;
+    
+    //base
+    batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
+    //base
+    
+    document.getElementById('b'+batchQueue[0].id).classList.toggle('ondeck');
+    var header = document.getElementById('b'+batchId);
+    if (header) {
+        
+        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
             theWindow.removeChild(header);
-        httpPostAsync('/app/submitBatch',{batchId:batchId,resultsId:resultsId,labels:batches[batchId].spottings},function (res){
-            //if(--test_batchesToDo > 0) {
-                getNextBatch();
-            //} else {
-            //    window.location.href = "/done";
-            //}
-        });
-    } else {
-        //TODO handle UNDO case
-    //    assert(false);
+            
+            //we shift the header past the collapsing element to provide the illusion of a smooth transition
+            var nextHeader = document.getElementById('b'+batchQueue[0].id);
+            theWindow.removeChild(nextHeader);
+            theWindow.appendChild(nextHeader);
+        } else {
+            header.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+            header.classList.toggle('batchHeader');
+            header.classList.toggle('collapserH');
+        }
     }
 }
 

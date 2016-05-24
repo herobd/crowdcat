@@ -73,6 +73,7 @@ MasterQueue::MasterQueue() {
     addSpottingResults(r0);*/
     
     testIter=0;	
+    test_rotate=0;
     addTestSpottings();
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
@@ -153,7 +154,7 @@ void MasterQueue::addTestSpottings()
 
 bool MasterQueue::test_autoBatch()
 {
-    SpottingsBatch* b = getBatch(5, false, 300);
+    SpottingsBatch* b = getBatch(5, false, 300,0,"");
     if (b==NULL)
         return false;
     vector<string> ids;
@@ -178,14 +179,18 @@ bool MasterQueue::test_autoBatch()
     delete tmp;
     return true;
 }
-SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth) 
+SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_rdlock(&semResultsQueue);
     //cout<<"got rw lock"<<endl;
+    int test_loc=0;
     for (auto ele : resultsQueue)
     {
+        if (test_loc++<test_rotate/2)
+            continue;
+        
         sem_t* sem = ele.second.first;
         SpottingResults* res = ele.second.second;
         bool succ = 0==sem_trywait(sem);
@@ -194,8 +199,16 @@ SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard,
             
             pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
+            //test
+            pthread_rwlock_wrlock(&semResultsQueue);
+            if (test_rotate++>2*(resultsQueue.size()-1))
+                test_rotate=0;
+            pthread_rwlock_unlock(&semResultsQueue);
+            //test
+            
             bool done=false;
-            batch = res->getBatch(&done,numberOfInstances,hard,maxWidth);
+            //cout << "getBatch "<<prevNgram<<endl;
+            batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram);
             if (done)
             {   //cout <<"done in queue "<<endl;
                 //TODO return the results that are above the accept threhsold
@@ -274,7 +287,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
 {
     
     test_numDone[id]+=ids.size();
-    vector<Spotting>* res = feedback(id, ids, userClassifications);
+    vector<Spotting>* res = feedback(id, ids, userClassifications,0);
     for (Spotting s : *res)
     {
         
@@ -293,7 +306,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
     return res;
 }
 
-vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
+vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent)
 {
     vector<Spotting>* ret = NULL;
     bool succ=false;
@@ -309,7 +322,7 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             if (succ)
             {
                 bool done=false;
-                ret = res->feedback(&done,ids,userClassifications);
+                ret = res->feedback(&done,ids,userClassifications,resent);
                 
                 if (done)
                 {cout <<"done done "<<endl;

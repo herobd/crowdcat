@@ -13,12 +13,12 @@ using namespace Nan;
 using namespace std;
 using namespace v8;
 
-class BatchRetrieveWorker : public AsyncWorker {
+class TestBatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, int width, int num, int userId, TestQueue* testQueue)
-        : AsyncWorker(callback), width(width), num(num), testQueue(testQueue), userId(userId) {}
+        TestBatchRetrieveWorker(Callback *callback, int width, int color, int num, int userId, TestQueue* testQueue)
+        : AsyncWorker(callback), width(width), color(color), num(num), userId(userId), testQueue(testQueue) {}
 
-        ~BatchRetrieveWorker() {}
+        ~TestBatchRetrieveWorker() {}
 
 
         void Execute () {
@@ -30,13 +30,14 @@ class BatchRetrieveWorker : public AsyncWorker {
             vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
             
 
-            /*bool hard=true;
+            bool hard=true;
             if (num==-1) {
                 num=5;
                 hard=false;
-            }*/
-            
-            SpottingsBatch* batch = testQueue->getBatch(num,width,userId);
+            }
+            //cout <<"getting test batch"<<endl;
+            SpottingsBatch* batch = testQueue->getBatch(num,width,color,userId);
+            //cout <<"got test batch"<<endl;
             if (batch != NULL)
             {
                 batchId=to_string(batch->batchId);
@@ -60,15 +61,16 @@ class BatchRetrieveWorker : public AsyncWorker {
                 }
                 //cout <<"readied batch of size "<<batchSize<<endl;
                 
-                delete batch;
+                
             }
             else
             {
-                batchId="No more batches.";
-                resultsId="";
-                ngram="No more batches.";
+                batchId="end";
+                resultsId="X";
+                ngram="end";
                 
             }
+            delete batch;
         }
 
         // We have the results, and we're back in the event loop.
@@ -110,7 +112,9 @@ class BatchRetrieveWorker : public AsyncWorker {
         
         //input
         int width;
+        int color;
         int num;
+        int userId;
         TestQueue* testQueue;
         
         

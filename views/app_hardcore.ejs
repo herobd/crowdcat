@@ -1,15 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS demo app</title>
+<title>CATTSS <% if (testMode) { %>user test alpha part <%= testNum %><% } else { %>demo app<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
-<script src="http://jsconsole.com/js/remote.js?27fd1090-e35d-471d-bde7-4a8ecb04a006"></script>
 <link href="app_hardcore.css" rel="stylesheet" type="text/css" />
+<script> 
+    <% if (testMode) { %>
+    testMode=true; 
+    testNum=<%= testNum %>;
+    <% } else { %>
+    testMode=false; 
+    testNum=-1;
+    <% } %>
+</script>
 </head>
 <body onload="setup()">
+<script type="text/javascript" src="app_base.js"></script>
 <script type="text/javascript" src="<%= app_version %>.js"></script>
 <div id="topper">
     <div id="title">

@@ -6,9 +6,10 @@ TestQueue::TestQueue() {
     pthread_rwlock_init(&userQueuesLock,NULL);
     pthread_rwlock_init(&userResLock,NULL);
     
+    int color=0;
     string pageLocation = "/home/brian/intel_index/data/gw_20p_wannot/";
-    numTestBatches=7;
-    for (int i=0; i<numTestBatches; i++)
+    int numOfTestBatches=7;
+    for (int i=0; i<numOfTestBatches; i++)
     {
     
         ifstream in("./data/testBatch"+to_string(i)+".csv");
@@ -61,7 +62,10 @@ TestQueue::TestQueue() {
             testGroundTruth[spotting.id]=truth;
             
         }
+        if (ngrams.size()!=0 && ngrams.back().compare(ngram)!=0)
+            color++;
         ngrams.push_back(ngram);
+        colors.push_back(color);
         testBatches.push_back(batch0);
         //testGroundTruth.push_back(gt0);
         in.close();
@@ -70,24 +74,48 @@ TestQueue::TestQueue() {
 
 
 
-vector< SpottingsBatch* > TestQueue::getTestSpottings(int maxWidth)
+deque< SpottingsBatch* > TestQueue::getTestSpottings(unsigned int numberOfInstances, unsigned int maxWidth,int color)
 {
-    vector< SpottingsBatch* > ret;
+    if (numberOfInstances<=0)
+        numberOfInstances=5;
+    deque< SpottingsBatch* > ret;
+    SpottingsBatch* batch0 = NULL;//new SpottingsBatch(ngrams[0], 0);
     for (int i=0; i<testBatches.size(); i++)
     {
-        SpottingsBatch* batch0 = new SpottingsBatch(ngrams[i], 0);
-        for (Spotting& s : testBatches[i])
-            batch0->push_back(SpottingImage(s,maxWidth));
         
-        ret.push_back(batch0);
+        if (batch0!=NULL)
+        {
+            if (ngrams[i].compare(ngrams[i-1])!=0)
+            {
+                ret.push_back(batch0);
+                batch0 = NULL;
+            }
+        }
+        for (Spotting& s : testBatches[i])
+        {
+            if (batch0==NULL)
+                batch0=new SpottingsBatch(ngrams[i], 0);
+            //string prevNgram="";
+            //if (ret.size()>0)
+            //    prevNgram=ret.back()->ngram;
+            batch0->push_back(SpottingImage(s,maxWidth,colors[i],""));
+            if (batch0->size()==numberOfInstances)
+            {
+                ret.push_back(batch0);
+                batch0 = NULL; //new SpottingsBatch(ngrams[i], 0);
+            }
+        }
+        
+        
     }
-    
+    if (batch0!=NULL)
+        ret.push_back(batch0);
     
     return ret;
 }
 
 
-SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth, USERID userId) 
+SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth, int color, USERID userId) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;
@@ -96,24 +124,27 @@ SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int
     
     if (userQueues.find(userId)==userQueues.end())
     {
-        userQueues[userId]=getTestSpottings(maxWidth);
+        cout <<"new user "<<userId<<", color="<<color<<endl;
+        userQueues[userId]=getTestSpottings(numberOfInstances,maxWidth,color);//we are assuming the number of instances will not change
+        numTestBatches[userId]=userQueues[userId].size();
     }
-    
-    
-    
-    batch=userQueues[userId].back();//.back();
-    
-    //userQueues[userId].back().pop_back();   
-    
-    //if(userQueues[userId].back().size()==0)
-    userQueues[userId].pop_back();
     
     if (userQueues[userId].size()==0)
     {
         //pthread_rwlock_unlock(&userQueuesLock);
         //pthread_rwlock_wrlock(&userQueuesLock);
         userQueues.erase(userId);
+        return NULL;
     }
+    
+    batch=userQueues[userId].front();//.back();
+    
+    //userQueues[userId].back().pop_back();   
+    
+    //if(userQueues[userId].back().size()==0)
+    userQueues[userId].pop_front();
+    
+    
     pthread_rwlock_unlock(&userQueuesLock);
     
     
@@ -122,39 +153,52 @@ SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int
 
 
 
-bool TestQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, USERID userId, int* fp, int* fn)
+bool TestQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, USERID userId, int* fp, int* fn)
 {
     //map<unsigned long, char> classified;
-    
-    
-    pthread_rwlock_wrlock(&userResLock);
-    for (int i=0; i<ids.size(); i++)
+    if (numTestBatches.find(userId) != numTestBatches.end())
     {
-        unsigned long spot = stoul(ids[i]);
-        if(testGroundTruth[spot] == userClassifications[i])
-            classified[userId][spot]='c';//correct
-        else if (testGroundTruth[spot])
-            classified[userId][spot]='p';//fp
-        else
-            classified[userId][spot]='n';//fn
-    }
-    if (++returned[userId]==numTestBatches)
-    {
-        *fp=0;
-        *fn=0;
-        for (auto x : classified[userId])
+    
+        pthread_rwlock_wrlock(&userResLock);
+        assert(ids.size()>0);
+        for (int i=0; i<ids.size(); i++)
         {
-            if (x.second=='p')
-                *fp++;
-            else if (x.second=='n')
-                *fn++;
+            unsigned long spot = stoul(ids[i]);
+            if(testGroundTruth[spot] == userClassifications[i])
+                classified[userId][spot]='c';//correct
+            else if (testGroundTruth[spot])
+                classified[userId][spot]='n';//fn
+            else
+                classified[userId][spot]='p';//fp
         }
-        classified.erase(userId);
+        cout <<"Returned: "<<(++returned[userId])<<" of: "<<numTestBatches[userId]<<endl;
+        //if (resent==0 && ++returned[userId]>=numTestBatches[userId])
+        if (classified[userId].size() == testGroundTruth.size())
+        {
+            //assert(
+            *fp=0;
+            *fn=0;
+            assert(classified[userId].size()>0);
+            for (auto x : classified[userId])
+            {
+                if (x.second=='p')
+                    (*fp)++;
+                else if (x.second=='n')
+                    (*fn)++;
+            }
+            classified.erase(userId);
+            returned.erase(userId);
+            numTestBatches.erase(userId);
+            pthread_rwlock_unlock(&userResLock);
+            return true;
+        }
+        //cout << userId<<" recieved "<<returned[userId]<<endl;
         pthread_rwlock_unlock(&userResLock);
-        return true;
     }
-    //cout << userId<<" recieved "<<returned[userId]<<endl;
-    pthread_rwlock_unlock(&userResLock);
+    else
+    {
+        cout <<"WARNING, non-existest user ("<<userId<<") trying to submit. "<<resent<<endl;
+    }
     return false;
 }
 

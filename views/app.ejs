@@ -1,23 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS demo app</title>
+<title>CATTSS <% if (testMode) { %>user test alpha part <%= testNum %><% } else { %>demo app<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
-<script src="http://jsconsole.com/js/remote.js?27fd1090-e35d-471d-bde7-4a8ecb04a006"></script>
 <link href="app.css" rel="stylesheet" type="text/css" />
+
+<script> 
+    <% if (testMode) { %>
+    testMode=true; 
+    testNum=<%= testNum %>;
+    <% } else { %>
+    testMode=false; 
+    testNum=-1;
+    <% } %>
+</script>
+
 </head>
 <body onload="setup()">
 <div class="container">
+    <script type="text/javascript" src="app_base.js"></script>
     <script type="text/javascript" src="<%= app_version %>.js"></script>
     <div id="title">
         <% if (app_version!=='app_tap') { %>
         <h>Subword user correction UI demo</h><br>
         <% } %>
         <label id='instructions'>Swipe right for correct and left for incorrect.</label>
-        <button type="button" id="undoButton" onclick="undo()">undo</button>
+        <button type="button" id="undoButton" onclick="undo()">Previous</button>
         <form action="/logout" method="post" hidden>
                 <input type="submit" value="Log out"/>
         </form>

@@ -35,6 +35,7 @@ private:
     //testing stuff
     //cv::Mat page;
     int testIter;
+    int test_rotate;
     map<string,cv::Mat> pages;
     void addTestSpottings();
     void test_showResults(unsigned long id,string ngram);
@@ -50,8 +51,8 @@ private:
     int done;
 public:
     MasterQueue();
-    SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth);
-    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
+    SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
+    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     void addSpottingResults(SpottingResults* res);
     
     //test

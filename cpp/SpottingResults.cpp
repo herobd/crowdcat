@@ -82,12 +82,13 @@ void SpottingResults::add(Spotting spotting) {
     return ret;
 }*/
 
-SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth) {
+SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram) {
     //cout <<"getBatch, from:"<<pullFromScore<<endl;
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds(true);
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
+    
     unsigned int toRet = (hard||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
     
     
@@ -107,7 +108,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         tracer--;
     
     for (unsigned int i=0; i<toRet && !*done; i++) {
-        SpottingImage tmp(**tracer,maxWidth);
+        SpottingImage tmp(**tracer,maxWidth,color,prevNgram);
         ret->push_back(tmp);
         
         tracer = instancesByScore.erase(tracer);
@@ -163,8 +164,8 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         allBatchesSent=true;
     //sem_post(&mutexSem);
     numBatches++;
-    /*cout <<"["<<id<<"] sent batch of size "<<ret->size()<<", have "<<instancesByScore.size()<<" left"<<endl;
-    cout <<"score: ";
+    //cout <<"["<<id<<"] sent batch of size "<<ret->size()<<", have "<<instancesByScore.size()<<" left"<<endl;
+    /*cout <<"score: ";
     for (int i=0; i<ret->size(); i++)
     {
         cout<<ret->at(i).score<<"\t";
@@ -173,7 +174,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     return ret;
 }
 
-vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications)
+vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent)
 {
     
     
@@ -182,6 +183,14 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     for (unsigned int i=0; i< ids.size(); i++)
     {
         unsigned long id = stoul(ids[i]);
+        
+        if (resent)
+        {
+            if (classById[id])
+                numberClassifiedTrue--;
+            else
+                numberClassifiedFalse--;
+        }
         
         // adjust threshs
         if (userClassifications[i])
@@ -199,7 +208,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     EMThresholds();
     
     
-    if (--numBatches==0 && allBatchesSent)
+    if (resent==0 && --numBatches==0 && allBatchesSent)
     {
         *done=true;
         //cout <<"all batches sent, cleaning up"<<endl;
@@ -224,7 +233,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     
    
     
-SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
+SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram)
 {
     //cout <<"getNextSpottingImage"<<endl;
     //float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
@@ -247,7 +256,7 @@ SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth)
     
     //cout <<"2 getNextSpottingImage: "<<*tracer<<endl;
     
-    SpottingImage toRet(**tracer,maxWidth);
+    SpottingImage toRet(**tracer,maxWidth,color,prevNgram);
     //cout <<"2.25 getNextSpottingImage"<<endl;
     
     tracer = instancesByScore.erase(tracer);

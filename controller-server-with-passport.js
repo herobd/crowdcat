@@ -21,10 +21,10 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Release/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon")
 
 var debug=true;
-
+numberOfTests=2;
 /**
  *  Define the sample application.
  */
@@ -156,7 +156,7 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = 'app';
+                var appName = 'app_tap';
                 res.render(appName, {app_version:'app_tap', testMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
@@ -186,20 +186,26 @@ var ControllerApp = function(port) {
         });
         
         var userCount=0;
-        self.app.get('/app-test', function(req, res) {
+        self.app.get('/app-test-([123])', function(req, res) {
             if (req.sessionID) {
+                
                 if (!self.userSessionMap[req.sessionID])
-                    self.userSessionMap[req.sessionID]=userCount++;
-                //console.log('[app] user-ses:'+req.sessionID+' hit app');
-                //res.setHeader('Content-Type', 'text/html');
-                //res.send(self.cache_get('app.html') );
-                var appName = self.getTestApp(req.user);
-                var num = +req.query.num;
-                if (num==undefined)
-                    num=1;
-                res.render(appName, {app_version:appName, testMode:true, testNum:num, message: req.flash('error') });
+                    res.redirect('/user-study');
+                else {
+                    var num = +req.params[0];
+                
+                
+                    if (num==undefined || num!=num)
+                        num=1;
+                    if (num>numberOfTests) {
+                        res.redirect('/feedback');
+                    } else {
+                        var appName = self.getTestApp(self.userSessionMap[req.sessionID],num);
+                        res.render(appName, {app_version:appName, testMode:true, testNum:num, message: req.flash('error') });
+                    }
+                }
             } else {
-                res.redirect('/login');
+                res.redirect('/error');
             }
         });
         
@@ -223,6 +229,26 @@ var ControllerApp = function(port) {
             }
         });
         
+        self.app.get('/user-study', function(req, res) {
+            self.userSessionMap[req.sessionID]=userCount++;
+            res.render('user-study-alpha', {});
+        });
+        
+        self.app.get('/thankyou', function(req, res) {
+            if (self.userSessionMap[req.sessionID])
+                self.userSessionMap[req.sessionID]=undefined;
+            res.render('thankyou', {});
+        });
+        
+        self.app.get('/feedback', function(req, res) {
+            if (self.userSessionMap[req.sessionID])
+            {
+                res.render('feedback', {userid:self.userSessionMap[req.sessionID]});
+            } else {
+                res.redirect('/user-study');
+            }
+        });
+        
         self.app.get('/app/test_image', function(req, res) {
             if (req.user || debug) {
                 spottingaddon.getTestImage(+req.query.quality,function (err,data64) {
@@ -239,17 +265,18 @@ var ControllerApp = function(port) {
             res.setHeader("Expires", "0"); // Proxies.
             if (req.user || debug) {
                 var num=-1;
-                if (req.query.num!==undefined)
+                if (req.query.num!==undefined && req.query.num!==null)
                     num=+req.query.num;
                 
                 if (req.query.test) {
-                    spottingaddon.getNextTestBatch(+req.query.width,num,self.userSessionMap[req.sessionID],function (err,batchType,batchId,resultsId,ngram,spottings) {
+                    console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
+                    spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],function (err,batchType,batchId,resultsId,ngram,spottings) {
                         //setTimeout(function(){
                         res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
                         //},2000);
                     });
                 } else {
-                    spottingaddon.getNextBatch(+req.query.width,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
                         //setTimeout(function(){
                         res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
                         //},2000);
@@ -260,6 +287,8 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
+        
+        
         
         
         self.app.post('/app/submitBatch', function (req, res) {
@@ -273,19 +302,31 @@ var ControllerApp = function(port) {
             -batch {spotting_id: true/false,...}
             */
             if (req.user || debug) {
-                
+                //console.log(req.body.labels)
+                var resend=0;
+                if(req.query.resend == 'true')
+                    resend=1;
                 if (req.query.test) {
-                    spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,self.userSessionMap[req.sessionID],function (err,done,fPos,fNeg) {
+                    console.log('user '+self.userSessionMap[req.sessionID]+' is submitting a batch');
+                    
+                    spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,self.userSessionMap[req.sessionID],function (err,done,fPos,fNeg) {
+                        //console.log('submission complete');
                         if (fPos>=0 && fNeg>=0) {
+                            res.send({done:true});
+                            //res.redirect('/app-test?test='+(req.query.test+1));
                             //TODO something with the tracking info.
+                            console.log(fPos+' false positives, '+fNeg+' false negatives');
+                        } else {
+                            res.send({done:false});
                         }
                     });
                 } else {
-                    spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,function (err) {
+                    spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
                         
                     });
+                    res.send({done:false});
                 }
-                res.send('ok');
+                
             } else
                 res.redirect('/login');
         });
@@ -328,6 +369,10 @@ var ControllerApp = function(port) {
             
         });
         
+        self.app.post('/feedback',function (req, res) {
+            console.log(req.body);
+            res.redirect('/thankyou');
+        });
         
     };
 
@@ -401,13 +446,13 @@ var ControllerApp = function(port) {
         
         //This could cuase bad things if people are using it right now. But hopefully nobody's up this late...
         spottingaddon.clearTestUsers(function(){self.userSessionMap={};});
-
+        console.log('Cleared users');
         var now = new Date();
         var millisTillTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 2, 0, 0, 0) - now;
         if (millisTillTime < 0) {
              millisTillTime += 86400000; // it's after 2am, try 2am tomorrow.
         }
-        setTimeout(resetTestUsers, millisTillTime);
+        setTimeout(self.resetTestUsers, millisTillTime);
     }
     
     
@@ -436,9 +481,11 @@ var ControllerApp = function(port) {
     //http://localhost:8081/connect?id=controller&address=localhost:8080
     
     
-    self.getTestApp = function(user) {
-        //TODO
-        return 'app';
+    self.getTestApp = function(userNum,testNum) {
+        if ((userNum+testNum)%2==0)
+            return 'app_hardcore';
+        else
+            return 'app_tap';
     }
     
     self.getTestInstructions = function(user) {
