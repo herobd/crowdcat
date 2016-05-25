@@ -1,7 +1,7 @@
 
 
-var OK_THRESH=100;
-var BAD_THRESH=-100;
+var OK_THRESH=85;
+var BAD_THRESH=-85;
 
 
 var lastRemovedEle=[];
@@ -60,9 +60,11 @@ function removeSpotting(OK) {
     lastRemovedEle.push(ondeck);
     
     if (lastRemovedEle.length>10) {
-        var removedBatch=lastRemovedEle.shift();
-        if (removedBatch!=lastRemovedBatchInfo[lastRemovedBatchInfo.length-1])
+        var removed=lastRemovedEle.shift();
+        if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].id) {
             lastRemovedBatchInfo.shift();
+            //console.log(lastRemovedBatchInfo)
+        }
     }
     
     
@@ -85,6 +87,7 @@ function createInlineLabel(label) {
 
 function undo() {
     if (lastRemovedEle.length>0) {
+        countUndos++;
         ondeck.classList.toggle('ondeck');
         var ondeckHeader = document.getElementById('b'+batchQueue[0].id)
             if (ondeckHeader)
@@ -105,9 +108,13 @@ function undo() {
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
             //console.log(pastInfo +' ?= '+batchQueue[0].id)
-            if (pastInfo!=batchQueue[0].id)
+            if (pastInfo!=batchQueue[0].id) {
                 batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
+            }
+            
         }   
+        if (ondeck.batch!=batchQueue[0].id)
+                console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].id)
         theWindow.appendChild(ondeck);
     }
     
@@ -138,9 +145,11 @@ function setup() {
     theWindow=windows[0];
     //for (var i = 0; i < windows.length; i++) {
     //    //initSlider(windows[i]);
-    windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
-    windows[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
-        
+    //windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
+    //windows[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
+    //initSlider(theWindow);
+    
+    
     //}
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
@@ -157,6 +166,8 @@ function setup() {
         headers[headers.length-1].classList.toggle('ondeck');
     });
     
+    document.getElementById('leftIcon').addEventListener('mouseup', function(e){removeSpotting(false); e.preventDefault();}, false);
+    document.getElementById('rightIcon').addEventListener('mouseup', function(e){removeSpotting(true); e.preventDefault();}, false);
 }
 
 function createSlider(im,id,batchId) {
@@ -295,15 +306,15 @@ function isBatchDone(batchId) {
     batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
     //base
     
-    document.getElementById('b'+batchQueue[0].id).classList.toggle('ondeck');
+    var nextHeader=document.getElementById('b'+batchQueue[0].id);
+    if (nextHeader)
+        nextHeader.classList.toggle('ondeck');
     var header = document.getElementById('b'+batchId);
     if (header) {
-        
         if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
             theWindow.removeChild(header);
             
             //we shift the header past the collapsing element to provide the illusion of a smooth transition
-            var nextHeader = document.getElementById('b'+batchQueue[0].id);
             theWindow.removeChild(nextHeader);
             theWindow.appendChild(nextHeader);
         } else {

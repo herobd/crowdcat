@@ -57,6 +57,7 @@ function removeSpotting(OK) {
 
 function undo() {
     if (lastRemoved.length>0) {
+        countUndos++;
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         lastRemoved.pop().hidden=false;

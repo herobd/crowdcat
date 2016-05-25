@@ -3,6 +3,8 @@ var batchQueue=[]
 var maxImgWidth=700;
 var imgWidth=null;
 var allReceived=false;
+var countUndos=0;
+var startTime = new Date().getTime();
 /*var batchQueue=[];
 var lastNgram='';
 function getNextBatch(window,toload) {
@@ -124,7 +126,7 @@ function getNextBatch(window,toload) {
                 */   
 
 
-function getNextBatchBase(elementSetup,toload,callback) {
+/*function getNextBatchBase(elementSetup,toload,callback) {
     
 
     var query='';
@@ -157,7 +159,7 @@ function getNextBatchBase(elementSetup,toload,callback) {
         
         
     });
-}
+}*/
 /////////////////////////
 
 
@@ -202,10 +204,14 @@ function batchShiftAndSend(batchId,callback) {
     var info = batchQueue[0];
     var ngram = info.ngram;
     var resultsId = info.rid;
+    if (info.id != batchId)
+        console.log("ERROR, not batching ids: "+info.id+" "+batchId)
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
-        //if (!batches[batchId].sent)
-            document.getElementById('b'+batchQueue[0].id).hidden=false;
+        
+        var next = document.getElementById('b'+batchQueue[0].id);
+        if (next)
+            next.hidden=false;
             //document.getElementById('b'+batchQueue[0].id).classList.toggle('show');
     } else {
         
@@ -227,16 +233,17 @@ function batchShiftAndSend(batchId,callback) {
             labels.push(batches[batchId].spottings[id]);
         }
     }
-    httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids},function (res){
+    httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
         
         var jres=JSON.parse(res);
         console.log(jres);
         if (testMode && jres.done) {
-            console.log(batchQueue.length);
+            //console.log(batchQueue.length);
             if (batchQueue.length==0)
                 window.location.href = "/app-test-"+(testNum+1);
         } else (!testMode || !allReceived)
             callback();
     });
     batches[batchId].sent=true;
+    
 }

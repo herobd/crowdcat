@@ -124,7 +124,7 @@ SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int
     
     if (userQueues.find(userId)==userQueues.end())
     {
-        cout <<"new user "<<userId<<", color="<<color<<endl;
+        //cout <<"new user "<<userId<<", color="<<color<<endl;
         userQueues[userId]=getTestSpottings(numberOfInstances,maxWidth,color);//we are assuming the number of instances will not change
         numTestBatches[userId]=userQueues[userId].size();
     }
@@ -134,20 +134,22 @@ SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int
         //pthread_rwlock_unlock(&userQueuesLock);
         //pthread_rwlock_wrlock(&userQueuesLock);
         userQueues.erase(userId);
-        return NULL;
+        
     }
-    
-    batch=userQueues[userId].front();//.back();
-    
-    //userQueues[userId].back().pop_back();   
-    
-    //if(userQueues[userId].back().size()==0)
-    userQueues[userId].pop_front();
-    
-    
+    else
+    {
+        batch=userQueues[userId].front();//.back();
+        
+        //userQueues[userId].back().pop_back();   
+        
+        //if(userQueues[userId].back().size()==0)
+        userQueues[userId].pop_front();
+        
+        
+        
+        //cout <<"returnin' batch"<<endl;
+    }
     pthread_rwlock_unlock(&userQueuesLock);
-    
-    
     return batch;
 }
 

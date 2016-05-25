@@ -185,7 +185,7 @@ var ControllerApp = function(port) {
             }
         });
         
-        var userCount=0;
+        self.userCount=new Date().getTime();
         self.app.get('/app-test-([123])', function(req, res) {
             if (req.sessionID) {
                 
@@ -230,7 +230,8 @@ var ControllerApp = function(port) {
         });
         
         self.app.get('/user-study', function(req, res) {
-            self.userSessionMap[req.sessionID]=userCount++;
+            console.log('hit suer-study, creating user '+(1+self.userCount));
+            self.userSessionMap[req.sessionID]=++self.userCount;
             res.render('user-study-alpha', {});
         });
         
@@ -269,7 +270,7 @@ var ControllerApp = function(port) {
                     num=+req.query.num;
                 
                 if (req.query.test) {
-                    console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
+                    //console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
                     spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],function (err,batchType,batchId,resultsId,ngram,spottings) {
                         //setTimeout(function(){
                         res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
@@ -307,7 +308,7 @@ var ControllerApp = function(port) {
                 if(req.query.resend == 'true')
                     resend=1;
                 if (req.query.test) {
-                    console.log('user '+self.userSessionMap[req.sessionID]+' is submitting a batch');
+                    //console.log('user '+self.userSessionMap[req.sessionID]+' is submitting a batch');
                     
                     spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,self.userSessionMap[req.sessionID],function (err,done,fPos,fNeg) {
                         //console.log('submission complete');
@@ -315,7 +316,13 @@ var ControllerApp = function(port) {
                             res.send({done:true});
                             //res.redirect('/app-test?test='+(req.query.test+1));
                             //TODO something with the tracking info.
+                            var userNum = self.userSessionMap[req.sessionID];
+                            console.log('user: '+userNum)
                             console.log(fPos+' false positives, '+fNeg+' false negatives');
+                            console.log('num of undos: '+req.body.undos)
+                            console.log('time elapsed: '+req.body.time)
+                            var info = {version:self.getTestApp(userNum,+req.query.test), fp:fPos, fn:fNeg, undos:req.body.undos, time:req.body.time};
+                            self.database.saveAlphaTest(userNum,info,function(err){if (err) console.log(err);});
                         } else {
                             res.send({done:false});
                         }
@@ -370,7 +377,8 @@ var ControllerApp = function(port) {
         });
         
         self.app.post('/feedback',function (req, res) {
-            console.log(req.body);
+            //console.log(req.body);
+            self.database.saveAlphaSurvey(req.body.userid,req.body,function(err){if (err) console.log(err);});
             res.redirect('/thankyou');
         });
         
@@ -445,7 +453,10 @@ var ControllerApp = function(port) {
     self.resetTestUsers = function() {
         
         //This could cuase bad things if people are using it right now. But hopefully nobody's up this late...
-        spottingaddon.clearTestUsers(function(){self.userSessionMap={};});
+        spottingaddon.clearTestUsers(function(){
+                self.userSessionMap={};
+                //self.userCount=0;
+            });
         console.log('Cleared users');
         var now = new Date();
         var millisTillTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 2, 0, 0, 0) - now;

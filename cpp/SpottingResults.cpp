@@ -38,6 +38,7 @@ SpottingResults::SpottingResults(string ngram) :
 void SpottingResults::add(Spotting spotting) {
     //sem_wait(&mutexSem);
     instancesById[spotting.id]=spotting;
+    assert(spotting.score==spotting.score);
     instancesByScore.insert(&instancesById[spotting.id]);
     tracer = instancesByScore.begin();
     if (spotting.score>maxScore)
@@ -165,12 +166,12 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     //sem_post(&mutexSem);
     numBatches++;
     //cout <<"["<<id<<"] sent batch of size "<<ret->size()<<", have "<<instancesByScore.size()<<" left"<<endl;
-    /*cout <<"score: ";
+    cout <<"ids["<<id<<"]: ";
     for (int i=0; i<ret->size(); i++)
     {
-        cout<<ret->at(i).score<<"\t";
+        cout<<ret->at(i).id<<"\t";
     }
-    cout<<endl;*/
+    cout<<endl;
     return ret;
 }
 
@@ -197,7 +198,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         {
             numberClassifiedTrue++;
             classById[id]=true;
-            ret->push_back(instancesById[id]);
+            ret->push_back(instancesById.at(id));
         }
         else
         {
@@ -318,7 +319,7 @@ void SpottingResults::EMThresholds(bool init)
         for (auto p : instancesById)
         {
             unsigned long id = p.first;
-            int bin = 255*(instancesById[id].score-minScore)/(maxScore-minScore);
+            int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
             histogram[bin]++;
             
         }
@@ -391,24 +392,24 @@ void SpottingResults::EMThresholds(bool init)
             unsigned long id = p.first;
             
             //test
-            int bin=(displayLen-1)*(instancesById[id].score-minScore)/(maxScore-minScore);
+            int bin=(displayLen-1)*(instancesById.at(id).score-minScore)/(maxScore-minScore);
             
             if (classById.find(id)!=classById.end())
             {
                 if (classById[id])
                 {
-                    expectedTrue.push_back(instancesById[id].score);
-                    expectedTrue.push_back(instancesById[id].score);
-                    sumTrue+=2*instancesById[id].score;
+                    expectedTrue.push_back(instancesById.at(id).score);
+                    expectedTrue.push_back(instancesById.at(id).score);
+                    sumTrue+=2*instancesById.at(id).score;
                     
                     //test
                     histogramCP.at(bin)++;
                 }
                 else
                 {
-                    expectedFalse.push_back(instancesById[id].score);
-                    expectedFalse.push_back(instancesById[id].score);
-                    sumFalse+=2*instancesById[id].score;
+                    expectedFalse.push_back(instancesById.at(id).score);
+                    expectedFalse.push_back(instancesById.at(id).score);
+                    sumFalse+=2*instancesById.at(id).score;
                     
                     //test
                     histogramCN.at(bin)++;
@@ -416,25 +417,25 @@ void SpottingResults::EMThresholds(bool init)
             }
             else
             {
-                double trueProb = exp(-1*pow(instancesById[id].score - trueMean,2)/(2*trueVariance));
-                double falseProb = exp(-1*pow(instancesById[id].score - falseMean,2)/(2*falseVariance));
+                double trueProb = exp(-1*pow(instancesById.at(id).score - trueMean,2)/(2*trueVariance));
+                double falseProb = exp(-1*pow(instancesById.at(id).score - falseMean,2)/(2*falseVariance));
                 if (init)
                 {
-                    trueProb = instancesById[id].score<pullFromScore;
-                    falseProb = instancesById[id].score>pullFromScore;
+                    trueProb = instancesById.at(id).score<pullFromScore;
+                    falseProb = instancesById.at(id).score>pullFromScore;
                 }
                 if (trueProb>falseProb)
                 {
-                    sumTrue+=instancesById[id].score;
-                    expectedTrue.push_back(instancesById[id].score);
+                    sumTrue+=instancesById.at(id).score;
+                    expectedTrue.push_back(instancesById.at(id).score);
                     
                     //test
                     histogramGP.at(bin)++;
                 }
                 else
                 {
-                    expectedFalse.push_back(instancesById[id].score);
-                    sumFalse+=instancesById[id].score;
+                    expectedFalse.push_back(instancesById.at(id).score);
+                    sumFalse+=instancesById.at(id).score;
                     
                     //test
                     histogramGN.at(bin)++;

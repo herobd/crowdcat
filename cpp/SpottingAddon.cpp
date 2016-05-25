@@ -77,6 +77,7 @@ NAN_METHOD(spottingBatchDone) {//TODO
 }
 
 NAN_METHOD(getNextTestBatch) {
+    //cout<<"request for test batch"<<endl;
     int width = To<int>(info[0]).FromJust();
     int color = To<int>(info[1]).FromJust();
     int num = To<int>(info[2]).FromJust();
