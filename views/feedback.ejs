@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CATTSS user study alpha</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link href="main.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="container">
+    <div id="title"><h1>Feedback</h1></div>
+    <p>Thank you for participating in this study, please provide some feedback:</p>
+    <form action="/feedback" method="post" autocomplete="on">
+        <input type="text" name="userid" value="<%= userid %>" hidden>
+        Which version of the app did you prefer?:<br>
+        <input type="radio" name="preference" value="<%= userid%2 %>" > the first one <br>
+        <input type="radio" name="preference" value="<%= (1+userid)%2 %>"> the second one<br>
+        <br>
+        What best describes the device you are using?:<br>
+        <input type="radio" name="device" value="phone" > smartphone <br>
+        <input type="radio" name="device" value="tablet"> tablet <br>
+        <input type="radio" name="device" value="desktop"> desktop <br>
+        <input type="radio" name="device" value="other"> other <br>
+        <br>
+        What did you like, dislike, find confusing, find annoying, enjoy, etc. about either of the versions?
+        <textarea class="feedbacktext" name="response"></textarea>
+        <br>
+        If you would be willing to participate in a later study, please provide your email address:<br>
+        <input class="feedbacktext" type="email" name="email" value=""><br>
+        <br>
+        <input class='button' type="submit" value="Submit">
+    </form>
+    
+</div>
+</body>
+</html>

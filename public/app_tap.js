@@ -99,8 +99,16 @@ function setup() {
         doneButton.addEventListener('touchend', batchDone, false);
         containers[i].appendChild(doneButton);
     }*/
-    document.getElementById("instructions").innerHTML='Select incorrect images.';
+    
     begin();
+    
+    if (testMode) {
+        document.getElementById('instructions').addEventListener('mouseup', function(e){
+            e.preventDefault(); 
+            startTime = new Date().getTime();
+            this.parentNode.removeChild(this);
+        }, false);
+    }
 }
 
 function createTapped(im,id,batchId) {

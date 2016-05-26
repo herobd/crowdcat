@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS <% if (testMode) { %>user test alpha part <%= testNum %><% } else { %>demo app<% } %></title>
+<title>CATTSS <% if (testMode) { %>user study alpha part <%= testNum %><% } else { %>demo app [swipe]<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -22,8 +22,8 @@
 <script type="text/javascript" src="<%= app_version %>.js"></script>
 <div id="topper">
     <div id="title">
-        <div>Subword user correction UI demo</div>
-        <p id='instructions' hidden>Swipe right of the highlighted handwriting matches the letters at the bottom, otherwise swipe right.</p>
+        <div>Subword user correction UI</div>
+        
         <form action="/logout" method="post" hidden>
             <input type="submit" value="Log out"/>
         </form>
@@ -46,5 +46,6 @@
     </div>
 </div>
 <div id='overlay'></div>
+<% if (testMode) { %><div id='instructions'><div><p>Swipe right if the highlighted handwriting matches the letters at the bottom, otherwise swipe left.</p><p>Tap to start!</p></div></div><% } %>
 </body>
 </html>

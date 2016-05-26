@@ -4,7 +4,7 @@ module.exports =  function() {
    65,465,56,56,546,542,6,565,46,654,6,5645,654,64,87,8790,3,571,7548,760,36,87356,76,
    57235,9838,625,645,76587,65338,56387,65,47,658,65,53,5,3,52,5,35,436,76,98,5,975,6,
    34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,56,
-   34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,5];
+   34,435,1,0,7,65,4,830,644,5,7,9,6,44,6,8,5,544,5,7,88,456,6,54,5,77,45624,456,6,5];
    var fs = require('fs');
     function Database(address,gdlDir) {
         
@@ -95,9 +95,20 @@ module.exports =  function() {
     
     Database.prototype.saveAlphaTest = function(userNum,info,callback) {
         var self=this;
-        self.alphaCollection.insert({_id:(userNum+'')}, {w:1}, function(err) {
-            self.alphaCollection.update({_id:(userNum+'')},{ $push: { tests: info } },{w:1}, callback)
+        self.alphaCollection.findOne({_id:(userNum+'')}, function(err, item) {
+            if (err) {
+                callback(err);
+            } else if (item==null) {
+                //console.log('adding new user '+userNum);
+                self.alphaCollection.insert({_id:(userNum+''), tests:[info]}, {w:1}, callback);
+            } else {
+                //console.log('updating user '+userNum);
+                self.alphaCollection.update({_id:(userNum+'')},{ $push: { tests: info } },{w:1}, callback);
+            }
         });
+        //self.alphaCollection.insert({_id:(userNum+''), tests:[]}, {w:1}, function(err) {
+        //    self.alphaCollection.update({_id:(userNum+'')},{ $push: { tests: info } },{w:1}, callback)
+        //});
     }
     
     Database.prototype.saveAlphaSurvey = function(userNum,results,callback) {

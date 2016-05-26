@@ -144,8 +144,8 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = 'app';
-                res.render(appName, {app_version:'app', testMode:false, message: req.flash('error') });
+                var appName = 'app-hardcore';
+                res.render(appName, {app_version:'app-hardcore', testMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }

@@ -166,8 +166,16 @@ function setup() {
         headers[headers.length-1].classList.toggle('ondeck');
     });
     
-    document.getElementById('leftIcon').addEventListener('mouseup', function(e){removeSpotting(false); e.preventDefault();}, false);
-    document.getElementById('rightIcon').addEventListener('mouseup', function(e){removeSpotting(true); e.preventDefault();}, false);
+    //document.getElementById('leftIcon').addEventListener('mouseup', function(e){removeSpotting(false); e.preventDefault();}, false);
+    //document.getElementById('rightIcon').addEventListener('mouseup', function(e){removeSpotting(true); e.preventDefault();}, false);
+    
+    if (testMode) {
+        document.getElementById('instructions').addEventListener('mouseup', function(e){
+            e.preventDefault(); 
+            startTime = new Date().getTime();
+            this.parentNode.removeChild(this);
+        }, false);
+    }
 }
 
 function createSlider(im,id,batchId) {

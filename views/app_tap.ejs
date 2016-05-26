@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CATTSS <% if (testMode) { %>user study alpha part <%= testNum %><% } else { %>demo app [tap]<% } %></title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+<link href="app.css" rel="stylesheet" type="text/css" />
+
+<script> 
+    <% if (testMode) { %>
+    testMode=true; 
+    testNum=<%= testNum %>;
+    <% } else { %>
+    testMode=false; 
+    testNum=-1;
+    <% } %>
+</script>
+
+</head>
+<body onload="setup()">
+<div class="container">
+    <script type="text/javascript" src="app_base.js"></script>
+    <script type="text/javascript" src="<%= app_version %>.js"></script>
+    <div id="title">
+        <% if (app_version!=='app_tap') { %>
+        <h>Subword user correction UI demo</h><br>
+        <% } %>
+        <label >Select incorrect highlightings.</label>
+        <button type="button" id="undoButton" onclick="undo()">Previous</button>
+        
+        <form action="/logout" method="post" hidden>
+                <input type="submit" value="Log out"/>
+        </form>
+    </div>
+    <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
+    <div class="window">
+        <div id="spinner" class="loader">Loading...</div>
+    </div>
+     
+</div>
+<% if (testMode) { %><div id='instructions'><div><p>Tap on highlightings that don't match the characters at the top.</p><p>Tap to start!</p></div></div><% } %>
+</body>
+</html>
