@@ -115,14 +115,24 @@ deque< SpottingsBatch* > TestQueue::getTestSpottings(unsigned int numberOfInstan
 }
 
 
-SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth, int color, USERID userId) 
+SpottingsBatch* TestQueue::getBatch(unsigned int numberOfInstances, unsigned int maxWidth, int color, USERID userId, int reset) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_wrlock(&userQueuesLock);
     //cout<<"got rw lock"<<endl;
     
-    if (userQueues.find(userId)==userQueues.end())
+    if (reset && userQueues.find(userId)!=userQueues.end())
+    {
+        for (auto b : userQueues[userId])
+            delete b;
+        userQueues.erase(userId);
+        classified.erase(userId);
+        returned.erase(userId);
+        numTestBatches.erase(userId);
+    }
+    
+    if (reset || userQueues.find(userId)==userQueues.end())
     {
         //cout <<"new user "<<userId<<", color="<<color<<endl;
         userQueues[userId]=getTestSpottings(numberOfInstances,maxWidth,color);//we are assuming the number of instances will not change
@@ -173,7 +183,7 @@ bool TestQueue::feedback(unsigned long id, const vector<string>& ids, const vect
             else
                 classified[userId][spot]='p';//fp
         }
-        cout <<"Returned: "<<(++returned[userId])<<" of: "<<numTestBatches[userId]<<endl;
+        //cout <<"Returned: "<<(++returned[userId])<<" of: "<<numTestBatches[userId]<<endl;
         //if (resent==0 && ++returned[userId]>=numTestBatches[userId])
         if (classified[userId].size() == testGroundTruth.size())
         {

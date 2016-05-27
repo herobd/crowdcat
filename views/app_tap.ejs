@@ -3,7 +3,8 @@
 <head>
 <title>CATTSS <% if (testMode) { %>user study alpha part <%= testNum %><% } else { %>demo app [tap]<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--meta name="viewport" content="width=device-width, initial-scale=1" /-->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/> <!--320-->
 
 
 <link href="app.css" rel="stylesheet" type="text/css" />
@@ -24,10 +25,8 @@
     <script type="text/javascript" src="app_base.js"></script>
     <script type="text/javascript" src="<%= app_version %>.js"></script>
     <div id="title">
-        <% if (app_version!=='app_tap') { %>
-        <h>Subword user correction UI demo</h><br>
-        <% } %>
-        <label >Select incorrect highlightings.</label>
+        
+        <label hidden>Select incorrect highlightings.</label>
         <button type="button" id="undoButton" onclick="undo()">Previous</button>
         
         <form action="/logout" method="post" hidden>
@@ -40,6 +39,10 @@
     </div>
      
 </div>
-<% if (testMode) { %><div id='instructions'><div><p>Tap on highlightings that don't match the characters at the top.</p><p>Tap to start!</p></div></div><% } %>
+<% if (testMode) { %><div id='instructions'><div>
+    <p><b>Version <%= testNum %></b></p>
+    <p>Tap on the instances where the highlighted part of the word doesn't match the characters at the top.</p>
+    <p>Tap to start!</p>
+</div></div><% } %>
 </body>
 </html>

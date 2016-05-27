@@ -6,22 +6,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <link href="main.css" rel="stylesheet" type="text/css" />
+<script>
+    function onload() {
+        var w = window,
+        d = document,
+        e = d.documentElement,
+        g = d.getElementsByTagName('body')[0],
+        x = w.innerWidth || e.clientWidth || g.clientWidth,
+        y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+        document.getElementById('width').value=x;
+        document.getElementById('height').value=y;
+        
+        document.getElementById('device').value=navigator.userAgent+'';
+    }
+</script>
 </head>
-<body>
+<body onload="onload()">
 <div class="container">
     <div id="title"><h1>Feedback</h1></div>
     <p>Thank you for participating in this study, please provide some feedback:</p>
     <form action="/feedback" method="post" autocomplete="on">
         <input type="text" name="userid" value="<%= userid %>" hidden>
+        <input id='width' type="text" name="screenwidth" value="" hidden>
+        <input id='height' type="text" name="screeneheight" value="" hidden>
+        <input id='device' type="text" name="userAgent" value="" hidden>
         Which version of the app did you prefer?:<br>
-        <input type="radio" name="preference" value="<%= userid%2 %>" > the first one <br>
-        <input type="radio" name="preference" value="<%= (1+userid)%2 %>"> the second one<br>
+        <input class="radioBig" type="radio" name="preference" value="<%= userid%2 %>" > the first one <br>
+        <input class="radioBig" type="radio" name="preference" value="<%= (1+userid)%2 %>"> the second one<br>
         <br>
         What best describes the device you are using?:<br>
-        <input type="radio" name="device" value="phone" > smartphone <br>
-        <input type="radio" name="device" value="tablet"> tablet <br>
-        <input type="radio" name="device" value="desktop"> desktop <br>
-        <input type="radio" name="device" value="other"> other <br>
+        <input class="radioBig" type="radio" name="device" value="phone" > smartphone <br>
+        <input class="radioBig" type="radio" name="device" value="tablet"> tablet <br>
+        <input class="radioBig" type="radio" name="device" value="desktop"> desktop <br>
+        <input class="radioBig" type="radio" name="device" value="other"> other <br>
         <br>
         What did you like, dislike, find confusing, find annoying, enjoy, etc. about either of the versions?
         <textarea class="feedbacktext" name="response"></textarea>

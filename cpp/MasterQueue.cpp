@@ -1,12 +1,46 @@
 #include "MasterQueue.h"
 
+void checkIncompleteSleeper(MasterQueue* q)
+{
+    //this_thread::sleep_for(chrono::hours(1));
+    this_thread::sleep_for(chrono::minutes(1));
+    q->checkIncomplete();
+}
 
+void MasterQueue::checkIncomplete()
+{
+    
+    
+    pthread_rwlock_rdlock(&semResults);
+    for (auto ele : results)
+    {
+        
+        sem_t* sem = ele.second.first;
+        SpottingResults* res = ele.second.second;
+        sem_wait(sem);
+            
+        if (res->checkIncomplete())
+        {
+            pthread_rwlock_wrlock(&semResultsQueue);
+            resultsQueue[res->getId()] = ele.second;
+            pthread_rwlock_unlock(&semResultsQueue);
+        }
+        
+        sem_post(sem);
+            
+
+    }
+    pthread_rwlock_unlock(&semResults);
+}
 
 MasterQueue::MasterQueue() {
     //sem_init(&semResultsQueue,false,1);
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
+    
+    //thread incompleteChecker (checkIncompleteSleeper,this);//This could be done by a thread for each sr
+    
     //atID=0;
     
     ///testing

@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
+
 <link href="app_hardcore.css" rel="stylesheet" type="text/css" />
 <script> 
     <% if (testMode) { %>
@@ -46,6 +47,10 @@
     </div>
 </div>
 <div id='overlay'></div>
-<% if (testMode) { %><div id='instructions'><div><p>Swipe right if the highlighted handwriting matches the letters at the bottom, otherwise swipe left.</p><p>Tap to start!</p></div></div><% } %>
+<% if (testMode) { %><div id='instructions'><div>
+    <p><b>Version <%= testNum %></b></p>
+    <p>Swipe right if the highlighted part of the handwriting matches the letters at the bottom, otherwise swipe left.</p>
+    <p>Tap to start!</p>
+</div></div><% } %>
 </body>
 </html>

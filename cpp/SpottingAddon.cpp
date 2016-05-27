@@ -82,9 +82,10 @@ NAN_METHOD(getNextTestBatch) {
     int color = To<int>(info[1]).FromJust();
     int num = To<int>(info[2]).FromJust();
     int userId = To<int>(info[3]).FromJust();
-    Callback *callback = new Callback(info[4].As<Function>());
+    int reset = To<int>(info[4]).FromJust();
+    Callback *callback = new Callback(info[5].As<Function>());
 
-    AsyncQueueWorker(new TestBatchRetrieveWorker(callback, width,color,num,userId,testQueue));
+    AsyncQueueWorker(new TestBatchRetrieveWorker(callback, width,color,num,userId,reset,testQueue));
 }
 
 NAN_METHOD(spottingTestBatchDone) {

@@ -10,6 +10,8 @@
 #include "semaphore.h"
 #include <pthread.h>
 #include "SpottingResults.h"
+#include <thread>
+#include <chrono>
 
 #include <fstream>
 
@@ -28,6 +30,8 @@ private:
     
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
+    
+    
     
     //int atID;
     //map<unsigned long,unsigned long> batchToResults;
@@ -67,5 +71,6 @@ public:
         cout << "* effort: "<<effortAvg/done<<endl;
         cout << "***********"<<endl;
     }
+    void checkIncomplete();
 };
 #endif

@@ -187,6 +187,7 @@ function createSlider(im,id,batchId) {
     //initSlider(genDiv);
     genDiv.style.background=spottingColors[colorIndex];
     genDiv.colorIndex=colorIndex;
+    genDiv.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
     genDiv.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
     return genDiv;
 }
@@ -228,8 +229,11 @@ function getNextBatch(toload,callback) {
     var prevNgram='.';
     if (batchQueue.length>0)
         prevNgram=batchQueue[batchQueue.length-1].ngram;
-    if (testMode)
-        query='&test='+testNum;
+    if (testMode) {
+        query+='&test='+testNum;
+        if (toload==toBeInQueue)
+            query+='&reset=true';
+    }
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
@@ -258,6 +262,8 @@ function getNextBatch(toload,callback) {
 	            if (jres.resultsId!=='X') {
 	                batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
 	                //console.log("got "+jres.resultsId)
+                } else if (jres.batchId=='R') {
+                    location.reload(true);
                 } else {
                     allReceived=true;
                     //console.log("all recieved")
@@ -313,8 +319,10 @@ function isBatchDone(batchId) {
     //base
     batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
     //base
-    
-    var nextHeader=document.getElementById('b'+batchQueue[0].id);
+    var nextHeader=null;
+    if (batchQueue.length>0) {
+        nextHeader=document.getElementById('b'+batchQueue[0].id);
+    }
     if (nextHeader)
         nextHeader.classList.toggle('ondeck');
     var header = document.getElementById('b'+batchId);
@@ -323,9 +331,12 @@ function isBatchDone(batchId) {
             theWindow.removeChild(header);
             
             //we shift the header past the collapsing element to provide the illusion of a smooth transition
-            theWindow.removeChild(nextHeader);
-            theWindow.appendChild(nextHeader);
+            if (nextHeader) {
+                theWindow.removeChild(nextHeader);
+                theWindow.appendChild(nextHeader);
+            }
         } else {
+            header.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
             header.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
             header.classList.toggle('batchHeader');
             header.classList.toggle('collapserH');

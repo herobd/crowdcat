@@ -6,7 +6,7 @@ module.exports =  function() {
    34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,56,
    34,435,1,0,7,65,4,830,644,5,7,9,6,44,6,8,5,544,5,7,88,456,6,54,5,77,45624,456,6,5];
    var fs = require('fs');
-    function Database(address,gdlDir) {
+    function Database(address) {
         
         var self=this;
         
@@ -84,7 +84,9 @@ module.exports =  function() {
         
     Database.prototype.revealEmail = function(enc) {
         var ret=''; 
+        //console.log(enc)
         for (var i in enc) {
+            
             var v = enc.charCodeAt(i)-fjfjfj[i];
             while (v<0)
                 v+=256;
@@ -116,6 +118,21 @@ module.exports =  function() {
         this.alphaCollection.update({_id:(userNum+'')},{$set: { survey:results } } ,{w:1}, callback)
     }
     
+    Database.prototype.listEmailsAlpha = function(callback) {
+        var ret=[];
+        var self=this;
+        var cursor = self.alphaCollection.find({},{survey:1});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+            } else if (doc != null) {
+                //console.log(doc)
+                ret.push(self.revealEmail(doc.survey.email))
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
     
     return Database
 };

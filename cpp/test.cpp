@@ -14,7 +14,7 @@ int main() {
         #pragma omp parallel for num_threads(4)
         for (int i=0; i<numUsers; i++)
         {
-            SpottingsBatch* b = t.getBatch(5, 400+i, i);
+            SpottingsBatch* b = t.getBatch(5, 400+i, i,0);
             first[i]=b->at(0).tlx;
             
             vector<string> ids;

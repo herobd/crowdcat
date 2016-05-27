@@ -82,7 +82,7 @@ function setup() {
     for (var i = 0; i < windows.length; i++) {
        //initSlider(windows[i]);
         //windows[i].addEventListener('touchstart', function(e){ e.preventDefault(); });
-        //windows[i].addEventListener('mousedown', function(e){ e.preventDefault(); });
+        windows[i].addEventListener('mousedown', function(e){ e.preventDefault(); });
         var doneButton = document.createElement("button");
         doneButton.classList.toggle('donebutton');
         doneButton.innerHTML='Next';
@@ -206,8 +206,11 @@ function getNextBatch(windowEle,toload) {
     var prevNgram='.';
     if (batchQueue.length>0)
         prevNgram=batchQueue[batchQueue.length-1].ngram;
-    if (testMode)
-        query='&test='+testNum; 
+    if (testMode) {
+        query+='&test='+testNum; 
+        if (toload==toBeInQueue)
+            query+='&reset=true';
+    }
     httpGetAsync('/app/nextBatch?num='+numBatch+'&width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         if (jres.err==null) {
@@ -248,6 +251,8 @@ function getNextBatch(windowEle,toload) {
 	            }*/ 
 	            if (jres.resultsId!=='X')
                     batchQueue.push({ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+                else if (jres.batchId=='R')
+                    location.reload(true);
                 else
                     allReceived=true;
                 spinner.hidden=true;

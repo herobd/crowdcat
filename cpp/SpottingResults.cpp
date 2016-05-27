@@ -163,15 +163,16 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     
     if (*done)
         allBatchesSent=true;
+    
+    //using chrono::system_clock;
+    for (int i=0; i<ret->size(); i++)
+    {    
+        starts[ret->at(i).id] = chrono::system_clock::now();
+    }
+        
     //sem_post(&mutexSem);
     numBatches++;
-    //cout <<"["<<id<<"] sent batch of size "<<ret->size()<<", have "<<instancesByScore.size()<<" left"<<endl;
-    cout <<"ids["<<id<<"]: ";
-    for (int i=0; i<ret->size(); i++)
-    {
-        cout<<ret->at(i).id<<"\t";
-    }
-    cout<<endl;
+    
     return ret;
 }
 
@@ -184,7 +185,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     for (unsigned int i=0; i< ids.size(); i++)
     {
         unsigned long id = stoul(ids[i]);
-        
+        starts.erase(id);
         if (resent)
         {
             if (classById[id])
@@ -573,3 +574,26 @@ void SpottingResults::EMThresholds(bool init)
     
 }
 
+
+bool SpottingResults::checkIncomplete()
+{
+    bool incomp=false;
+    for (auto start : starts)
+    {
+        chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
+        chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
+        cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
+        if (pass.count() > 2) //if a half-hour has passed
+        {
+            instancesByScore.insert(&instancesById[start.first]);
+            tracer = instancesByScore.begin();
+            incomp=true;
+        }
+    }
+    if (incomp && allBatchesSent)
+    {
+        allBatchesSent=false;
+        return true;
+    }
+    return false;
+}

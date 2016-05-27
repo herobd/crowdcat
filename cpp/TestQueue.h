@@ -43,7 +43,7 @@ private:
 public:
     TestQueue();
     deque< SpottingsBatch* > getTestSpottings(unsigned int numberOfInstances, unsigned int maxWidth, int color);
-    SpottingsBatch* getBatch(unsigned int numberOfInstances, unsigned int maxWidth, int color, USERID userId) ;
+    SpottingsBatch* getBatch(unsigned int numberOfInstances, unsigned int maxWidth, int color, USERID userId, int reset) ;
     bool feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, USERID userId, int* fp, int* fn);
     void clearUsers()//This is a reset, a hackish way to be sure we don't overflow
     {

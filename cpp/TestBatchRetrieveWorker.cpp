@@ -15,8 +15,8 @@ using namespace v8;
 
 class TestBatchRetrieveWorker : public AsyncWorker {
     public:
-        TestBatchRetrieveWorker(Callback *callback, int width, int color, int num, int userId, TestQueue* testQueue)
-        : AsyncWorker(callback), width(width), color(color), num(num), userId(userId), testQueue(testQueue) {}
+        TestBatchRetrieveWorker(Callback *callback, int width, int color, int num, int userId, int reset, TestQueue* testQueue)
+        : AsyncWorker(callback), width(width), color(color), num(num), userId(userId), reset(reset), testQueue(testQueue) {}
 
         ~TestBatchRetrieveWorker() {}
 
@@ -36,7 +36,7 @@ class TestBatchRetrieveWorker : public AsyncWorker {
                 hard=false;
             }
             //cout <<"getting test batch"<<endl;
-            SpottingsBatch* batch = testQueue->getBatch(num,width,color,userId);
+            SpottingsBatch* batch = testQueue->getBatch(num,width,color,userId,reset);
             //cout <<"got test batch"<<endl;
             if (batch != NULL)
             {
@@ -115,6 +115,7 @@ class TestBatchRetrieveWorker : public AsyncWorker {
         int color;
         int num;
         int userId;
+        int reset;
         TestQueue* testQueue;
         
         

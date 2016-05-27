@@ -150,6 +150,9 @@ button {
   top:        0; 
   left:       0;
   
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -222,6 +225,8 @@ button {
     /*transition: collapse 0.8s ease-in-out;*/
     animation-duration: 0.2s;
     animation-name: collapse;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: collapse;
     opacity: 0;
 }
 
@@ -231,15 +236,30 @@ button {
     to   {max-height:0px;
           min-height:0px;}
 }
+@-webkit-keyframes collapse {
+    from {max-height:100px;
+          min-height:70px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+
 
 .collapserH {
     /*transition: collapse 0.8s ease-in-out;*/
     animation-duration: 0.3s;
     animation-name: collapseH;
+    -webkit-animation-duration: 0.3s;
+    -webkit-animation-name: collapseH;
     opacity: 0;
 }
 
 @keyframes collapseH {
+    from {max-height:100px;
+          min-height:40px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+@-webkit-keyframes collapseH {
     from {max-height:100px;
           min-height:40px;}
     to   {max-height:0px;
@@ -269,7 +289,7 @@ button {
     /*background: #FFFFCC !important;*/
     color: #0E0E0E;
     height:140px;
-    border-width:4px 0px;
+    border-width:20px 0px;
     border-color: #FFFF77;
     border-style: solid;
 }

@@ -21,7 +21,7 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Debug/spottingaddon")
+var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 var debug=true;
 numberOfTests=2;
@@ -188,20 +188,23 @@ var ControllerApp = function(port) {
         self.userCount=new Date().getTime();
         self.app.get('/app-test-([123])', function(req, res) {
             if (req.sessionID) {
-                
-                if (!self.userSessionMap[req.sessionID])
+                var userId = self.userSessionMap[req.sessionID];
+                if (!userId)
                     res.redirect('/user-study');
                 else {
                     var num = +req.params[0];
-                
-                
-                    if (num==undefined || num!=num)
-                        num=1;
-                    if (num>numberOfTests) {
-                        res.redirect('/feedback');
+                    if (self.userStateMap[userId]!=num) {
+                        res.redirect('/app-test-'+self.userStateMap[userId]);
                     } else {
-                        var appName = self.getTestApp(self.userSessionMap[req.sessionID],num);
-                        res.render(appName, {app_version:appName, testMode:true, testNum:num, message: req.flash('error') });
+                
+                        if (num==undefined || num!=num || num<1)
+                            num=1;
+                        if (num>numberOfTests) {
+                            res.redirect('/feedback');
+                        } else {
+                            var appName = self.getTestApp(userId,num);
+                            res.render(appName, {app_version:appName, testMode:true, testNum:num, message: req.flash('error') });
+                        }
                     }
                 }
             } else {
@@ -230,21 +233,30 @@ var ControllerApp = function(port) {
         });
         
         self.app.get('/user-study', function(req, res) {
-            console.log('hit suer-study, creating user '+(1+self.userCount));
             self.userSessionMap[req.sessionID]=++self.userCount;
+            self.userStateMap[self.userSessionMap[req.sessionID]]=1;
             res.render('user-study-alpha', {});
         });
         
         self.app.get('/thankyou', function(req, res) {
-            if (self.userSessionMap[req.sessionID])
+            if (self.userSessionMap[req.sessionID]) {
+                 self.userStateMap[self.userSessionMap[req.sessionID]]=undefined;
                 self.userSessionMap[req.sessionID]=undefined;
+            }
             res.render('thankyou', {});
         });
         
         self.app.get('/feedback', function(req, res) {
             if (self.userSessionMap[req.sessionID])
             {
-                res.render('feedback', {userid:self.userSessionMap[req.sessionID]});
+                var state = self.userStateMap[self.userSessionMap[req.sessionID]];
+                if (state > numberOfTests+1) {
+                    res.redirect('/thankyou');
+                } else if (state > numberOfTests) {
+                    res.render('feedback', {userid:self.userSessionMap[req.sessionID]});
+                } else {
+                    res.redirect('/app-test-'+state);
+                }
             } else {
                 res.redirect('/user-study');
             }
@@ -271,11 +283,19 @@ var ControllerApp = function(port) {
                 
                 if (req.query.test) {
                     //console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
-                    spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],function (err,batchType,batchId,resultsId,ngram,spottings) {
-                        //setTimeout(function(){
-                        res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
-                        //},2000);
-                    });
+                    if (+req.query.test == self.userStateMap[self.userSessionMap[req.sessionID]]) {
+                        var reset=0;
+                        if (req.query.reset)
+                            reset=1;
+                        spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],reset,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                            //setTimeout(function(){
+                            res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                            //},2000);
+                        });
+                    } else {
+                        res.send({batchType:"spottings",batchId:"R",resultsId:"X",ngram:"Error, refresh",spottings:[]});
+                    }
+                    
                 } else {
                     spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
                         //setTimeout(function(){
@@ -309,18 +329,21 @@ var ControllerApp = function(port) {
                     resend=1;
                 if (req.query.test) {
                     //console.log('user '+self.userSessionMap[req.sessionID]+' is submitting a batch');
+                    var userNum = self.userSessionMap[req.sessionID];
                     
-                    spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,self.userSessionMap[req.sessionID],function (err,done,fPos,fNeg) {
+                    spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,userNum,function (err,done,fPos,fNeg) {
                         //console.log('submission complete');
                         if (fPos>=0 && fNeg>=0) {
+                            
+                            self.userStateMap[userNum]++;
                             res.send({done:true});
                             //res.redirect('/app-test?test='+(req.query.test+1));
                             //TODO something with the tracking info.
-                            var userNum = self.userSessionMap[req.sessionID];
-                            console.log('user: '+userNum)
-                            console.log(fPos+' false positives, '+fNeg+' false negatives');
-                            console.log('num of undos: '+req.body.undos)
-                            console.log('time elapsed: '+req.body.time)
+                            
+                            //console.log('user: '+userNum)
+                            //console.log(fPos+' false positives, '+fNeg+' false negatives');
+                            //console.log('num of undos: '+req.body.undos)
+                            //console.log('time elapsed: '+req.body.time)
                             var info = {version:self.getTestApp(userNum,+req.query.test), fp:fPos, fn:fNeg, undos:req.body.undos, time:req.body.time};
                             self.database.saveAlphaTest(userNum,info,function(err){if (err) console.log(err);});
                         } else {
@@ -378,6 +401,7 @@ var ControllerApp = function(port) {
         
         self.app.post('/feedback',function (req, res) {
             //console.log(req.body);
+            self.userStateMap[req.body.userid]++;
             self.database.saveAlphaSurvey(req.body.userid,req.body,function(err){if (err) console.log(err);});
             res.redirect('/thankyou');
         });
@@ -430,6 +454,7 @@ var ControllerApp = function(port) {
         
         // Create the express server and routes.
         self.userSessionMap={};
+        self.userStateMap={};
         self.initializeServer();
     };
 
@@ -455,6 +480,7 @@ var ControllerApp = function(port) {
         //This could cuase bad things if people are using it right now. But hopefully nobody's up this late...
         spottingaddon.clearTestUsers(function(){
                 self.userSessionMap={};
+                self.userStateMap={};
                 //self.userCount=0;
             });
         console.log('Cleared users');

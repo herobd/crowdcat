@@ -7,10 +7,11 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <chrono>
 
 #include <iostream>
 
-#define FUZZY 15
+#define FUZZY 12
 
 using namespace std;
 
@@ -111,10 +112,18 @@ public:
                     else if (c>sideFromR+brx-tlx-FUZZY)
                         fuzzyMult=(sideFromR+brx-tlx+FUZZY-c)/(2.0*FUZZY);
                     
-                    
-                    pix[color%3]*=1.0-0.25*fuzzyMult;
-                    pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
-                    pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
+                    if (color%3!=1)//red is a bad color for highlighting
+                    {
+                        pix[color%3]*=1.0-0.25*fuzzyMult;
+                        pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
+                        pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
+                    }
+                    else
+                    {
+                        pix[color%3]=min((int)(20*fuzzyMult+(pix[(color)%3]*(1.0+fuzzyMult*0.05))),255);
+                        pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
+                        pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
+                    }
                 }
             }
         //cout<<endl;
@@ -159,6 +168,8 @@ public:
     SpottingImage at(int i) const    {return instances.at(i);}
     SpottingImage & at(int i) {return instances.at(i);}
     unsigned int size() const { return instances.size();}
+    
+    
 private:
     static unsigned long _batchId;
     vector<SpottingImage> instances;
@@ -221,6 +232,8 @@ public:
     
     vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     
+    bool checkIncomplete();
+    
 private:
     static unsigned long _id;
     
@@ -246,6 +259,8 @@ private:
     multiset<Spotting*,scoreComp> instancesByScore;
     map<unsigned long,Spotting> instancesById;
     map<unsigned long,bool> classById;
+    
+    map<unsigned long, chrono::system_clock::time_point > starts;
     
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;
