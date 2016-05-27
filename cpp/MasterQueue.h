@@ -12,6 +12,7 @@
 #include "SpottingResults.h"
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 #include <fstream>
 
@@ -31,7 +32,7 @@ private:
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
     
-    
+    thread* incompleteChecker;
     
     //int atID;
     //map<unsigned long,unsigned long> batchToResults;
@@ -64,13 +65,18 @@ public:
     bool test_autoBatch();
     ~MasterQueue()
     {
+        kill.store(true);
+        //~(*incompleteChecker)();
+        
         cout << "***********"<<endl;
         cout << "* accuracy: "<<accuracyAvg/done<<endl;
         cout << "* recall: "<<recallAvg/done<<endl;
         cout << "* manual: "<<manualAvg/done<<endl;
         cout << "* effort: "<<effortAvg/done<<endl;
         cout << "***********"<<endl;
+        delete incompleteChecker;
     }
     void checkIncomplete();
+    atomic_bool kill;
 };
 #endif

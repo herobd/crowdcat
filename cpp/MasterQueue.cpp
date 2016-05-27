@@ -3,8 +3,12 @@
 void checkIncompleteSleeper(MasterQueue* q)
 {
     //this_thread::sleep_for(chrono::hours(1));
-    this_thread::sleep_for(chrono::minutes(1));
-    q->checkIncomplete();
+    //cout <<"kill is "<<q->kill.load()<<endl;
+    while(!q->kill.load()) {
+        //cout <<"begin sleep"<<endl;
+        this_thread::sleep_for(chrono::hours(1));
+        q->checkIncomplete();
+    }
 }
 
 void MasterQueue::checkIncomplete()
@@ -38,9 +42,9 @@ MasterQueue::MasterQueue() {
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
-    
-    //thread incompleteChecker (checkIncompleteSleeper,this);//This could be done by a thread for each sr
-    
+    kill.store(false);
+    incompleteChecker = new thread(checkIncompleteSleeper,this);//This could be done by a thread for each sr
+    incompleteChecker->detach();
     //atID=0;
     
     ///testing

@@ -240,7 +240,7 @@ private:
     unsigned long id;
     double acceptThreshold;
     double rejectThreshold;
-    int numBatches;
+    //int numBatches;
     bool allBatchesSent;
     
     

@@ -1,5 +1,6 @@
 #include "SpottingResults.h"
 
+#include <ctime>
 
 
 unsigned long Spotting::_id=0;
@@ -11,7 +12,7 @@ SpottingResults::SpottingResults(string ngram) :
 {
     id = _id++;
     //sem_init(&mutexSem,false,1);
-    numBatches=0;
+    //numBatches=0;
     allBatchesSent=false;
     
     numberClassifiedTrue=0;
@@ -164,14 +165,17 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if (*done)
         allBatchesSent=true;
     
-    //using chrono::system_clock;
+    //cout<<"batch is "<<ret->size()<<endl;
     for (int i=0; i<ret->size(); i++)
-    {    
+    {   
         starts[ret->at(i).id] = chrono::system_clock::now();
+        
+        //time_t tt= chrono::system_clock::to_time_t ( starts[ret->at(i).id] );
+        //cout << ret->at(i).id<<" at time "<< ctime(&tt)<<endl;
     }
         
     //sem_post(&mutexSem);
-    numBatches++;
+    //numBatches++;
     
     return ret;
 }
@@ -210,7 +214,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     EMThresholds();
     
     
-    if (resent==0 && --numBatches==0 && allBatchesSent)
+    if (resent==0 && starts.size()==0 && allBatchesSent)
     {
         *done=true;
         //cout <<"all batches sent, cleaning up"<<endl;
@@ -235,66 +239,6 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     
    
     
-SpottingImage SpottingResults::getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram)
-{
-    //cout <<"getNextSpottingImage"<<endl;
-    //float midScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
-    float midScore = pullFromScore;
-    if ((*tracer)->score < midScore)
-        while(tracer!=instancesByScore.end() && (*tracer)->score<midScore)
-            tracer++;
-    else
-        while((*tracer)->score>midScore && tracer!=instancesByScore.begin())
-            tracer--;
-    
-    
-    //cout <<"1 getNextSpottingImage"<<endl;
-    
-    if(tracer==instancesByScore.end())
-        tracer--;
-    
-    if ((*tracer)->score > rejectThreshold && tracer!=instancesByScore.begin())
-        tracer--;
-    
-    //cout <<"2 getNextSpottingImage: "<<*tracer<<endl;
-    
-    SpottingImage toRet(**tracer,maxWidth,color,prevNgram);
-    //cout <<"2.25 getNextSpottingImage"<<endl;
-    
-    tracer = instancesByScore.erase(tracer);
-    //cout <<"2.5 getNextSpottingImage"<<endl;
-    if (instancesByScore.size()==0)
-    {
-        *done=true;
-        return toRet;
-    }
-    
-    //cout <<"3 getNextSpottingImage"<<endl;
-    
-    if (tracer != instancesByScore.begin())
-    {
-        tracer--;
-    }
-    
-    
-    if (tracer == instancesByScore.end())
-    {
-        *done=true;
-        return toRet;
-    }
-    //cout <<"4 getNextSpottingImage"<<endl;
-    
-    if ((*tracer)->score < acceptThreshold)
-        tracer++;
-    
-    //cout <<"5 getNextSpottingImage"<<endl;
-    
-    if (tracer==instancesByScore.end() || (*tracer)->score > rejectThreshold)
-        *done = true;
-    
-    //cout <<"fin getNextSpottingImage"<<endl;
-    return toRet;
-}
 
 void SpottingResults::EMThresholds(bool init)
 {
@@ -578,18 +522,24 @@ void SpottingResults::EMThresholds(bool init)
 bool SpottingResults::checkIncomplete()
 {
     bool incomp=false;
+    //cout <<"checkIncomplete, starts is "<<starts.size()<<endl;
+    vector<unsigned long> toRemove;
     for (auto start : starts)
     {
         chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
-        cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
-        if (pass.count() > 2) //if a half-hour has passed
+        //cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
+        if (pass.count() > 20) //if 20 mins has passed
         {
             instancesByScore.insert(&instancesById[start.first]);
             tracer = instancesByScore.begin();
             incomp=true;
+            toRemove.push_back(start.first);
+            
         }
     }
+    for (unsigned long id : toRemove)
+        starts.erase(id);
     if (incomp && allBatchesSent)
     {
         allBatchesSent=false;
