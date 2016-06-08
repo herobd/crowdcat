@@ -1,12 +1,46 @@
 
 #include "MasterQueue.h"
 #include "TestQueue.h"
+#include "Knowledge.h"
+#include "Lexicon.h"
 #include <assert.h>
+#include <iostream>
 
 int main() {
     //TEST
-    
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	TestQueue t;
+    Lexicon::readIn("~/intel_index/data/wordsEnWithNames.txt");
+    Knowledge::Corpus c;
+    //Knowledge::Page* = new Knowledge::Page();
+    int pageId=0;
+    //c.addPage(pageId);
+    cv::Mat page = cv::imread("~/intel_index/data/gw_20p_wannot/2700270.tif");
+    while(1)
+    {
+        int tlx, tly, brx, bry;
+        string ngram;
+        cout << "tlx: ";
+        cin >> tlx;
+        if (tlx=-1)
+            break;
+        cout << "tly: ";
+        cin >> tly;
+        if (tly=-1)
+            break;
+        cout << "brx: ";
+        cin >> brx;
+        if (brx=-1)
+            break;
+        cout << "bry: ";
+        cin >> bry;
+        if (bry=-1)
+            break;
+        cout << "ngram: ";
+        cin >> ngram;
+        
+        Spotting s(tlx, tly, brx, bry, pageId, &page, ngram, 0.1);
+        c.addSpotting(s);
+    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	/*TestQueue t;
     int numUsers=8;
     for (int n=0; n<t.numTestBatches; n++)
     {
@@ -34,7 +68,8 @@ int main() {
         {
             assert(first[i-1] == first[i]);
         }
-    }
+    }*/
+    
     //MasterQueue q;
     //while (q.test_autoBatch()){}
     

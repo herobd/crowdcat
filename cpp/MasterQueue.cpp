@@ -115,6 +115,7 @@ MasterQueue::MasterQueue() {
     addTestSpottings();
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
+    numCTrue=numCTrue=0;
     ///end testing
 }
 
@@ -127,7 +128,8 @@ void MasterQueue::addTestSpottings()
     map<string,SpottingResults*> spottingResults;
     
     
-    ifstream in("./data/GW_agSpottings_fold1_0.100000.csv");
+    ifstream in("./data/GW_spottings_fold1_0.100000.csv");
+    assert(in.is_open());
     string line;
     
     //std::getline(in,line);
@@ -197,8 +199,8 @@ bool MasterQueue::test_autoBatch()
         return false;
     vector<string> ids;
     vector<int> userClassifications;
-    
-    cout<<b->ngram<<": ";
+    assert(b->size()>0);
+    //cout<<b->ngram<<": ";
     
     for (int i=0; i<b->size(); i++)
     {
@@ -210,9 +212,9 @@ bool MasterQueue::test_autoBatch()
         else
             userClassifications.push_back(0);
         
-        cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
+        //cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
     }
-    cout<<endl;
+    //cout<<endl;
     vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
     delete tmp;
     return true;
@@ -323,7 +325,14 @@ void MasterQueue::test_showResults(unsigned long id,string ngram)
 //not thread safe
 vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
 {
-    
+    assert(ids.size()>0 && userClassifications.size()>0);
+    for (int c : userClassifications)
+    {
+        if (c)
+            numCTrue++;
+        else
+            numCFalse++;
+    }
     test_numDone[id]+=ids.size();
     vector<Spotting>* res = feedback(id, ids, userClassifications,0);
     for (Spotting s : *res)
@@ -339,7 +348,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
         }
     }
     
-    if (res->size()>ids.size())
+    if (results.find(id)==results.end())
         test_showResults(id,"");
     return res;
 }

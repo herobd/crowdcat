@@ -54,6 +54,7 @@ private:
     map<unsigned long, int> test_numFalsePos;
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
     int done;
+    int numCTrue, numCFalse;
 public:
     MasterQueue();
     SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
@@ -73,8 +74,11 @@ public:
         cout << "* recall: "<<recallAvg/done<<endl;
         cout << "* manual: "<<manualAvg/done<<endl;
         cout << "* effort: "<<effortAvg/done<<endl;
+        cout << "* true/false: "<<numCTrue/(0.0+numCFalse)<<endl;
         cout << "***********"<<endl;
         delete incompleteChecker;
+        pthread_rwlock_destroy(&semResultsQueue);
+        pthread_rwlock_destroy(&semResults);
     }
     void checkIncomplete();
     atomic_bool kill;
