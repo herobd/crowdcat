@@ -23,7 +23,7 @@ using namespace std;
 #define THRESH_LEXICON_LOOKUP_COUNT 20
 //#define THRESH_SCORING 1.0
 #define THRESH_SCORING_COUNT 6
-//#define averageCharWidth 40 //GW, totally just making this up
+#define averageCharWidth 40 //GW, totally just making this up
 
 class TranscribeBatch
 {
@@ -31,17 +31,22 @@ private:
     vector<string> possibilities;
     cv::Mat wordImg;
     cv::Mat ngramLocs;
+    
+    static vector< cv::Vec3f > colors;
 public:
     TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
         possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {}
     
+    TranscribeBatch(multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry);
+    
     const vector<string>& getPossibilities() {return possibilities;}
+    cv::Mat getImage() { return wordImg; }
 };
 
 namespace Knowledge
 {
 
-int averageCharWidth=40;
+//int averageCharWidth=40;
 
 //some general functions
 void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry);
@@ -56,6 +61,7 @@ private:
     int tlx, tly, brx, bry; // top y and bottom y
     string query;
     Meta meta;
+    const cv::Mat* pagePnt;
     
     multimap<int,Spotting> spottings;
     
@@ -64,12 +70,12 @@ private:
     string generateQuery();
     
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1)
+    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query("")
     {
         pthread_rwlock_init(&lock,NULL);
     }    
     
-    Word(int tlx, int tly, int brx, int bry) : tlx(tlx), tly(tly), brx(brx), bry(bry), query("")
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query("")
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -131,7 +137,7 @@ public:
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
-        Word* newWord = new Word(tlx,tly,brx,bry);
+        Word* newWord = new Word(tlx,tly,brx,bry,s.pagePnt);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -190,11 +196,11 @@ class Corpus
 private:
     pthread_rwlock_t pagesLock;
     
-    int averageCharWidth;
+    //int averageCharWidth;
     float threshScoring;
     
     map<unsigned long, vector<Word*> > spottingsToWords;
-    vector<Page*> pages;
+    map<int,Page*> pages;
 public:
     Corpus();
     ~Corpus()

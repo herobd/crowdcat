@@ -8,31 +8,32 @@
 
 int main() {
     //TEST
-    Lexicon::readIn("~/intel_index/data/wordsEnWithNames.txt");
+    Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     Knowledge::Corpus c;
     //Knowledge::Page* = new Knowledge::Page();
     int pageId=0;
     //c.addPage(pageId);
-    cv::Mat page = cv::imread("~/intel_index/data/gw_20p_wannot/2700270.tif");
+    cv::Mat page = cv::imread("/home/brian/intel_index/data/gw_20p_wannot/2700270.tif",CV_LOAD_IMAGE_GRAYSCALE);
+    assert(page.rows>0);
     while(1)
     {
         int tlx, tly, brx, bry;
         string ngram;
         cout << "tlx: ";
         cin >> tlx;
-        if (tlx=-1)
+        if (tlx==-1)
             break;
         cout << "tly: ";
         cin >> tly;
-        if (tly=-1)
+        if (tly==-1)
             break;
         cout << "brx: ";
         cin >> brx;
-        if (brx=-1)
+        if (brx==-1)
             break;
         cout << "bry: ";
         cin >> bry;
-        if (bry=-1)
+        if (bry==-1)
             break;
         cout << "ngram: ";
         cin >> ngram;

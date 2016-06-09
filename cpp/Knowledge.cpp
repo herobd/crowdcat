@@ -1,10 +1,38 @@
 #include "Knowledge.h"
 
+vector< cv::Vec3f > TranscribeBatch::colors = {cv::Vec3f(1.2,1.2,0.8),cv::Vec3f(1.2,0.8,1.2),cv::Vec3f(0.83,0.93,1.3),cv::Vec3f(0.85,1.3,0.85),cv::Vec3f(1.3,0.85,0.85),cv::Vec3f(0.85,0.85,1.3)};
+
+TranscribeBatch::TranscribeBatch(multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry)
+{
+    for (auto p : scored)
+    {
+        possibilities.push_back(p.second);
+    }
+    if (wordImg.type()==CV_8UC3)
+        this->wordImg = wordImg.clone();
+    else
+        cv::cvtColor(wordImg,this->wordImg,CV_GRAY2RGB);
+    
+    int colorIndex=0;
+    for (auto iter : *spottings)
+    {
+        const Spotting& s = iter.second;
+        for (int r= max(0,s.tly-tly); r<min(wordImg.rows,s.bry-tly); r++)
+            for (int c= max(0,s.tlx-tlx); c<min(wordImg.cols,s.brx-tlx); c++)
+            {
+                this->wordImg.at<cv::Vec3b>(r,c)[0] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[0]*colors[colorIndex][0]);
+                this->wordImg.at<cv::Vec3b>(r,c)[1] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[1]*colors[colorIndex][1]);
+                this->wordImg.at<cv::Vec3b>(r,c)[2] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[2]*colors[colorIndex][2]);
+                
+            }
+        colorIndex = (colorIndex+1)%colors.size();
+    }
+}
 
 Knowledge::Corpus::Corpus()
 {
     pthread_rwlock_init(&pagesLock,NULL);
-    averageCharWidth=40;
+    //averageCharWidth=40;
     threshScoring= 1.0;
 }
 
@@ -15,8 +43,9 @@ void Knowledge::Corpus::addSpotting(Spotting s)
     pthread_rwlock_unlock(&pagesLock);
     if (page==NULL)
     {
+        page = new Page();
         pthread_rwlock_wrlock(&pagesLock);
-        pages[s.pageId] = new Page();
+        pages[s.pageId] = page;
         pthread_rwlock_unlock(&pagesLock);
     }
     
@@ -58,6 +87,8 @@ void Knowledge::Corpus::addSpotting(Spotting s)
                     {
                         cout << pos <<", ";
                     }
+                    cv::imshow("highligh",newBatch->getImage());
+                    cv::waitKey();
                     cout <<endl;
                 }
             }
@@ -101,7 +132,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
 {
     pthread_rwlock_wrlock(&lock);
     //decide if it should be merge with another
-    int width = s.brx=s.tlx;
+    int width = s.brx-s.tlx;
     bool merged=false;
     for (auto otherS : spottings)
     {
@@ -114,6 +145,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
                 otherS.second.tlx = (otherS.second.tlx+s.tlx)/2;
                 otherS.second.brx = (otherS.second.brx+s.brx)/2;
                 merged=true;
+                cout <<"merge"<<endl;
                 break;
             }
         }
@@ -127,13 +159,14 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
     if (query.compare(newQuery) !=0)
     {
         query=newQuery;
-        vector<string> matches = Lexicon::search(query,meta);
+        vector<string> matches = Lexicon::instance()->search(query,meta);
         if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
             if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
-                ret= createBatch(scored);
+                //ret= createBatch(scored);
+                ret = new TranscribeBatch(scored,(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly)),&spottings,tlx,tly,brx,bry);
             }
         }
         else if (matches.size()==0)
@@ -173,8 +206,9 @@ string Knowledge::Word::generateQuery()
     while (spot != spottings.end())
     {
         int dif = spot->second.tlx-pos;
-        float numChars = dif/Knowledge::averageCharWidth;
-        
+        float numChars = dif/(0.0+averageCharWidth);
+        cout <<"pos: "<<pos<<" str: "<<spot->second.tlx<<endl;
+        cout <<"num chars: "<<numChars<<endl;
         
         
         if (numChars>0)
@@ -197,8 +231,8 @@ string Knowledge::Word::generateQuery()
             }
             else if (ret[ret.length()-1] == spot->second.ngram[0])
                 ret+="?";
-            if (-1*numChars<THRESH_UNKNOWN_EST)
-                ret += "[a-zA-Z0-9]?";
+            //if (-1*numChars<THRESH_UNKNOWN_EST/2)
+            //    ret += "[a-zA-Z0-9]?";
         }
         ret += spot->second.ngram;
         pos = spot->second.brx;
@@ -206,7 +240,9 @@ string Knowledge::Word::generateQuery()
     }
     
     int dif = brx-pos;
-    float numChars = dif/averageCharWidth;
+    float numChars = dif/(0.0+averageCharWidth);
+    cout <<"pos: "<<pos<<" end: "<<brx<<endl;
+    cout <<"E num chars: "<<numChars<<endl;
     if (numChars>0)
     {
         int least = floor(numChars);
@@ -219,12 +255,13 @@ string Knowledge::Word::generateQuery()
         least = max(0,least);
         ret += "[a-zA-Z0-9]{"+to_string(least)+","+to_string(most)+"}";
     }
-    else
+    /*else
     {
-        if (-1*numChars<THRESH_UNKNOWN_EST)
+        if (-1*numChars<THRESH_UNKNOWN_EST/2)
             ret += "[a-zA-Z0-9]?";
-    }
-    
+    }*/
+    cout << "query : "<<ret<<endl;
+    return ret;
 }
 
 
@@ -234,11 +271,16 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
     
     //int centerY = s.tly+(s.bry-s.tly)/2.0;
     cv::Mat b;// = otsu(*t.pagePnt);
-    cv::adaptiveThreshold(*s.pagePnt, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, max(s.brx-s.tlx,s.bry-s.tly), 20);
-    cv::imshow("adp thresh", b);
-    cv::waitKey();
-    cv::Mat ele = (cv::Mat_<float>(3,3) << 1, 1, 1, 1, 1, 1, 1, 1, 1);
+    int blockSize = max(s.brx-s.tlx,s.bry-s.tly);
+    if (blockSize%2==0)
+        blockSize++;
+    cv::adaptiveThreshold(*s.pagePnt, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
+    //cv::imshow("ff", b);
+    //cv::waitKey();
+    cv::Mat ele = cv::Mat::ones(3,5,CV_32F);//(cv::Mat_<float>(3,5) << 1, 1, 1, 1, 1, 1, 1, 1, 1);
     cv::dilate(b, b, ele);
+    //cv::imshow("ff", b);
+    //cv::waitKey();
     vector<cv::Point> ps;
     for (int r=s.tly; r<=s.bry; r++)
         for (int c=s.tlx; c<=s.brx; c++)
@@ -248,8 +290,9 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
                 //startX=c;
                 //startY=r;
                 ps.push_back(cv::Point(c,r));
-                r= s.bry+1;
-                break;
+                b.at<unsigned char>(r,c)=0;
+                //r= s.bry+1;
+                //break;
             }
         }
     if (ps.size()>0)
@@ -258,7 +301,6 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
         int maxX = ps[0].x;
         int minY = ps[0].y;
         int maxY = ps[0].y;
-        b.at<unsigned char>(ps[0])=0;
         vector<cv::Point> rel = {cv::Point(0,1),cv::Point(0,-1),cv::Point(1,0),cv::Point(-1,0)};
         while (ps.size()>0)
         {
@@ -282,6 +324,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
                 }
             }
         }
+        cout<<"findPotentailWordBoundraies: "<<minX<<", "<<minY<<", "<<maxX<<", "<<maxY<<endl;
         *tlx=min(s.tlx,minX);
         *tly=min(s.tly,minY);
         *brx=max(s.brx,maxX);
@@ -289,6 +332,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
     }
     else
     {   //no word?
+        cout<<"findPotentailWordBoundraies: No word?"<<endl;
         *tlx=s.tlx;
         *tly=s.tly;
         *brx=s.brx;

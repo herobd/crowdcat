@@ -3,6 +3,7 @@
 
 #include <regex>
 #include <iostream>
+#include <fstream>
 
 #include <assert.h>
 
@@ -16,9 +17,16 @@ class Meta
 class Lexicon
 {
 public:
-    static vector<string> search(string query, Meta meta);
-    static bool readIn(string fileName);
-protected:
+    vector<string> search(string query, Meta meta);
+    bool readIn(string fileName);
+    static Lexicon* instance()
+    {
+        if (self==NULL) {
+            self=new Lexicon();
+        }
+        return self;
+    }
+private:
     Lexicon()
     {
         words_lineSeperated="";
