@@ -1,9 +1,15 @@
 #include "Knowledge.h"
 
 vector< cv::Vec3f > TranscribeBatch::colors = {cv::Vec3f(1.2,1.2,0.8),cv::Vec3f(1.2,0.8,1.2),cv::Vec3f(0.83,0.93,1.3),cv::Vec3f(0.85,1.3,0.85),cv::Vec3f(1.3,0.85,0.85),cv::Vec3f(0.85,0.85,1.3)};
+atomic_ulong TranscribeBatch::_id;//I'm assuming 0 is the default value
 
-TranscribeBatch::TranscribeBatch(multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry)
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id)
 {
+    this->origin=origin;
+    if (id!=0)
+        this->id=id;
+    else
+        this->id = ++_id;
     for (auto p : scored)
     {
         possibilities.push_back(p.second);
@@ -32,6 +38,7 @@ TranscribeBatch::TranscribeBatch(multimap<float,string> scored, const cv::Mat wo
 Knowledge::Corpus::Corpus()
 {
     pthread_rwlock_init(&pagesLock,NULL);
+    pthread_rwlock_init(&spottingsMapLock,NULL);
     //averageCharWidth=40;
     threshScoring= 1.0;
 }
@@ -67,29 +74,36 @@ void Knowledge::Corpus::addSpotting(Spotting s)
             for (Word* word : words)
             {
                 int word_tlx, word_tly, word_brx, word_bry;
-                word->getBounds(&word_tlx,&word_tly,&word_brx,&word_bry);
-                int overlap = max(0,min(s.bry,word_bry) - max(s.tly,word_tly)) * max(0,min(s.brx,word_brx) - max(s.tlx,word_tlx));
-                float overlapPortion = overlap/(0.0+(s.bry-s.tly)*(s.brx-s.tlx));
-                TranscribeBatch* newBatch=NULL;
-                if (overlapPortion > OVERLAP_WORD_THRESH)
+                bool isDone;
+                word->getBoundsAndDone(&word_tlx,&word_tly,&word_brx,&word_bry,&isDone);
+                if (!isDone)
                 {
-                    oneWord=true;
-                    //possibleWords.push_back(word);
-                    newBatch = word->addSpotting(s);
-                    spottingsToWords[s.id].push_back(word);
-                }
-                
-                if (newBatch != NULL)
-                {
-                    //TODO submit/update batch
-                    cout<<"Batch Possibilities: ";
-                    for (string pos : newBatch->getPossibilities())
+                    int overlap = max(0,min(s.bry,word_bry) - max(s.tly,word_tly)) * max(0,min(s.brx,word_brx) - max(s.tlx,word_tlx));
+                    float overlapPortion = overlap/(0.0+(s.bry-s.tly)*(s.brx-s.tlx));
+                    cout <<"Overlap for word "<<word<<": overlapPortion="<<overlapPortion<<" ="<<overlap<<"/"<<(0.0+(s.bry-s.tly)*(s.brx-s.tlx))<<endl;
+                    TranscribeBatch* newBatch=NULL;
+                    if (overlapPortion > OVERLAP_WORD_THRESH)
                     {
-                        cout << pos <<", ";
+                        oneWord=true;
+                        //possibleWords.push_back(word);
+                        newBatch = word->addSpotting(s);
+                        pthread_rwlock_wrlock(&spottingsMapLock);
+                        spottingsToWords[s.id].push_back(word);
+                        pthread_rwlock_unlock(&spottingsMapLock);
                     }
-                    cv::imshow("highligh",newBatch->getImage());
-                    cv::waitKey();
-                    cout <<endl;
+                    
+                    if (newBatch != NULL)
+                    {
+                        //TODO submit/update batch
+                        cout<<"Batch Possibilities: ";
+                        for (string pos : newBatch->getPossibilities())
+                        {
+                            cout << pos <<", ";
+                        }
+                        cout <<endl;
+                        cv::imshow("highligh",newBatch->getImage());
+                        cv::waitKey();
+                    }
                 }
             }
             
@@ -128,6 +142,29 @@ void Knowledge::Corpus::addSpotting(Spotting s)
     
 }
 
+void Knowledge::Corpus::removeSpotting(unsigned long sid)
+{
+
+    pthread_rwlock_wrlock(&spottingsMapLock);
+    vector<Word*> words = spottingsToWords[sid];
+    spottingsToWords[sid].clear(); 
+    pthread_rwlock_unlock(&spottingsMapLock);
+    for (Word* word : words)
+    {
+        
+        unsigned long retractId=0;
+        TranscribeBatch* newBatch = word->removeSpotting(sid,&retractId);
+        if (retractId!=0 && newBatch==0)
+        {
+            //TODO retract the batch
+        }
+        else if (newBatch != NULL)
+        {
+            //TODO modify batch
+        }
+    }
+}
+
 TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
 {
     pthread_rwlock_wrlock(&lock);
@@ -154,6 +191,14 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
     {
         spottings.emplace(s.tlx,s);//multimap, so they are properly ordered
     }
+    TranscribeBatch* ret=queryForBatch();
+    pthread_rwlock_unlock(&lock);
+    return ret;
+}
+
+TranscribeBatch* Knowledge::Word::queryForBatch()
+{
+
     string newQuery = generateQuery();
     TranscribeBatch* ret=NULL;
     if (query.compare(newQuery) !=0)
@@ -166,7 +211,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
             if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
-                ret = new TranscribeBatch(scored,(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly)),&spottings,tlx,tly,brx,bry);
+                ret = new TranscribeBatch(this,scored,(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly)),&spottings,tlx,tly,brx,bry,sentBatchId);
             }
         }
         else if (matches.size()==0)
@@ -175,6 +220,23 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
             //ret= createManualBatch();
         }
     }
+    if (ret!=NULL)
+        sentBatchId=ret->getId();
+    return ret;
+}
+TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long* sentBatchId)
+{
+    pthread_rwlock_wrlock(&lock);
+    *sentBatchId = this->sentBatchId;
+    for (auto iter= spottings.begin(); iter!=spottings.end(); iter++)
+    {
+        if (iter->second.id == sid)
+        {
+            spottings.erase(iter);
+            break;
+        }
+    }
+    TranscribeBatch* ret=queryForBatch();
     pthread_rwlock_unlock(&lock);
     return ret;
 }
@@ -188,7 +250,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
     return ret;
 }
 
-TranscribeBatch* Knowledge::Word::createBatch(multimap<float,string> scored)
+/*TranscribeBatch* Knowledge::Word::createBatch(multimap<float,string> scored)
 {
     vector<string> pos;
     for (auto p : scored)
@@ -196,7 +258,7 @@ TranscribeBatch* Knowledge::Word::createBatch(multimap<float,string> scored)
         pos.push_back(p.second);
     }    
     return new TranscribeBatch(pos,cv::Mat(),cv::Mat());
-}
+}*/
 
 string Knowledge::Word::generateQuery()
 {

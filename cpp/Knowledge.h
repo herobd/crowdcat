@@ -10,6 +10,7 @@
 #include <iostream>
 #include <semaphore.h>
 #include <pthread.h>
+#include <atomic>
 
 #include "SpottingResults.h"
 #include "Lexicon.h"
@@ -25,22 +26,30 @@ using namespace std;
 #define THRESH_SCORING_COUNT 6
 #define averageCharWidth 40 //GW, totally just making this up
 
+class WordBackPointer
+{
+    virtual void result(string selected)= 0;
+};
+
 class TranscribeBatch
 {
 private:
+    WordBackPointer* origin;
     vector<string> possibilities;
     cv::Mat wordImg;
     cv::Mat ngramLocs;
-    
+    unsigned long id;
     static vector< cv::Vec3f > colors;
+    static std::atomic_ulong _id;
 public:
-    TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
-        possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {}
+    //TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
+    //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
     
-    TranscribeBatch(multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry);
+    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
     
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { return wordImg; }
+    unsigned long getId() {return id;}
 };
 
 namespace Knowledge
@@ -53,7 +62,7 @@ void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* 
 
 
 
-class Word
+class Word:WordBackPointer
 {
 private:
     pthread_rwlock_t lock;
@@ -64,18 +73,20 @@ private:
     const cv::Mat* pagePnt;
     
     multimap<int,Spotting> spottings;
-    
+    bool done;
+    unsigned long sentBatchId;
     multimap<float,string> scoreAndThresh(vector<string> match);
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
-    
+    TranscribeBatch* queryForBatch();
+    string transcription;
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query("")
+    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query(""), done(false), sentBatchId(0)
     {
         pthread_rwlock_init(&lock,NULL);
     }    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query("")
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query(""), done(false), sentBatchId(0)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -86,17 +97,27 @@ public:
     }
     
     TranscribeBatch* addSpotting(Spotting s);
+    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId);
     
-    void getBounds(int* word_tlx, int* word_tly, int* word_brx, int* word_bry)
+    void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
         pthread_rwlock_rdlock(&lock);
         *word_tlx=tlx;
         *word_tly=tly;
         *word_brx=brx;
         *word_bry=bry;
+	*isDone=done;
         pthread_rwlock_unlock(&lock);
     }
 
+    void result(string selected)
+    {
+        pthread_rwlock_wrlock(&lock);
+        transcription=selected;
+        done=true;
+        pthread_rwlock_unlock(&lock);
+        //TODO, harvest new ngram exemplars
+    }
 };
 
 class Line
@@ -195,7 +216,7 @@ class Corpus
 {
 private:
     pthread_rwlock_t pagesLock;
-    
+    pthread_rwlock_t spottingsMapLock;
     //int averageCharWidth;
     float threshScoring;
     
@@ -208,6 +229,7 @@ public:
         pthread_rwlock_destroy(&pagesLock);
     }
     void addSpotting(Spotting s);
+    void removeSpotting(unsigned long sid);
 };
 
 }
