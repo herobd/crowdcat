@@ -18,11 +18,15 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
         this->wordImg = wordImg.clone();
     else
         cv::cvtColor(wordImg,this->wordImg,CV_GRAY2RGB);
-    
+    textImage = cv::Mat::zeros(40,this->wordImg.cols,CV_8UC3);
+
     int colorIndex=0;
     for (auto iter : *spottings)
     {
         const Spotting& s = iter.second;
+        Point org((min(wordImg.cols,s.brx-tlx)-max(0,s.tlx-tlx))*0.2 + max(0,s.tlx-tlx), 5);
+        cv::putText(textImage, s.ngram, org, FONT_HERSHEY_PLAIN, 1.0, colors[colorIndex]*255,1, 8, true);
+            
         for (int r= max(0,s.tly-tly); r<min(wordImg.rows,s.bry-tly); r++)
             for (int c= max(0,s.tlx-tlx); c<min(wordImg.cols,s.brx-tlx); c++)
             {
@@ -43,8 +47,9 @@ Knowledge::Corpus::Corpus()
     threshScoring= 1.0;
 }
 
-void Knowledge::Corpus::addSpotting(Spotting s)
+vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
 {
+    vector<TranscribeBatch*> ret;
     pthread_rwlock_rdlock(&pagesLock);
     Page* page = pages[s.pageId];
     pthread_rwlock_unlock(&pagesLock);
@@ -94,7 +99,7 @@ void Knowledge::Corpus::addSpotting(Spotting s)
                     
                     if (newBatch != NULL)
                     {
-                        //TODO submit/update batch
+                        /*submit/update batch
                         cout<<"Batch Possibilities: ";
                         for (string pos : newBatch->getPossibilities())
                         {
@@ -102,14 +107,15 @@ void Knowledge::Corpus::addSpotting(Spotting s)
                         }
                         cout <<endl;
                         cv::imshow("highligh",newBatch->getImage());
-                        cv::waitKey();
+                        cv::waitKey();*/
+                        ret.push_back(newBatch);
                     }
                 }
             }
             
             if (!oneWord)
             {
-                //TODO make a new word
+                //make a new word
                 assert(false);
                 line->addWord(s);
             }
@@ -139,7 +145,7 @@ void Knowledge::Corpus::addSpotting(Spotting s)
     }
     //pthread_rwlock_unlock(&page->linesLock);
     
-    
+    return ret;
 }
 
 void Knowledge::Corpus::removeSpotting(unsigned long sid)

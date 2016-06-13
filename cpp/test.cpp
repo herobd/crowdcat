@@ -3,6 +3,7 @@
 #include "TestQueue.h"
 #include "Knowledge.h"
 #include "Lexicon.h"
+#include "TranscribeBatchQueue.h"
 #include <assert.h>
 #include <iostream>
 
@@ -10,6 +11,7 @@ int main() {
     //TEST
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     Knowledge::Corpus c;
+    TranscribeBatchQueue q;
     //Knowledge::Page* = new Knowledge::Page();
     int pageId=0;
     //c.addPage(pageId);
@@ -39,9 +41,32 @@ int main() {
         cin >> ngram;
         
         Spotting s(tlx, tly, brx, bry, pageId, &page, ngram, 0.1);
-        c.addSpotting(s);
+        vector<TranscribeBatch*> bs = c.addSpotting(s);
+        for (auto b : bs)
+            if (b!=NULL)
+            {
+                cout<<"enqueued"<<endl;
+                q.enqueue(b);
+            }
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	/*TestQueue t;
+    
+    while(1)
+    {
+        TranscribeBatch* b = q.dequeue();
+        if (b==NULL)
+            break;
+        cout<<"Poss: "<<endl;
+        for (string p : b->getPossibilities())
+            cout<<"  "<<p<<endl;
+        cv::imshow("word",b->getImage());
+        cv::imshow("ngrams",b->getTextImage());
+        cv::waitKey();
+        string trans;
+        cout << "transcription: ";
+        cin >> trans;
+    }
+    c.show();
+    /*TestQueue t;
     int numUsers=8;
     for (int n=0; n<t.numTestBatches; n++)
     {

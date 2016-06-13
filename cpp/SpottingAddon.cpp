@@ -14,13 +14,13 @@ using namespace v8;
 
 #include "BatchRetrieveWorker.cpp"
 #include "SpottingBatchUpdateWorker.cpp"
+#include "TranscriptionBatchUpdateWorker.cpp"
 #include "TestBatchRetrieveWorker.cpp"
 #include "SpottingTestBatchUpdateWorker.cpp"
 #include "ClearTestUsersWorker.cpp"
 
 MasterQueue* masterQueue;
 TestQueue* testQueue;
-
 
 
 NAN_METHOD(getNextBatch) {
@@ -74,6 +74,27 @@ NAN_METHOD(spottingBatchDone) {//TODO
     Callback *callback = new Callback(info[4].As<Function>());
 
     AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels,resent));
+}
+
+NAN_METHOD(getNextTranscriptionBatch) {
+    int width = To<int>(info[0]).FromJust();
+    
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue));
+}
+
+NAN_METHOD(transcriptionBatchDone) {
+    //string batchId = To<string>(info[0]).FromJust();
+    //string resultsId = To<string>(info[0]).FromJust();
+    String::Utf8Value resultNAN(info[0]);
+    string transcription = string(*resultNAN);
+    String::Utf8Value resultsIdNAN(info[1]);
+    string id = string(*resultsIdNAN);
+    
+    Callback *callback = new Callback(info[2].As<Function>());
+
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,id,transcription));
 }
 
 NAN_METHOD(getNextTestBatch) {
@@ -134,6 +155,13 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<String>("spottingBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(spottingBatchDone)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("getNextTranscriptionBatch").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(getNextTranscriptionBatch)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("transcriptionBatchDone").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(transcriptionBatchDone)).ToLocalChecked());
+    
     
     testQueue = new TestQueue();
     

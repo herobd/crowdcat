@@ -1,5 +1,6 @@
-#ifndef BATCH_WRAPER_SPOTTINGS
-#define BATCH_WRAPER_SPOTTINGS
+
+#ifndef BATCH_WRAPER_TRANS
+#define BATCH_WRAPER_TRANS
 #include <nan.h>
 #include <iostream>
 #include <assert.h>
@@ -12,7 +13,7 @@
 using namespace Nan;
 using namespace std;
 using namespace v8;
-class BatchWraperSpottings: public BatchWraper
+class BatchWraperTranscription: public BatchWraper
 {
     private:
         //output
@@ -23,8 +24,8 @@ class BatchWraperSpottings: public BatchWraper
         string ngram;
         
     public:
-        BatchWraperSpottings(SpottingsBatch* batch);
-        ~BatchWraperSpottings() {}
+        BatchWraperTranscrption(TranscriptionBatch* batch);
+        ~BatchWraperTranscription() {}
         void doCallback(Callback* callback);
 };
 #endif

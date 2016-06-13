@@ -3,7 +3,7 @@
   "targets": [
     {
       "target_name": "spottingaddon",
-      "sources": [ "SpottingAddon.cpp", "BatchRetrieveWorker.cpp", "SpottingBatchUpdateWorker.cpp", "MasterQueue.h", "MasterQueue.cpp", "SpottingResults.h", "SpottingResults.cpp", "TestQueue.h", "TestQueue.cpp"],
+      "sources": [ "SpottingAddon.cpp", "BatchRetrieveWorker.cpp", "SpottingBatchUpdateWorker.cpp", "MasterQueue.h", "MasterQueue.cpp", "SpottingResults.h", "SpottingResults.cpp", "TestQueue.h", "TestQueue.cpp", "BatchWraper.h", "BatchWraperSpottings.h", "BatchWraperSpottings.cpp"],
       "cflags": ["-Wall", "-std=c++11"],
       "include_dirs" : ["<!(node -e \"require('nan')\")"],
       "libraries": [

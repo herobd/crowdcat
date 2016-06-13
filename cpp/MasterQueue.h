@@ -10,6 +10,7 @@
 #include "semaphore.h"
 #include <pthread.h>
 #include "SpottingResults.h"
+#include "TranscribeBatchQueue.h"
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -31,7 +32,7 @@ private:
     
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
-    
+    TranscribeBatchQueue transcribeBatchQueue;
     thread* incompleteChecker;
     
     //int atID;
@@ -57,10 +58,12 @@ private:
     int numCTrue, numCFalse;
 public:
     MasterQueue();
-    SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
+    SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     void addSpottingResults(SpottingResults* res);
     
+    TranscribeBatch* getTranscriptionBatch() {return transcribeBatchQueue.dequeue();}
+    void transcriptionFeedback(unsigned long id, string transcription) {transcribeBatchQueue.feedback(id, transcription);}
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();

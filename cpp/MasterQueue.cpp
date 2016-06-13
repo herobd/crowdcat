@@ -13,7 +13,7 @@ void checkIncompleteSleeper(MasterQueue* q)
 
 void MasterQueue::checkIncomplete()
 {
-    
+    transcribeBatchQueue.checkIncomplete();    
     
     pthread_rwlock_rdlock(&semResults);
     for (auto ele : results)
@@ -115,7 +115,7 @@ MasterQueue::MasterQueue() {
     addTestSpottings();
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
-    numCTrue=numCTrue=0;
+    numCFalse=numCTrue=0;
     ///end testing
 }
 
@@ -194,7 +194,7 @@ void MasterQueue::addTestSpottings()
 
 bool MasterQueue::test_autoBatch()
 {
-    SpottingsBatch* b = getBatch(5, false, 300,0,"");
+    SpottingsBatch* b = getSpottingsBatch(5, false, 300,0,"");
     if (b==NULL)
         return false;
     vector<string> ids;
@@ -219,7 +219,7 @@ bool MasterQueue::test_autoBatch()
     delete tmp;
     return true;
 }
-SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
+SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;

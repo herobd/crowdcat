@@ -37,7 +37,7 @@ private:
     WordBackPointer* origin;
     vector<string> possibilities;
     cv::Mat wordImg;
-    cv::Mat ngramLocs;
+    cv::Mat textImg;
     unsigned long id;
     static vector< cv::Vec3f > colors;
     static std::atomic_ulong _id;
@@ -49,7 +49,9 @@ public:
     
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { return wordImg; }
+    cv::Mat getTextImage() { return textImg; }
     unsigned long getId() {return id;}
+    WordBackPointer* getBackPointer() {return origin;}
 };
 
 namespace Knowledge
@@ -62,7 +64,7 @@ void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* 
 
 
 
-class Word:WordBackPointer
+class Word: public WordBackPointer
 {
 private:
     pthread_rwlock_t lock;
@@ -114,9 +116,14 @@ public:
     {
         pthread_rwlock_wrlock(&lock);
         transcription=selected;
-        done=true;
+        if (!done)
+            done=true;
+        else
+        {
+            //TODO this is a resubmission
+        }
         pthread_rwlock_unlock(&lock);
-        //TODO, harvest new ngram exemplars
+        //TODO, harvest new ngram exemplars, undo those already harvested
     }
 };
 
@@ -228,8 +235,10 @@ public:
     {
         pthread_rwlock_destroy(&pagesLock);
     }
-    void addSpotting(Spotting s);
+    vector<TranscribeBatch*> addSpotting(Spotting s);
     void removeSpotting(unsigned long sid);
+
+    void show();
 };
 
 }

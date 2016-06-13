@@ -1,5 +1,5 @@
-
-void BatchWraperSpottings::BatchWraperSpottings(Spottings* batch)
+#include "BatchWraperSpottings.h"
+BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
 {
     base64::encoder E;
     vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
