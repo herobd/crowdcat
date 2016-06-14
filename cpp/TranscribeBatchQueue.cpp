@@ -15,12 +15,17 @@ void TranscribeBatchQueue::enqueue(TranscribeBatch* batch)
 TranscribeBatch* TranscribeBatchQueue::dequeue()
 {
     lock();
-    TranscibeBatch* ret = queue.front();
-    queue.pop_front();
+    TranscribeBatch* ret=NULL;
+    if (queue.size()>0)
+    {
+        ret = queue.front();
+        queue.pop_front();
 
-    returnMap[ret.getId()]=ret;
-    timeMap[ret.getId()]=chrono::system_clock::now();
+        returnMap[ret->getId()]=ret;
+        timeMap[ret->getId()]=chrono::system_clock::now();
+    }
     unlock();
+    return ret;
 }
 
 void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
@@ -30,7 +35,7 @@ void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
     {
         returnMap[id]->getBackPointer()->result(transcription);
         doneMap[id] = returnMap[id]->getBackPointer();
-        delete returnMap[id]
+        delete returnMap[id];
         returnMap.erase(id);
         timeMap.erase(id);
     }
@@ -48,6 +53,7 @@ void TranscribeBatchQueue::checkIncomplete()
     lock();
     for (auto start : timeMap)
     {
+        unsigned long id = start.first;
         chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed

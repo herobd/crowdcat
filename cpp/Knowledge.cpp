@@ -18,14 +18,14 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
         this->wordImg = wordImg.clone();
     else
         cv::cvtColor(wordImg,this->wordImg,CV_GRAY2RGB);
-    textImage = cv::Mat::zeros(40,this->wordImg.cols,CV_8UC3);
+    textImg = cv::Mat::zeros(40,this->wordImg.cols,CV_8UC3);
 
     int colorIndex=0;
     for (auto iter : *spottings)
     {
         const Spotting& s = iter.second;
-        Point org((min(wordImg.cols,s.brx-tlx)-max(0,s.tlx-tlx))*0.2 + max(0,s.tlx-tlx), 5);
-        cv::putText(textImage, s.ngram, org, FONT_HERSHEY_PLAIN, 1.0, colors[colorIndex]*255,1, 8, true);
+        cv::Point org((min(wordImg.cols,s.brx-tlx)-max(0,s.tlx-tlx))*0.2 + max(0,s.tlx-tlx), 33);
+        cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
             
         for (int r= max(0,s.tly-tly); r<min(wordImg.rows,s.bry-tly); r++)
             for (int c= max(0,s.tlx-tlx); c<min(wordImg.cols,s.brx-tlx); c++)
@@ -407,3 +407,45 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
         *bry=s.bry;
     }
 }
+
+void Knowledge::Corpus::show()
+{
+    map<const cv::Mat*,cv::Mat> draw;
+    pthread_rwlock_rdlock(&pagesLock);
+    
+    for (auto p : pages)
+    {
+        Page* page = p.second;
+        vector<Line*> lines = page->lines();
+        for (Line* line : lines)
+        {
+            int line_ty, line_by;
+            vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : words)
+            {
+                int tlx,tly,brx,bry;
+                bool done;
+                word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+                if (done)
+                {
+                    if (draw.find(word->getPage()) == draw.end())
+                        if (word->getPage()->dims ==3)
+                            draw[word->getPage()] = word->getPage()->clone();
+                        else
+                            cv::cvtColor(*word->getPage(),draw[word->getPage()],CV_GRAY2BGR);
+                    cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
+                }
+                else
+                    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
+            }
+        }
+    }
+    for (auto p : draw)
+    {
+        cv::imshow("a page",p.second);
+        cv::waitKey();
+    }
+
+    pthread_rwlock_unlock(&pagesLock);
+}
+

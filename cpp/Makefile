@@ -9,7 +9,7 @@ LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 
 PROGRAM_NAME = test
 
-OBJECTS = obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o
+OBJECTS = obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o obj/TranscribeBatchQueue.o
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME)
@@ -41,3 +41,7 @@ obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h
 	
 obj/Lexicon.o: Lexicon.h Lexicon.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Lexicon.o Lexicon.cpp $(LIBS)
+
+
+obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/TranscribeBatchQueue.o TranscribeBatchQueue.cpp $(LIBS)

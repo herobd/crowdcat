@@ -28,7 +28,8 @@ using namespace std;
 
 class WordBackPointer
 {
-    virtual void result(string selected)= 0;
+    public:
+        virtual void result(string selected)= 0;
 };
 
 class TranscribeBatch
@@ -125,6 +126,9 @@ public:
         pthread_rwlock_unlock(&lock);
         //TODO, harvest new ngram exemplars, undo those already harvested
     }
+
+    const cv::Mat* getPage() {return pagePnt;}
+    string getTranscription() {pthread_rwlock_rdlock(&lock); if (done) return transcription; else return "[ERROR]"; pthread_rwlock_unlock(&lock);}
 };
 
 class Line

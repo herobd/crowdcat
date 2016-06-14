@@ -297,9 +297,13 @@ var ControllerApp = function(port) {
                     }
                     
                 } else {
-                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,arg3,arg4,arg5) {
                         //setTimeout(function(){
-                        res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                        if (batchType=='spottings')
+                            res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                        else if (batchType=='transcription')
+                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngramImg:arg4,possibilities:arg5});
+
                         //},2000);
                     });
                 }
@@ -351,9 +355,15 @@ var ControllerApp = function(port) {
                         }
                     });
                 } else {
-                    spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
-                        
-                    });
+                    if (req.query.type=='spottings)
+                        spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
+                            
+                        });
+                    else
+                        spottingaddon.transcriptionBatchDone(req.body.ids,req.body.labels,resend,function (err) {
+                            
+                        });
+
                     res.send({done:false});
                 }
                 

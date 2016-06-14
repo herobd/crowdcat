@@ -64,6 +64,7 @@ int main() {
         string trans;
         cout << "transcription: ";
         cin >> trans;
+        b->getBackPointer()->result(trans);
     }
     c.show();
     /*TestQueue t;
