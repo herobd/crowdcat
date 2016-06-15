@@ -202,8 +202,6 @@ var lastRemovedBatchInfo=[];
 function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
-    var ngram = info.ngram;
-    var resultsId = info.rid;
     if (info.id != batchId)
         console.log("ERROR, not batching ids: "+info.id+" "+batchId)
     batchQueue=batchQueue.slice(1)
@@ -217,33 +215,50 @@ function batchShiftAndSend(batchId,callback) {
         
         spinner.hidden=false;
     }
-    
-    
-    
     lastRemovedBatchInfo.push(info);
-    
-    var query='?resend='+batches[batchId].sent;
-    if (testMode)
-        query+='&test='+testNum;
-    var labels = [];
-    var ids = [];
-    for (var id in batches[batchId].spottings){
-        if (batches[batchId].spottings.hasOwnProperty(id)) {
-            ids.push(id);
-            labels.push(batches[batchId].spottings[id]);
-        }
-    }
-    httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+    if (info.ngram!='#') {
+        var ngram = info.ngram;
+        var resultsId = info.rid;
         
-        var jres=JSON.parse(res);
-        console.log(jres);
-        if (testMode && jres.done) {
-            //console.log(batchQueue.length);
-            if (batchQueue.length==0)
-                window.location.href = "/app-test-"+(testNum+1);
-        } else (!testMode || !allReceived)
-            callback();
-    });
-    batches[batchId].sent=true;
-    
+        
+        
+        
+        var query='?type=spotting&resend='+batches[batchId].sent;
+        if (testMode)
+            query+='&test='+testNum;
+        var labels = [];
+        var ids = [];
+        for (var id in batches[batchId].spottings){
+            if (batches[batchId].spottings.hasOwnProperty(id)) {
+                ids.push(id);
+                labels.push(batches[batchId].spottings[id]);
+            }
+        }
+        httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+            
+            var jres=JSON.parse(res);
+            console.log(jres);
+            if (testMode && jres.done) {
+                //console.log(batchQueue.length);
+                if (batchQueue.length==0)
+                    window.location.href = "/app-test-"+(testNum+1);
+            } else (!testMode || !allReceived)
+                callback();
+        });
+        batches[batchId].sent=true;
+    } else {
+        var query='?type=transcription';
+        httpPostAsync('/app/submitBatch'+query,{id:batchId,label:info.transcription,time:new Date().getTime()-startTime},function (res){
+            
+            var jres=JSON.parse(res);
+            console.log(jres);
+            if (testMode && jres.done) {
+                //console.log(batchQueue.length);
+                if (batchQueue.length==0)
+                    window.location.href = "/app-test-"+(testNum+1);
+            } else (!testMode || !allReceived)
+                callback();
+        });
+
+    } 
 }

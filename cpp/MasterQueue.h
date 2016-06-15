@@ -62,7 +62,7 @@ public:
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     void addSpottingResults(SpottingResults* res);
     
-    TranscribeBatch* getTranscriptionBatch() {return transcribeBatchQueue.dequeue();}
+    TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription) {transcribeBatchQueue.feedback(id, transcription);}
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);

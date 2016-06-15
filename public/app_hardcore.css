@@ -221,6 +221,48 @@ button {
     min-height:30px;
 }
 
+.transcription {
+    background: #fafaeb;
+    width: 100%;
+    height: 100%;
+    min-height:70px;
+    position: relative;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    z-index: 3;
+    text-align: center;
+    border-width:0px;
+    
+    
+}
+
+.transcription img {
+    position: relative;
+      left: 0;
+}
+
+.transcription .meat {
+    visibility: hidden;
+}
+.transcription.ondeck .meat {
+    visibility: visible;
+}
+
+.selections {
+    overflow: auto;
+    height:100%;
+}
+
+.selection {
+    
+    position: relative;
+    display: block;
+    font-size: 24px;
+    color: #090909;
+    text-align: center;
+    width:100%;
+    min-height:30px;
+}
 .collapser {
     /*transition: collapse 0.8s ease-in-out;*/
     animation-duration: 0.2s;

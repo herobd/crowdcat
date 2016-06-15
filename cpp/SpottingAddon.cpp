@@ -87,10 +87,10 @@ NAN_METHOD(getNextTranscriptionBatch) {
 NAN_METHOD(transcriptionBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
-    String::Utf8Value resultNAN(info[0]);
-    string transcription = string(*resultNAN);
-    String::Utf8Value resultsIdNAN(info[1]);
+    String::Utf8Value resultsIdNAN(info[0]);
     string id = string(*resultsIdNAN);
+    String::Utf8Value resultNAN(info[1]);
+    string transcription = string(*resultNAN);
     
     Callback *callback = new Callback(info[2].As<Function>());
 

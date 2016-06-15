@@ -12,13 +12,14 @@ void TranscribeBatchQueue::enqueue(TranscribeBatch* batch)
     unlock();
 }
 
-TranscribeBatch* TranscribeBatchQueue::dequeue()
+TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
 {
     lock();
     TranscribeBatch* ret=NULL;
     if (queue.size()>0)
     {
         ret = queue.front();
+        ret.setWidth(maxWidth);
         queue.pop_front();
 
         returnMap[ret->getId()]=ret;

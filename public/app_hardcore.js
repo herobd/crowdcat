@@ -11,7 +11,7 @@ var ondeck;
 var theWindow;
 
 var toBeInQueue=3;
-
+var swipeOn=true;
 
 
 
@@ -24,7 +24,7 @@ function handleTouchStart(evt) {
 };                                                
 
 function handleTouchMove(evt) {
-    if ( ! this.xDown) {
+    if ( ! this.xDown || !swipeOn) {
         return;
     }
     
@@ -121,6 +121,8 @@ function undo() {
 }
 
 function handleTouchEnd(evt) {
+    if (!swipOn)
+        return;
     //var xUp = evt.touches[0].clientX;    
     //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
     
@@ -287,6 +289,41 @@ function getNextBatch(toload,callback) {
                 }
                 spinner.hidden=true;
                 
+            } else if (jres.batchType=='transcription') {
+                //batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
+                
+                var batchHeader = document.createElement("div");
+                //batchHeader.classList.toggle('spotting');
+                batchHeader.classList.toggle('batchHeader');
+                batchHeader.id='b'+jres.batchId
+                batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
+	        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
+                    batchHeader.hidden=true
+                    
+	        } else {
+	            colorIndex = (++colorIndex)%headerColors.length;
+	            lastNgram=jres.ngram;
+                }
+	            /*if (lastNgram!=jres.ngram) {
+	                colorIndex = (++colorIndex)%headerColors.length;
+	                lastNgram=jres.ngram;
+                }*/
+	            batchHeader.style.background=headerColors[colorIndex];
+	            
+	        if (jres.batchId!=='R' && jres.batchId!=='X') {
+	            batchQueue.push({ngram:'#', id:jres.batchId, transcription:'#'});
+	            //console.log("got "+jres.resultsId)
+                } else if (jres.batchId=='R') {
+                    location.reload(true);
+                } 
+                
+                var wordImg = new Image();
+                wordImg.src='data:image/png;base64,'+jres.wordImg;
+                var ngramImg = new Image();
+                ngramImg.src='data:image/png;base64,'+jres.ngramImg;
+                theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,ngramImg,jres.possibilities),theWindow.childNodes[0]);
+                spinner.hidden=true;
+                
             }
             if (toload!==undefined && --toload>0)
                 getNextBatch(toload,callback);
@@ -312,36 +349,81 @@ function highlightLast() {
 
 function isBatchDone(batchId) {
     
-    for (spottingId in batches[batchId].spottings)
-        if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
-            return;
+    if (batcheQueue[0].ngram == '#')
+        for (spottingId in batches[batchId].spottings)
+            if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
+                return;
     
     //base
     batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
     //base
-    var nextHeader=null;
+    var nextElement=null;
     if (batchQueue.length>0) {
-        nextHeader=document.getElementById('b'+batchQueue[0].id);
+        nextElement=document.getElementById('b'+batchQueue[0].id);
     }
-    if (nextHeader)
-        nextHeader.classList.toggle('ondeck');
-    var header = document.getElementById('b'+batchId);
-    if (header) {
-        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
-            theWindow.removeChild(header);
-            
-            //we shift the header past the collapsing element to provide the illusion of a smooth transition
-            if (nextHeader) {
-                theWindow.removeChild(nextHeader);
-                theWindow.appendChild(nextHeader);
-            }
-        } else {
-            header.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
-            header.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
-            header.classList.toggle('batchHeader');
-            header.classList.toggle('collapserH');
+    if (nextElement) {
+        nextElement.classList.toggle('ondeck');
+        if (batchQueue[0].ngram=='#') {
+            //TODO hide gradient
         }
     }
+    var oldElement = document.getElementById('b'+batchId);
+    if (oldElement) {
+        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram!='#') {
+            if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
+                theWindow.removeChild(oldElement);
+                
+                //we shift the header past the collapsing element to provide the illusion of a smooth transition
+                if (nextHeader) {
+                    theWindow.removeChild(nextHeader);
+                    theWindow.appendChild(nextHeader);
+                }
+            } else {
+                oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
+                oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+                oldElement.classList.toggle('batchHeader');
+                oldElement.classList.toggle('collapserH');
+            }
+        } else {
+            //TODO fix gradient
+            oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
+            oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+            oldElement.classList.toggle('collapser');
+        }
+    }
+}
+
+function classify(id,word) {
+    return function(ele) {
+        batchQueue[0].transcription=word;
+        isBatchDone(id);
+    };
+}
+
+function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
+{
+    
+    var genDiv = document.createElement("div");
+    genDiv.classList.toggle('transcription');
+    genDiv.appendChild(wordImg);
+    //ngramImg.hidden=true;
+    ngramImg.classList.toggle('meat');
+    genDiv.appendChild(ngramImg);
+    genDiv.id='b'+id;
+    var selectionDiv = document.createElement("div");
+    selectionDiv.classList.toggle('selections');
+    selectionDiv.classList.toggle('meat');
+    //selectionDiv.hidden=true;
+    for (var word of possibilities) {
+        var wordDiv = document.createElement("div");
+        wordDiv.classList.toggle('selection');
+        wordDiv.innerHTML=word;
+        wordDiv.addEventListener('mouseup', classify(id,word), false);
+        selectionDiv.appendChild(wordDiv);
+    }
+    genDiv.appendChild(selectionDiv);
+
+    return genDiv;
 }
 
 /*window.onbeforeunload = confirmExit;

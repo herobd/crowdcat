@@ -21,17 +21,26 @@ class BatchRetrieveWorker : public AsyncWorker {
 
 
         void Execute () {
-            //retrieve the next batch from the priority queue
-            //  This will have merely ids and subimage params
-            //retireve subimages and base64 encode them
-            //then
-            bool hard=true;
-            if (num==-1) {
-                num=5;
-                hard=false;
+
+            if (color==-1)
+            {
+                batch = new BatchWraperTranscription(masterQueue->getTranscriptionBatch(width));
+
             }
-            
-            batch = new BatchWraperSpottings(masterQueue->getSpottingsBatch(num,hard,width,color,prevNgram));
+            else
+            {
+                //retrieve the next batch from the priority queue
+                //  This will have merely ids and subimage params
+                //retireve subimages and base64 encode them
+                //then
+                bool hard=true;
+                if (num==-1) {
+                    num=5;
+                    hard=false;
+                }
+                
+                batch = new BatchWraperSpottings(masterQueue->getSpottingsBatch(num,hard,width,color,prevNgram));
+            }
         }
 
         // We have the results, and we're back in the event loop.

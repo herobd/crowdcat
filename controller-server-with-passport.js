@@ -355,13 +355,13 @@ var ControllerApp = function(port) {
                         }
                     });
                 } else {
-                    if (req.query.type=='spottings)
+                    if (req.query.type=='spottings')
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
-                            
+                           if (err) console.log(err); 
                         });
-                    else
-                        spottingaddon.transcriptionBatchDone(req.body.ids,req.body.labels,resend,function (err) {
-                            
+                    else if (req.query.type=='transcription')
+                        spottingaddon.transcriptionBatchDone(req.body.id,req.body.label,function (err) {
+                            if (err) console.log(err);
                         });
 
                     res.send({done:false});

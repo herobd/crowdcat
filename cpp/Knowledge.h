@@ -39,6 +39,7 @@ private:
     vector<string> possibilities;
     cv::Mat wordImg;
     cv::Mat textImg;
+    unsigned int imgWidth;
     unsigned long id;
     static vector< cv::Vec3f > colors;
     static std::atomic_ulong _id;
@@ -53,6 +54,7 @@ public:
     cv::Mat getTextImage() { return textImg; }
     unsigned long getId() {return id;}
     WordBackPointer* getBackPointer() {return origin;}
+    void setWidth(unsigned int width);
 };
 
 namespace Knowledge

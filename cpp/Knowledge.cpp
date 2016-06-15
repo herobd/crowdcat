@@ -14,29 +14,49 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
     {
         possibilities.push_back(p.second);
     }
+    this->wordImg=wordImg;
+}
+
+void setWidth(unsigned int width) 
+{
+
     if (wordImg.type()==CV_8UC3)
-        this->wordImg = wordImg.clone();
+        wordImg = wordImg.clone();
     else
-        cv::cvtColor(wordImg,this->wordImg,CV_GRAY2RGB);
-    textImg = cv::Mat::zeros(40,this->wordImg.cols,CV_8UC3);
+        cv::cvtColor(wordImg,wordImg,CV_GRAY2RGB);
+    cv::Mat newWordImg = cv::Mat::zeros(wordImg.rows,width,CV_8UC3);
+    int padLeft = max((width-wordImg.cols)/2,0);
+    double scale=1.0;
+    if (width>=wordImg.cols)
+    {
+        wordImg.copyTo(newWordImg(Rect(padLeft, 0, src.cols, src.rows)));
+    }
+    else
+    {
+        scale = width/(0.0+wordImg.cols);
+        resize(wordImg, newWordImg, cv::Size(), scale,scale, INTER_CUBIC )
+    }
+
+    textImg = cv::Mat::zeros(40,wordImg.cols,CV_8UC3);
 
     int colorIndex=0;
     for (auto iter : *spottings)
     {
         const Spotting& s = iter.second;
-        cv::Point org((min(wordImg.cols,s.brx-tlx)-max(0,s.tlx-tlx))*0.2 + max(0,s.tlx-tlx), 33);
+        cv::Point org(((min(wordImg.cols,(s.brx-tlx)*scale)-max(0,(s.tlx-tlx)*scale))*0.2 + max(0,(s.tlx-tlx)*scale)) + padLeft, 33);
         cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
             
-        for (int r= max(0,s.tly-tly); r<min(wordImg.rows,s.bry-tly); r++)
-            for (int c= max(0,s.tlx-tlx); c<min(wordImg.cols,s.brx-tlx); c++)
+        for (int r= max(0,s.tly-tly)*scale; r<min(wordImg.rows,(s.bry-tly)*scale); r++)
+            for (int c= max(0,s.tlx-tlx)*scale; c<min(wordImg.cols,(s.brx-tlx)*scale); c++)
             {
-                this->wordImg.at<cv::Vec3b>(r,c)[0] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[0]*colors[colorIndex][0]);
-                this->wordImg.at<cv::Vec3b>(r,c)[1] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[1]*colors[colorIndex][1]);
-                this->wordImg.at<cv::Vec3b>(r,c)[2] = min(255.f,this->wordImg.at<cv::Vec3b>(r,c)[2]*colors[colorIndex][2]);
+                newWordImg.at<cv::Vec3b>(r+padLeft,c)[0] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[0]*colors[colorIndex][0]);
+                newWordImg.at<cv::Vec3b>(r+padLeft,c)[1] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[1]*colors[colorIndex][1]);
+                newWordImg.at<cv::Vec3b>(r+padLeft,c)[2] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[2]*colors[colorIndex][2]);
                 
             }
         colorIndex = (colorIndex+1)%colors.size();
     }
+    wordImg=newWordImg;
 }
 
 Knowledge::Corpus::Corpus()
