@@ -13,7 +13,7 @@ using namespace v8;
 
 class SpottingBatchUpdateWorker : public AsyncWorker {
     public:
-        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, string resultsId, vector<string> ids, vector<int> labels, int resent)
+        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, Knowledge::Corpus* corpus, sstring resultsId, vector<string> ids, vector<int> labels, int resent)
         : AsyncWorker(callback), masterQueue(masterQueue), resultsId(resultsId), ids(ids), labels(labels), resent(resent) {}
 
         ~SpottingBatchUpdateWorker() {}
@@ -22,7 +22,14 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
         void Execute () {
             
             vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent);
-            //TODO update global spottings, fix resends
+            if (resent)
+            {
+                //TODO
+            }
+            else
+            {
+                corpus->addSpottings(toAdd);
+            }
             delete toAdd;
         }
 
@@ -38,6 +45,7 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
         }
     private:
         MasterQueue* masterQueue;
+        Knowledge::Corpus* corpus;
         string resultsId;
         vector<string> ids;
         vector<int> labels;

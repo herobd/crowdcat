@@ -57,4 +57,5 @@ bool Lexicon::readIn(string fileName)
         words.push_back(word);
     }
     in.close();
+    return true;
 }

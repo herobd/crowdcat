@@ -15,9 +15,14 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
         possibilities.push_back(p.second);
     }
     this->wordImg=wordImg;
+    this->spottings=spottings;
+    this->tlx=tlx;
+    this->tly=tly;
+    this->brx=brx;
+    this->bry=bry;
 }
 
-void setWidth(unsigned int width) 
+void TranscribeBatch::setWidth(unsigned int width) 
 {
 
     if (wordImg.type()==CV_8UC3)
@@ -25,16 +30,16 @@ void setWidth(unsigned int width)
     else
         cv::cvtColor(wordImg,wordImg,CV_GRAY2RGB);
     cv::Mat newWordImg = cv::Mat::zeros(wordImg.rows,width,CV_8UC3);
-    int padLeft = max((width-wordImg.cols)/2,0);
+    int padLeft = max((((int)width)-wordImg.cols)/2,0);
     double scale=1.0;
     if (width>=wordImg.cols)
     {
-        wordImg.copyTo(newWordImg(Rect(padLeft, 0, src.cols, src.rows)));
+        wordImg.copyTo(newWordImg(cv::Rect(padLeft, 0, wordImg.cols, wordImg.rows)));
     }
     else
     {
         scale = width/(0.0+wordImg.cols);
-        resize(wordImg, newWordImg, cv::Size(), scale,scale, INTER_CUBIC )
+        cv::resize(wordImg, newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
     }
 
     textImg = cv::Mat::zeros(40,wordImg.cols,CV_8UC3);
@@ -43,11 +48,11 @@ void setWidth(unsigned int width)
     for (auto iter : *spottings)
     {
         const Spotting& s = iter.second;
-        cv::Point org(((min(wordImg.cols,(s.brx-tlx)*scale)-max(0,(s.tlx-tlx)*scale))*0.2 + max(0,(s.tlx-tlx)*scale)) + padLeft, 33);
+        cv::Point org(((min((double)wordImg.cols,(s.brx-tlx)*scale)-max(0.0,(s.tlx-tlx)*scale))*0.2 + max(0.0,(s.tlx-tlx)*scale)) + padLeft, 33);
         cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
             
-        for (int r= max(0,s.tly-tly)*scale; r<min(wordImg.rows,(s.bry-tly)*scale); r++)
-            for (int c= max(0,s.tlx-tlx)*scale; c<min(wordImg.cols,(s.brx-tlx)*scale); c++)
+        for (int r= max(0,s.tly-tly)*scale; r<min((double)wordImg.rows,(s.bry-tly)*scale); r++)
+            for (int c= max(0,s.tlx-tlx)*scale; c<min((double)wordImg.cols,(s.brx-tlx)*scale); c++)
             {
                 newWordImg.at<cv::Vec3b>(r+padLeft,c)[0] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[0]*colors[colorIndex][0]);
                 newWordImg.at<cv::Vec3b>(r+padLeft,c)[1] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[1]*colors[colorIndex][1]);
@@ -81,6 +86,39 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
         pthread_rwlock_unlock(&pagesLock);
     }
     
+    addSpottingToPage(page,ret);
+    
+    return ret;
+}
+vector<TranscribeBatch*> Knowledge::Corpus::addSpottings(vector<Spotting>* spottings)
+{
+    vector<TranscribeBatch*> ret;
+    vector<Page*> pages;
+    pthread_rwlock_rdlock(&pagesLock);
+    for (const Spotting& s : spottings)
+    {
+        Page* page = pages[s.pageId];
+        if (page==NULL)
+        {
+            pthread_rwlock_unlock(&pagesLock);
+            page = new Page();
+            pthread_rwlock_wrlock(&pagesLock);
+            pages[s.pageId] = page;
+            pthread_rwlock_unlock(&pagesLock);
+        }
+        pages.push_back(page);
+    }
+    pthread_rwlock_unlock(&pagesLock);
+    
+    for (int i=0; i<spottings.size(); i++)
+        addSpottingToPage(spottings[i],pages[i],ret);
+    
+    return ret;
+}
+
+void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret)
+{
+
     vector<Line*> possibleLines;
     //pthread_rwlock_rdlock(&page->linesLock);
     vector<Line*> lines = page->lines();
@@ -163,9 +201,6 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
         //I'm assumming most lines are added prior with a preprocessing step
         page->addLine(s);
     }
-    //pthread_rwlock_unlock(&page->linesLock);
-    
-    return ret;
 }
 
 void Knowledge::Corpus::removeSpotting(unsigned long sid)
@@ -449,10 +484,12 @@ void Knowledge::Corpus::show()
                 if (done)
                 {
                     if (draw.find(word->getPage()) == draw.end())
+                    {
                         if (word->getPage()->dims ==3)
                             draw[word->getPage()] = word->getPage()->clone();
                         else
                             cv::cvtColor(*word->getPage(),draw[word->getPage()],CV_GRAY2BGR);
+                    }
                     cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
                 }
                 else

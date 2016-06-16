@@ -19,7 +19,7 @@
 
 using namespace std;
 
-
+#define ROTATE 0 //this is for testing, forcing it to feed up batches from different spotting results.
 
 
 

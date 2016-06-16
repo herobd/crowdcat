@@ -208,7 +208,7 @@ public:
     
     ~SpottingResults() 
     {
-        cout <<"results "<<id<<", numberClassifiedTrue: "<<numberClassifiedTrue<<", numberClassifiedFalse: "<<numberClassifiedFalse<<", numberAccepted: "<<numberAccepted<<", numberRejected: "<<numberRejected<<endl;
+        cout <<"results["<<id<<"]:"<<ngram<<", numberClassifiedTrue: "<<numberClassifiedTrue<<", numberClassifiedFalse: "<<numberClassifiedFalse<<", numberAccepted: "<<numberAccepted<<", numberRejected: "<<numberRejected<<endl;
         float effortR=numberAccepted/(0.0+numberClassifiedTrue+numberClassifiedFalse);
         cout<<"* effort reduction: "<<effortR<<endl;
         //assert(effortR>0);

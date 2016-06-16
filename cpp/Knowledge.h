@@ -39,8 +39,10 @@ private:
     vector<string> possibilities;
     cv::Mat wordImg;
     cv::Mat textImg;
+    const multimap<int,Spotting>* spottings;
     unsigned int imgWidth;
     unsigned long id;
+    int tlx, tly, brx, bry;
     static vector< cv::Vec3f > colors;
     static std::atomic_ulong _id;
 public:
@@ -235,6 +237,8 @@ private:
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
+    void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret);
+
 public:
     Corpus();
     ~Corpus()
@@ -242,6 +246,7 @@ public:
         pthread_rwlock_destroy(&pagesLock);
     }
     vector<TranscribeBatch*> addSpotting(Spotting s);
+    vector<TranscribeBatch*> addSpottings(vector<Spotting>* spottings);
     void removeSpotting(unsigned long sid);
 
     void show();

@@ -203,7 +203,7 @@ function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
     if (info.id != batchId)
-        console.log("ERROR, not batching ids: "+info.id+" "+batchId)
+        console.log("ERROR, not matching ids: "+info.id+" "+batchId)
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
         
@@ -223,7 +223,7 @@ function batchShiftAndSend(batchId,callback) {
         
         
         
-        var query='?type=spotting&resend='+batches[batchId].sent;
+        var query='?type=spottings&resend='+batches[batchId].sent;
         if (testMode)
             query+='&test='+testNum;
         var labels = [];

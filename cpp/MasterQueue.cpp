@@ -225,11 +225,15 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_rdlock(&semResultsQueue);
     //cout<<"got rw lock"<<endl;
+#if ROTATE
     int test_loc=0;
+#endif
     for (auto ele : resultsQueue)
     {
+#if ROTATE
         if (test_loc++<test_rotate/2)
             continue;
+#endif
         
         sem_t* sem = ele.second.first;
         SpottingResults* res = ele.second.second;
@@ -240,10 +244,12 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             //test
+#if ROTATE
             pthread_rwlock_wrlock(&semResultsQueue);
             if (test_rotate++>2*(resultsQueue.size()-1))
                 test_rotate=0;
             pthread_rwlock_unlock(&semResultsQueue);
+#endif
             //test
             
             bool done=false;
@@ -355,6 +361,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
 
 vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent)
 {
+    cout <<"got feedback for: "<<id<<endl;
     vector<Spotting>* ret = NULL;
     bool succ=false;
     while (!succ)
@@ -385,9 +392,12 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
                 else
                     sem_post(sem);
             }
+            else
+                cout<<"Failed to get lock for: "<<id<<endl;
         }
         else
         {
+            cout <<"Results not found for: "<<id<<endl;
             pthread_rwlock_unlock(&semResults);
             break;
         }

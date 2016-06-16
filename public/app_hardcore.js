@@ -122,7 +122,7 @@ function undo() {
 }
 
 function handleTouchEnd(evt) {
-    if (!swipOn)
+    if (!swipeOn)
         return;
     //var xUp = evt.touches[0].clientX;    
     //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
@@ -351,7 +351,7 @@ function highlightLast() {
 
 function isBatchDone(batchId) {
     
-    if (batcheQueue[0].ngram == '#')
+    if (batchQueue[0].ngram != '#')
         for (spottingId in batches[batchId].spottings)
             if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
                 return;
@@ -377,9 +377,9 @@ function isBatchDone(batchId) {
                 theWindow.removeChild(oldElement);
                 
                 //we shift the header past the collapsing element to provide the illusion of a smooth transition
-                if (nextHeader) {
-                    theWindow.removeChild(nextHeader);
-                    theWindow.appendChild(nextHeader);
+                if (nextElement) {
+                    theWindow.removeChild(nextElement);
+                    theWindow.appendChild(nextElement);
                 }
             } else {
                 oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);

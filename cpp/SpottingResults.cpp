@@ -219,8 +219,10 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     }
     EMThresholds();
     
-    //cout << "starts: "<<starts.size()<<"  all sent: "<<allBatchesSent<<endl;
-    
+    ///test
+    cout<<"["<<id<<"]:"<<ngram<<", all sent: "<<allBatchesSent<<", waiting for "<<starts.size()<<", num left "<<instancesByScore.size()<<endl;
+    ///test
+
     if (resent==0 && starts.size()==0 && allBatchesSent)
     {
         *done=true;
@@ -250,7 +252,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
 void SpottingResults::EMThresholds(bool init)
 {
     float oldMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
-    /*This will likely predict very narrow and ditinct distributions
+    /*This will likely predict very narrow and distinct distributions
      *initailly. This should be fine as we sample from the middle of
      *the thresholds outward.
      */

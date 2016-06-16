@@ -6,6 +6,7 @@
 #define BUFFERSIZE 65536
 
 #include "MasterQueue.h"
+#include "Knowledge.h"
 #include "TestQueue.h"
 
 using namespace Nan;
@@ -20,6 +21,7 @@ using namespace v8;
 #include "ClearTestUsersWorker.cpp"
 
 MasterQueue* masterQueue;
+Knowledge::Corpus* corpus;
 TestQueue* testQueue;
 
 
@@ -42,7 +44,7 @@ NAN_METHOD(getNextBatch) {
     
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue,corpus));
 }
 
 NAN_METHOD(spottingBatchDone) {//TODO
@@ -73,7 +75,7 @@ NAN_METHOD(spottingBatchDone) {//TODO
     int resent = To<int>(info[3]).FromJust();
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels,resent));
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,corpus,resultsId,ids,labels,resent));
 }
 
 NAN_METHOD(getNextTranscriptionBatch) {
@@ -81,7 +83,7 @@ NAN_METHOD(getNextTranscriptionBatch) {
     
     Callback *callback = new Callback(info[1].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue,corpus));
 }
 
 NAN_METHOD(transcriptionBatchDone) {
@@ -94,7 +96,13 @@ NAN_METHOD(transcriptionBatchDone) {
     
     Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,id,transcription));
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,corpus,id,transcription));
+}
+
+NAN_METHOD(showCorpus) {
+    Callback *callback = new Callback(info[0].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",corpus,masterQueue));
 }
 
 NAN_METHOD(getNextTestBatch) {
@@ -148,7 +156,7 @@ NAN_METHOD(clearTestUsers) {
 NAN_MODULE_INIT(Init) {
     
     masterQueue = new MasterQueue();
-    
+    corpus = new Knowledge::Corpus();
     
     Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
@@ -162,6 +170,8 @@ NAN_MODULE_INIT(Init) {
     Nan::Set(target, New<String>("transcriptionBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(transcriptionBatchDone)).ToLocalChecked());
     
+    Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     
     testQueue = new TestQueue();
     

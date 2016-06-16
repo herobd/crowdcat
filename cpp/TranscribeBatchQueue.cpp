@@ -19,7 +19,7 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     if (queue.size()>0)
     {
         ret = queue.front();
-        ret.setWidth(maxWidth);
+        ret->setWidth(maxWidth);
         queue.pop_front();
 
         returnMap[ret->getId()]=ret;
