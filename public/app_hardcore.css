@@ -246,6 +246,10 @@ button {
 }
 .transcription.ondeck .meat {
     visibility: visible;
+    animation-duration: 0.2s;
+    animation-name: expand;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: expand;
 }
 
 .selections {
@@ -263,6 +267,20 @@ button {
     width:100%;
     min-height:30px;
 }
+
+@keyframes expand {
+    from {max-height:0px;
+          min-height:0px;}
+    to   {max-height:500px;
+          min-height:100px;}
+}
+@-webkit-keyframes expand {
+    from {max-height:0px;
+          min-height:0px;}
+    to   {max-height:500px;
+          min-height:100px;}
+}
+
 .collapser {
     /*transition: collapse 0.8s ease-in-out;*/
     animation-duration: 0.2s;

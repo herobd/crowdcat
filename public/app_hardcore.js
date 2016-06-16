@@ -9,6 +9,7 @@ var spinner;
 
 var ondeck;
 var theWindow;
+var gradient;
 
 var toBeInQueue=3;
 var swipeOn=true;
@@ -145,6 +146,7 @@ function setup() {
     spinner = document.getElementById("spinner");
     var windows = document.getElementsByClassName('window');
     theWindow=windows[0];
+    gradient = document.getElementById("overlay");
     //for (var i = 0; i < windows.length; i++) {
     //    //initSlider(windows[i]);
     //windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
@@ -365,6 +367,7 @@ function isBatchDone(batchId) {
         nextElement.classList.toggle('ondeck');
         if (batchQueue[0].ngram=='#') {
             //TODO hide gradient
+            gradient.hidden=true;
         }
     }
     var oldElement = document.getElementById('b'+batchId);
@@ -386,6 +389,7 @@ function isBatchDone(batchId) {
             }
         } else {
             //TODO fix gradient
+            gradient.hidden=false;
             oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
             oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
             oldElement.classList.toggle('collapser');
