@@ -18,7 +18,7 @@ class TranscribeBatchQueue
         TranscribeBatchQueue();
         void enqueue(TranscribeBatch* batch);
 
-        TranscribeBatch* dequeue();
+        TranscribeBatch* dequeue(unsigned int maxWidth);
 
         void feedback(unsigned long id, string transcription);
 

@@ -8,6 +8,7 @@
 #include "MasterQueue.h"
 #include "BatchWraper.h"
 #include "BatchWraperSpottings.h"
+#include "BatchWraperTranscription.h"
 using namespace Nan;
 using namespace std;
 using namespace v8;

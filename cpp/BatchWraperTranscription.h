@@ -9,6 +9,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "SpottingResults.h"
 #include "BatchWraper.h"
+#include "Knowledge.h"
 
 using namespace Nan;
 using namespace std;
@@ -24,7 +25,7 @@ class BatchWraperTranscription: public BatchWraper
         string ngram;
         
     public:
-        BatchWraperTranscrption(TranscriptionBatch* batch);
+        BatchWraperTranscription(TranscribeBatch* batch);
         ~BatchWraperTranscription() {}
         void doCallback(Callback* callback);
 };

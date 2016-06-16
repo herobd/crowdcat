@@ -1,6 +1,6 @@
 
 #include "BatchWraperTranscription.h"
-BatchWraperTranscription::BatchWraperTranscription(TranscriptionBatch* batch)
+BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
 {
     base64::encoder E;
     vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
