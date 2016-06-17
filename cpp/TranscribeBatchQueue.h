@@ -16,7 +16,7 @@ class TranscribeBatchQueue
 {
     public:
         TranscribeBatchQueue();
-        void enqueue(TranscribeBatch* batch);
+        void enqueueAll(vector<TranscribeBatch*> batches);
 
         TranscribeBatch* dequeue(unsigned int maxWidth);
 

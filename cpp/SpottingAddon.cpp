@@ -19,6 +19,7 @@ using namespace v8;
 #include "TestBatchRetrieveWorker.cpp"
 #include "SpottingTestBatchUpdateWorker.cpp"
 #include "ClearTestUsersWorker.cpp"
+#include "MiscWorker.cpp"
 
 MasterQueue* masterQueue;
 Knowledge::Corpus* corpus;
@@ -44,7 +45,7 @@ NAN_METHOD(getNextBatch) {
     
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue,corpus));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue));
 }
 
 NAN_METHOD(spottingBatchDone) {//TODO
@@ -83,7 +84,7 @@ NAN_METHOD(getNextTranscriptionBatch) {
     
     Callback *callback = new Callback(info[1].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue,corpus));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue));
 }
 
 NAN_METHOD(transcriptionBatchDone) {
@@ -96,13 +97,13 @@ NAN_METHOD(transcriptionBatchDone) {
     
     Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,corpus,id,transcription));
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,id,transcription));
 }
 
 NAN_METHOD(showCorpus) {
     Callback *callback = new Callback(info[0].As<Function>());
 
-    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",corpus,masterQueue));
+    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",masterQueue,corpus));
 }
 
 NAN_METHOD(getNextTestBatch) {

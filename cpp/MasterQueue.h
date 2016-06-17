@@ -64,6 +64,7 @@ public:
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription) {transcribeBatchQueue.feedback(id, transcription);}
+    void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches) {transcribeBatchQueue.enqueueAll(newBatches);};
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();

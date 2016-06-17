@@ -5,10 +5,31 @@ TranscribeBatchQueue::TranscribeBatchQueue()
 
 }
 
-void TranscribeBatchQueue::enqueue(TranscribeBatch* batch)
+/*void TranscribeBatchQueue::enqueue(TranscribeBatch* batch)
 {
     lock();
     queue.push_back(batch);
+    unlock();
+}*/
+void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches)
+{
+    lock();
+    for (TranscribeBatch* b :  batches)
+    {
+        bool found=false;
+        for (int i=0; i<batches.size(); i++)
+        {
+            if (b->getId() == queue[i]->getId())
+            {
+                delete queue[i];
+                queue[i] = b;
+                found=true;
+                break;
+            }
+        }
+        if (!found)
+            queue.push_back(b);
+    }
     unlock();
 }
 
