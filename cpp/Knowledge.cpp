@@ -74,51 +74,70 @@ Knowledge::Corpus::Corpus()
 
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
 {
+    cout <<"addSpotting"<<endl;
     vector<TranscribeBatch*> ret;
     pthread_rwlock_rdlock(&pagesLock);
     Page* page = pages[s.pageId];
     pthread_rwlock_unlock(&pagesLock);
     if (page==NULL)
     {
-        page = new Page();
+        /*page = new Page();
         pthread_rwlock_wrlock(&pagesLock);
         pages[s.pageId] = page;
-        pthread_rwlock_unlock(&pagesLock);
+        pthread_rwlock_unlock(&pagesLock);*/
+        assert(false && "ERROR, page not present");
     }
     
-    addSpottingToPage(page,ret);
+    addSpottingToPage(s,page,ret);
     
+    cout <<"END addSpotting"<<endl;
     return ret;
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpottings(vector<Spotting>* spottings)
 {
+    cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
-    vector<Page*> pages;
+    vector<Page*> thesePages;
     pthread_rwlock_rdlock(&pagesLock);
-    for (const Spotting& s : spottings)
+    cout <<"addSpottings: got lock"<<endl;
+    bool writing=false;
+    for (const Spotting& s : *spottings)
     {
-        Page* page = pages[s.pageId];
-        if (page==NULL)
+        Page* page;
+        if (pages.find(s.pageId)==pages.end())
         {
-            pthread_rwlock_unlock(&pagesLock);
+
+            assert(false && "ERROR, page not present");
+            /*if (!writing)
+            {
+                pthread_rwlock_unlock(&pagesLock);
+                cout <<"addSpottings: release lock"<<endl;
+                pthread_rwlock_wrlock(&pagesLock);
+                cout <<"addSpottings: got write lock"<<endl;
+                writing=true;
+            }
             page = new Page();
-            pthread_rwlock_wrlock(&pagesLock);
-            pages[s.pageId] = page;
-            pthread_rwlock_unlock(&pagesLock);
+            pages[s.pageId] = page;*/
         }
-        pages.push_back(page);
+        else
+        {
+            page = pages[s.pageId];
+        }
+        thesePages.push_back(page);
     }
     pthread_rwlock_unlock(&pagesLock);
+    cout <<"addSpottings: release lock"<<endl;
     
-    for (int i=0; i<spottings.size(); i++)
-        addSpottingToPage(spottings[i],pages[i],ret);
+    for (int i=0; i<spottings->size(); i++)
+        addSpottingToPage(spottings->at(i),thesePages[i],ret);
     
+    cout <<"END addSpottings"<<endl;
     return ret;
 }
 
 void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret)
 {
-
+    cout<<"  addSpottingsToPage"<<endl;
     vector<Line*> possibleLines;
     //pthread_rwlock_rdlock(&page->linesLock);
     vector<Line*> lines = page->lines();
@@ -141,7 +160,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
                 word->getBoundsAndDone(&word_tlx,&word_tly,&word_brx,&word_bry,&isDone);
                 if (!isDone)
                 {
-                    int overlap = max(0,min(s.bry,word_bry) - max(s.tly,word_tly)) * max(0,min(s.brx,word_brx) - max(s.tlx,word_tlx));
+                    int overlap = (max(0,min(s.bry,word_bry) - max(s.tly,word_tly))) * (max(0,min(s.brx,word_brx) - max(s.tlx,word_tlx)));
                     float overlapPortion = overlap/(0.0+(s.bry-s.tly)*(s.brx-s.tlx));
                     cout <<"Overlap for word "<<word<<": overlapPortion="<<overlapPortion<<" ="<<overlap<<"/"<<(0.0+(s.bry-s.tly)*(s.brx-s.tlx))<<endl;
                     TranscribeBatch* newBatch=NULL;
@@ -173,9 +192,11 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
             
             if (!oneWord)
             {
-                //make a new word
-                assert(false);
-                line->addWord(s);
+                //for now, do nothing as we know where all words are
+                //TODO
+                //make a new word?
+                //assert(false);
+                //line->addWord(s);
             }
             
             //pthread_rwlock_unlock(&line->wordsLock);
@@ -201,6 +222,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
         //I'm assumming most lines are added prior with a preprocessing step
         page->addLine(s);
     }
+    cout<<"  END addSpottingsToPage"<<endl;
 }
 
 void Knowledge::Corpus::removeSpotting(unsigned long sid)
@@ -397,7 +419,10 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
     int blockSize = max(s.brx-s.tlx,s.bry-s.tly);
     if (blockSize%2==0)
         blockSize++;
-    cv::adaptiveThreshold(*s.pagePnt, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
+    cv::Mat orig = *s.pagePnt;
+    if (orig.type()==CV_8UC3)
+        cv::cvtColor(orig,orig,CV_RGB2GRAY);
+    cv::adaptiveThreshold(orig, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
     //cv::imshow("ff", b);
     //cv::waitKey();
     cv::Mat ele = cv::Mat::ones(3,5,CV_32F);//(cv::Mat_<float>(3,5) << 1, 1, 1, 1, 1, 1, 1, 1, 1);
@@ -506,3 +531,81 @@ void Knowledge::Corpus::show()
     pthread_rwlock_unlock(&pagesLock);
 }
 
+void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesFile)
+{
+    ifstream in(queriesFile);
+
+    assert(in.is_open());
+    string line;
+    
+    //std::getline(in,line);
+    //float initSplit=0;//stof(line);//-0.52284769;
+    
+    while(std::getline(in,line))
+    {
+        vector<string> strV;
+        //split(line,',',strV);
+        std::stringstream ss(line);
+        std::string item;
+        while (std::getline(ss, item, ' ')) {
+            strV.push_back(item);
+        }
+        
+        
+        
+        string imageFile = strV[0];
+        int pageId = stoi(strV[0]);
+        string gt = strV[5];
+        int tlx=stoi(strV[1]);
+        int tly=stoi(strV[2]);
+        int brx=stoi(strV[3]);
+        int bry=stoi(strV[4]);
+        
+
+        Page* page;
+        if (pages.find(pageId)==pages.end())
+        {
+            /*if (!writing)
+            {
+                pthread_rwlock_unlock(&pagesLock);
+                pthread_rwlock_wrlock(&pagesLock);
+                writing=true;
+            }*/
+            page = new Page(imageLoc+"/"+imageFile);
+            pages[pageId] = page;
+        }
+        else
+        {
+            page = pages[pageId];
+        }
+        vector<Line*> lines = page->lines();
+        bool oneLine=false;
+        for (Line* line : lines)
+        {
+            int line_ty, line_by;
+            line->wordsAndBounds(&line_ty,&line_by);
+            int overlap = min(bry,line_by) - max(tly,line_ty);
+            float overlapPortion = overlap/(0.0+bry-tly);
+            if (overlapPortion > OVERLAP_LINE_THRESH)
+            {
+                oneLine=true;
+                line->addWord(tlx,tly,brx,bry,gt);
+                
+            }
+        }
+        if (!oneLine)
+        {
+            page->addWord(tlx,tly,brx,bry,gt);
+        }
+    }
+
+    in.close();
+}
+
+
+cv::Mat* Knowledge::Corpus::imgForPageId(int pageId)
+{
+
+    Page* page = pages[pageId];
+    return page->getImg();
+}

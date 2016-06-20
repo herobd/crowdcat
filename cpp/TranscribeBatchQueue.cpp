@@ -13,6 +13,7 @@ TranscribeBatchQueue::TranscribeBatchQueue()
 }*/
 void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches)
 {
+    cout <<"enqueueAll"<<endl;
     lock();
     for (TranscribeBatch* b :  batches)
     {
@@ -31,6 +32,7 @@ void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches)
             queue.push_back(b);
     }
     unlock();
+    cout <<"END enqueueAll"<<endl;
 }
 
 TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)

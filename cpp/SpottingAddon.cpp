@@ -21,6 +21,9 @@ using namespace v8;
 #include "ClearTestUsersWorker.cpp"
 #include "MiscWorker.cpp"
 
+//test
+#include "SpottingResults.h"
+
 MasterQueue* masterQueue;
 Knowledge::Corpus* corpus;
 TestQueue* testQueue;
@@ -158,7 +161,20 @@ NAN_MODULE_INIT(Init) {
     
     masterQueue = new MasterQueue();
     corpus = new Knowledge::Corpus();
-    
+    corpus->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
+
+    //test
+
+        Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);
+        Spotting s2(1196, 1429, 1288, 1491, 2720272, corpus->imgForPageId(2720272), "ch", 0.01);
+        Spotting s3(1114, 1465, 1182, 1496, 2720272, corpus->imgForPageId(2720272), "ar", 0.01);
+        vector<Spotting> toAdd={s1,s2,s3};
+        vector<TranscribeBatch*> newBatches = corpus->addSpottings(&toAdd);
+        masterQueue->enqueueTranscriptionBatches(newBatches);
+        
+    //test
+
+
     Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
     

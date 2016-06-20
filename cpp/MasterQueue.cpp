@@ -116,6 +116,8 @@ MasterQueue::MasterQueue() {
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
     numCFalse=numCTrue=0;
+
+    
     ///end testing
 }
 
@@ -174,7 +176,7 @@ void MasterQueue::addTestSpottings()
         float score=-1*stof(strV[7]);
         bool truth = strV[8].find("true")!= string::npos?true:false;
         
-        Spotting spotting(tlx, tly, brx, bry, 0, &pages[page], ngram, score);
+        Spotting spotting(tlx, tly, brx, bry, stoi(page), &pages[page], ngram, score);
         spottingResults[spottingId]->add(spotting);
         test_groundTruth[spottingResults[spottingId]->getId()][spotting.id]=truth;
         test_total[spottingResults[spottingId]->getId()]++;
@@ -253,10 +255,10 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             //test
             
             bool done=false;
-            //cout << "getBatch "<<prevNgram<<endl;
+            cout << "getBatch   prev:"<<prevNgram<<endl;
             batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram);
             if (done)
-            {   //cout <<"done in queue "<<endl;
+            {   cout <<"done in queue "<<endl;
                 //TODO return the results that are above the accept threhsold
                 
                 pthread_rwlock_wrlock(&semResultsQueue);
@@ -364,6 +366,7 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
     cout <<"got feedback for: "<<id<<endl;
     vector<Spotting>* ret = NULL;
     bool succ=false;
+    int test=0;
     while (!succ)
     {
         pthread_rwlock_rdlock(&semResults);
@@ -376,7 +379,9 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             if (succ)
             {
                 bool done=false;
+                cout <<"res feedback"<<endl;
                 ret = res->feedback(&done,ids,userClassifications,resent);
+                cout <<"END res feedback"<<endl;
                 
                 if (done)
                 {cout <<"done done "<<endl;
@@ -401,7 +406,14 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             pthread_rwlock_unlock(&semResults);
             break;
         }
+        if (test++>2000)
+        {
+            cout<<"ERROR, unable to find match"<<endl;
+            assert(false);
+            break;
+        }
     }
+    cout<<"END feedback"<<endl;
     return ret;
 }
 

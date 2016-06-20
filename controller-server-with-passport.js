@@ -21,7 +21,7 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Release/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon")
 
 var debug=true;
 numberOfTests=2;
@@ -262,10 +262,10 @@ var ControllerApp = function(port) {
             }
         });
         
-        self.app.get('/app/test_image', function(req, res) {
+        self.app.get('/xxx/show_results', function(req, res) {
             if (req.user || debug) {
-                spottingaddon.getTestImage(+req.query.quality,function (err,data64) {
-                    res.send('data:image/png;base64,'+data64);
+                spottingaddon.showCorpus(function (err) {
+                    if (err) console.log(err);
                 });
             } else {
                 res.redirect('/login');

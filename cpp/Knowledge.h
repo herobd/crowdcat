@@ -18,8 +18,8 @@
 
 using namespace std;
 
-#define OVERLAP_LINE_THRESH 0.5
-#define OVERLAP_WORD_THRESH 0.6
+#define OVERLAP_LINE_THRESH 0.45
+#define OVERLAP_WORD_THRESH 0.45
 #define THRESH_UNKNOWN_EST 0.2
 #define THRESH_LEXICON_LOOKUP_COUNT 20
 //#define THRESH_SCORING 1.0
@@ -76,6 +76,7 @@ private:
     vector<Word*> _words;
     int tlx, tly, brx, bry; // top y and bottom y
     string query;
+    string gt;
     Meta meta;
     const cv::Mat* pagePnt;
     
@@ -88,12 +89,16 @@ private:
     TranscribeBatch* queryForBatch();
     string transcription;
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query(""), done(false), sentBatchId(0)
+    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query(""), gt(""), done(false), sentBatchId(0)
     {
         pthread_rwlock_init(&lock,NULL);
     }    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query(""), done(false), sentBatchId(0)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query(""), gt(""), done(false), sentBatchId(0)
+    {
+        pthread_rwlock_init(&lock,NULL);
+    }
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), query(""), gt(gt), done(false), sentBatchId(0)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -141,13 +146,14 @@ private:
     pthread_rwlock_t lock;
     vector<Word*> _words;
     int ty, by; // top y and bottom y
+    cv::Mat* pagePnt;
 public:
-    Line() : ty(-1), by(-1)
+    Line() : ty(-1), by(-1), pagePnt(NULL)
     {
         pthread_rwlock_init(&lock,NULL);
     }
     
-    Line(int ty, int by) : ty(ty), by(by)
+    Line(int ty, int by, cv::Mat* pagePnt) : ty(ty), by(by), pagePnt(pagePnt)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -173,12 +179,26 @@ public:
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
-        Word* newWord = new Word(tlx,tly,brx,bry,s.pagePnt);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
         
         return newWord->addSpotting(s);
+    }
+    TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
+    {
+        //Becuase this occurs with an absolute word boundary, we adjust the line to match the word
+        if (ty>tly)
+            ty=tly;
+        if (by<bry)
+            by=bry;
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,gt);
+        pthread_rwlock_wrlock(&lock);
+         _words.push_back(newWord);
+        pthread_rwlock_unlock(&lock);
+        
+        return NULL;
     }
 };
 
@@ -187,9 +207,19 @@ class Page
 private:
     pthread_rwlock_t lock;
     vector<Line*> _lines;
+    cv::Mat pageImg; //I am owner of this Mat
 public:
     Page()
     {
+        pthread_rwlock_init(&lock,NULL);
+    }
+    Page(cv::Mat pageImg) : pageImg(pageImg)
+    {
+        pthread_rwlock_init(&lock,NULL);
+    }
+    Page(string imageLoc) 
+    {
+        pageImg = cv::imread(imageLoc);
         pthread_rwlock_init(&lock,NULL);
     }
     
@@ -210,7 +240,7 @@ public:
     
     TranscribeBatch* addLine(Spotting s)
     {
-        Line* newLine = new Line(s.tly, s.bry);
+        Line* newLine = new Line(s.tly, s.bry, &pageImg);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -219,6 +249,20 @@ public:
         
         return newLine->addWord(s);
     }
+
+    TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
+    {
+        Line* newLine = new Line(tly, bry, &pageImg);
+        
+        
+        pthread_rwlock_wrlock(&lock);
+        _lines.push_back(newLine);
+        pthread_rwlock_unlock(&lock);
+        
+        return newLine->addWord(tlx,tly,brx,bry,gt);
+    }
+
+    cv::Mat* getImg() {return &pageImg;}
 };
 
 
@@ -249,6 +293,8 @@ public:
     vector<TranscribeBatch*> addSpottings(vector<Spotting>* spottings);
     void removeSpotting(unsigned long sid);
 
+    void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
+    cv::Mat* imgForPageId(int pageId);
     void show();
 };
 

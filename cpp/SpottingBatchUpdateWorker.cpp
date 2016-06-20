@@ -20,10 +20,11 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
 
 
         void Execute () {
-            
+            cout <<"Recieved batch for "<<resultsId<<endl;            
             vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent);
             vector<TranscribeBatch*> newBatches = corpus->addSpottings(toAdd);
             masterQueue->enqueueTranscriptionBatches(newBatches);
+            cout <<"Enqueued "<<newBatches.size()<<" new trans"<<endl;            
             delete toAdd;
         }
 
