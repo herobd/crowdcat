@@ -124,6 +124,7 @@ public:
 
     void result(string selected)
     {
+        cout <<"recived trans: "<<selected<<endl;
         pthread_rwlock_wrlock(&lock);
         transcription=selected;
         if (!done)

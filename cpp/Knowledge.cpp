@@ -42,7 +42,7 @@ void TranscribeBatch::setWidth(unsigned int width)
         cv::resize(wordImg, newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
     }
 
-    textImg = cv::Mat::zeros(40,wordImg.cols,CV_8UC3);
+    textImg = cv::Mat::zeros(50,width,CV_8UC3);
 
     int colorIndex=0;
     for (auto iter : *spottings)
@@ -54,9 +54,9 @@ void TranscribeBatch::setWidth(unsigned int width)
         for (int r= max(0,s.tly-tly)*scale; r<min((double)wordImg.rows,(s.bry-tly)*scale); r++)
             for (int c= max(0,s.tlx-tlx)*scale; c<min((double)wordImg.cols,(s.brx-tlx)*scale); c++)
             {
-                newWordImg.at<cv::Vec3b>(r+padLeft,c)[0] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[0]*colors[colorIndex][0]);
-                newWordImg.at<cv::Vec3b>(r+padLeft,c)[1] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[1]*colors[colorIndex][1]);
-                newWordImg.at<cv::Vec3b>(r+padLeft,c)[2] = min(255.f,newWordImg.at<cv::Vec3b>(r+padLeft,c)[2]*colors[colorIndex][2]);
+                newWordImg.at<cv::Vec3b>(r,padLeft+c)[0] = min(255.f,newWordImg.at<cv::Vec3b>(r,padLeft+c)[0]*colors[colorIndex][0]);
+                newWordImg.at<cv::Vec3b>(r,padLeft+c)[1] = min(255.f,newWordImg.at<cv::Vec3b>(r,padLeft+c)[1]*colors[colorIndex][1]);
+                newWordImg.at<cv::Vec3b>(r,padLeft+c)[2] = min(255.f,newWordImg.at<cv::Vec3b>(r,padLeft+c)[2]*colors[colorIndex][2]);
                 
             }
         colorIndex = (colorIndex+1)%colors.size();
@@ -291,7 +291,12 @@ TranscribeBatch* Knowledge::Word::queryForBatch()
         if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
-            if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
+            if (scored.size() == 1)
+            {
+                transcription=scored.begin()->second;
+                done=true;
+            }
+            else if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
                 ret = new TranscribeBatch(this,scored,(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly)),&spottings,tlx,tly,brx,bry,sentBatchId);
@@ -510,10 +515,13 @@ void Knowledge::Corpus::show()
                 {
                     if (draw.find(word->getPage()) == draw.end())
                     {
-                        if (word->getPage()->dims ==3)
+                        if (word->getPage()->type() == CV_8UC3)
                             draw[word->getPage()] = word->getPage()->clone();
                         else
+                        {
+                            draw[word->getPage()] = cv::Mat();
                             cv::cvtColor(*word->getPage(),draw[word->getPage()],CV_GRAY2BGR);
+                        }
                     }
                     cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
                 }

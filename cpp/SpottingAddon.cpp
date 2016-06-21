@@ -7,6 +7,7 @@
 
 #include "MasterQueue.h"
 #include "Knowledge.h"
+#include "Lexicon.h"
 #include "TestQueue.h"
 
 using namespace Nan;
@@ -160,6 +161,7 @@ NAN_METHOD(clearTestUsers) {
 NAN_MODULE_INIT(Init) {
     
     masterQueue = new MasterQueue();
+    Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     corpus = new Knowledge::Corpus();
     corpus->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
 
@@ -168,8 +170,15 @@ NAN_MODULE_INIT(Init) {
         Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);
         Spotting s2(1196, 1429, 1288, 1491, 2720272, corpus->imgForPageId(2720272), "ch", 0.01);
         Spotting s3(1114, 1465, 1182, 1496, 2720272, corpus->imgForPageId(2720272), "ar", 0.01);
-        vector<Spotting> toAdd={s1,s2,s3};
+        Spotting s4(345, 956, 415, 986, 2720272, corpus->imgForPageId(2720272), "or", 0.01);
+        Spotting s5(472, 957, 530, 987, 2720272, corpus->imgForPageId(2720272), "er", 0.01);
+        Spotting s6(535, 943, 634, 986, 2720272, corpus->imgForPageId(2720272), "ed", 0.01);
+        Spotting s7(355, 1046, 455, 1071, 2720272, corpus->imgForPageId(2720272), "un", 0.01);
+        Spotting s8(492, 1030, 553, 1069, 2720272, corpus->imgForPageId(2720272), "it", 0.01);
+        Spotting s9(439, 1024, 507, 1096, 2720272, corpus->imgForPageId(2720272), "fi", 0.01);
+        vector<Spotting> toAdd={s1,s2,s3,s4,s5,s6,s7,s8,s9};
         vector<TranscribeBatch*> newBatches = corpus->addSpottings(&toAdd);
+        assert(newBatches.size()>0);
         masterQueue->enqueueTranscriptionBatches(newBatches);
         
     //test

@@ -18,12 +18,11 @@ class BatchWraperTranscription: public BatchWraper
 {
     private:
         //output
-        vector<string> retData;
-        vector<string> retId;
         string batchId;
-        string resultsId;
-        string ngram;
-        
+        string wordImgStr;
+        string ngramImgStr;
+        vector<string> retPoss;
+
     public:
         BatchWraperTranscription(TranscribeBatch* batch);
         ~BatchWraperTranscription() {}

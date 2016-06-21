@@ -16,7 +16,7 @@ using namespace v8;
 class BatchRetrieveWorker : public AsyncWorker {
     public:
         BatchRetrieveWorker(Callback *callback, int width, int color, string prevNgram, int num, MasterQueue* masterQueue)
-        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), masterQueue(masterQueue) {}
+        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), masterQueue(masterQueue), batch(NULL) {}
 
         ~BatchRetrieveWorker() {}
 
@@ -25,7 +25,9 @@ class BatchRetrieveWorker : public AsyncWorker {
 
             if (color==-1)
             {
-                batch = new BatchWraperTranscription(masterQueue->getTranscriptionBatch(width));
+                TranscribeBatch* b = masterQueue->getTranscriptionBatch(width);
+                if (b!=NULL)
+                    batch = new BatchWraperTranscription(b);
 
             }
             else

@@ -39,7 +39,10 @@ vector<string> Lexicon::search(string query, Meta meta)
     {
         assert(ret1[i].compare(ret2[i])==0);
     }*/
-    
+    cout << query <<": ";
+    for (string s : ret1)
+        cout<<s<<", ";
+    cout<<endl;
     return ret1;
 }
 

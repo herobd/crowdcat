@@ -18,7 +18,7 @@ void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches)
     for (TranscribeBatch* b :  batches)
     {
         bool found=false;
-        for (int i=0; i<batches.size(); i++)
+        for (int i=0; i<queue.size(); i++)
         {
             if (b->getId() == queue[i]->getId())
             {
