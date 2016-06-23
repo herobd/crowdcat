@@ -88,7 +88,7 @@ button {
     column-count: 2;
     column-gap: 80%;*/
     
-    z-index: -1;
+    /*z-index: -1;*/
     
     margin: auto;  
       left:0;
@@ -109,11 +109,11 @@ button {
    clear:both;
 }
 
-#leftIcon {
+#rightIcon {
     float: left;
     clear: left;
 }
-#rightIcon {
+#leftIcon {
     float: right;
     clear: right;
 }
@@ -176,7 +176,7 @@ button {
     position: fixed;
     bottom: 0;
     min-height: 10%;
-    z-index: -4;
+    /*z-index: -4;*/
     
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none;   /* Chrome/Safari/Opera */
@@ -219,6 +219,84 @@ button {
     text-align: center;
     width:100%;
     min-height:30px;
+}
+
+div.transcription {
+    background: #fafaeb;
+    width: 100%;
+    height: 100vh;
+    min-height:70px;
+    position: relative;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    z-index: 3;
+    text-align: center;
+    border-width: 20px 0px;
+    border-style: solid;
+    border-color: #380B61;
+    /*overflow-y: auto; 
+    overflow-x: hidden;*/
+    overflow:hidden;
+}
+
+.transcription img {
+    position: relative;
+    left: 0;
+    display: block;
+}
+
+/*.transcription .images {
+    position:fixed;
+}*/
+
+.transcription .meat {
+    display: none;
+}
+.transcription.ondeck .meat {
+    display: block;
+    animation-duration: 0.2s;
+    animation-name: expand;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: expand;
+}
+
+div.selections {
+    /*height:100%;*/
+    overflow-y:auto;
+    overflow-x:hidden;
+}
+
+div.selection {
+    background:darkgray;
+    position: relative;
+    display: block;
+    font-size: 32px;
+    color: #090909;
+    text-align: center;
+    width:100%;
+    /*min-height:40px;*/
+    padding: 10px 0px;
+    margin: 5px 0px;
+}
+
+.selection div {
+    background: #F1EBC8;
+    width: 93%;
+    margin:auto;
+    padding: 5px;
+}
+
+@keyframes expand {
+    from {max-height:0px;
+          min-height:0px;}
+    to   {max-height:500px;
+          min-height:100px;}
+}
+@-webkit-keyframes expand {
+    from {max-height:0px;
+          min-height:0px;}
+    to   {max-height:500px;
+          min-height:100px;}
 }
 
 .collapser {

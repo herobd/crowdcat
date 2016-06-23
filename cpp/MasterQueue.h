@@ -10,6 +10,7 @@
 #include "semaphore.h"
 #include <pthread.h>
 #include "SpottingResults.h"
+#include "TranscribeBatchQueue.h"
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -18,7 +19,7 @@
 
 using namespace std;
 
-
+#define ROTATE 0 //this is for testing, forcing it to feed up batches from different spotting results.
 
 
 
@@ -31,7 +32,7 @@ private:
     
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
-    
+    TranscribeBatchQueue transcribeBatchQueue;
     thread* incompleteChecker;
     
     //int atID;
@@ -54,12 +55,16 @@ private:
     map<unsigned long, int> test_numFalsePos;
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
     int done;
+    int numCTrue, numCFalse;
 public:
     MasterQueue();
-    SpottingsBatch* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
+    SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent);
     void addSpottingResults(SpottingResults* res);
     
+    TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
+    void transcriptionFeedback(unsigned long id, string transcription) {transcribeBatchQueue.feedback(id, transcription);}
+    void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches) {transcribeBatchQueue.enqueueAll(newBatches);};
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();
@@ -73,8 +78,11 @@ public:
         cout << "* recall: "<<recallAvg/done<<endl;
         cout << "* manual: "<<manualAvg/done<<endl;
         cout << "* effort: "<<effortAvg/done<<endl;
+        cout << "* true/false: "<<numCTrue/(0.0+numCFalse)<<endl;
         cout << "***********"<<endl;
         delete incompleteChecker;
+        pthread_rwlock_destroy(&semResultsQueue);
+        pthread_rwlock_destroy(&semResults);
     }
     void checkIncomplete();
     atomic_bool kill;

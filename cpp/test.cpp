@@ -1,12 +1,73 @@
 
 #include "MasterQueue.h"
 #include "TestQueue.h"
+#include "Knowledge.h"
+#include "Lexicon.h"
+#include "TranscribeBatchQueue.h"
 #include <assert.h>
+#include <iostream>
 
 int main() {
     //TEST
+    Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
+    Knowledge::Corpus c;
+    TranscribeBatchQueue q;
+    //Knowledge::Page* = new Knowledge::Page();
+    int pageId=0;
+    //c.addPage(pageId);
+    cv::Mat page = cv::imread("/home/brian/intel_index/data/gw_20p_wannot/2700270.tif",CV_LOAD_IMAGE_GRAYSCALE);
+    assert(page.rows>0);
+    while(1)
+    {
+        int tlx, tly, brx, bry;
+        string ngram;
+        cout << "tlx: ";
+        cin >> tlx;
+        if (tlx==-1)
+            break;
+        cout << "tly: ";
+        cin >> tly;
+        if (tly==-1)
+            break;
+        cout << "brx: ";
+        cin >> brx;
+        if (brx==-1)
+            break;
+        cout << "bry: ";
+        cin >> bry;
+        if (bry==-1)
+            break;
+        cout << "ngram: ";
+        cin >> ngram;
+        
+        Spotting s(tlx, tly, brx, bry, pageId, &page, ngram, 0.1);
+        vector<TranscribeBatch*> bs = c.addSpotting(s);
+        for (auto b : bs)
+            if (b!=NULL)
+            {
+                cout<<"enqueued"<<endl;
+                q.enqueue(b);
+            }
+    }
     
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	TestQueue t;
+    while(1)
+    {
+        TranscribeBatch* b = q.dequeue();
+        if (b==NULL)
+            break;
+        cout<<"Poss: "<<endl;
+        for (string p : b->getPossibilities())
+            cout<<"  "<<p<<endl;
+        cv::imshow("word",b->getImage());
+        cv::imshow("ngrams",b->getTextImage());
+        cv::waitKey();
+        string trans;
+        cout << "transcription: ";
+        cin >> trans;
+        b->getBackPointer()->result(trans);
+    }
+    c.show();
+    /*TestQueue t;
     int numUsers=8;
     for (int n=0; n<t.numTestBatches; n++)
     {
@@ -34,7 +95,8 @@ int main() {
         {
             assert(first[i-1] == first[i]);
         }
-    }
+    }*/
+    
     //MasterQueue q;
     //while (q.test_autoBatch()){}
     

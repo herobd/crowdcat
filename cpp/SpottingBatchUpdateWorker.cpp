@@ -1,11 +1,10 @@
 #include <nan.h>
 #include <iostream>
 #include <assert.h>
-#define BUFFERSIZE 65536
-#include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
 
 #include "MasterQueue.h"
+#include "Knowledge.h"
 
 using namespace Nan;
 using namespace std;
@@ -13,16 +12,19 @@ using namespace v8;
 
 class SpottingBatchUpdateWorker : public AsyncWorker {
     public:
-        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, string resultsId, vector<string> ids, vector<int> labels, int resent)
-        : AsyncWorker(callback), masterQueue(masterQueue), resultsId(resultsId), ids(ids), labels(labels), resent(resent) {}
+        SpottingBatchUpdateWorker(Callback *callback, MasterQueue* masterQueue, Knowledge::Corpus* corpus, string resultsId, vector<string> ids, vector<int> labels, int resent)
+        : AsyncWorker(callback), masterQueue(masterQueue), corpus(corpus),
+          resultsId(resultsId), ids(ids), labels(labels), resent(resent) {}
 
         ~SpottingBatchUpdateWorker() {}
 
 
         void Execute () {
-            
+            cout <<"Recieved batch for "<<resultsId<<endl;            
             vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent);
-            //TODO update global spottings, fix resends
+            vector<TranscribeBatch*> newBatches = corpus->addSpottings(toAdd);
+            masterQueue->enqueueTranscriptionBatches(newBatches);
+            cout <<"Enqueued "<<newBatches.size()<<" new trans"<<endl;            
             delete toAdd;
         }
 
@@ -38,6 +40,7 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
         }
     private:
         MasterQueue* masterQueue;
+        Knowledge::Corpus* corpus;
         string resultsId;
         vector<string> ids;
         vector<int> labels;

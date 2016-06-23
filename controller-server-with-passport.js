@@ -21,7 +21,7 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Release/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon")
 
 var debug=true;
 numberOfTests=2;
@@ -262,10 +262,10 @@ var ControllerApp = function(port) {
             }
         });
         
-        self.app.get('/app/test_image', function(req, res) {
+        self.app.get('/xxx/show_results', function(req, res) {
             if (req.user || debug) {
-                spottingaddon.getTestImage(+req.query.quality,function (err,data64) {
-                    res.send('data:image/png;base64,'+data64);
+                spottingaddon.showCorpus(function (err) {
+                    if (err) console.log(err);
                 });
             } else {
                 res.redirect('/login');
@@ -297,9 +297,14 @@ var ControllerApp = function(port) {
                     }
                     
                 } else {
-                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,arg3,arg4,arg5) {
                         //setTimeout(function(){
-                        res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                        if (batchType=='spottings')
+                            res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                        else if (batchType=='transcription')
+                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngramImg:arg4,possibilities:arg5});
+                        else
+                            res.send({batchType:'ERROR',batchId:-1});
                         //},2000);
                     });
                 }
@@ -351,9 +356,15 @@ var ControllerApp = function(port) {
                         }
                     });
                 } else {
-                    spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
-                        
-                    });
+                    if (req.query.type=='spottings')
+                        spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
+                           if (err) console.log(err); 
+                        });
+                    else if (req.query.type=='transcription')
+                        spottingaddon.transcriptionBatchDone(req.body.id,req.body.label,function (err) {
+                            if (err) console.log(err);
+                        });
+
                     res.send({done:false});
                 }
                 

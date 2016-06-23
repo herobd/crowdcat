@@ -13,7 +13,7 @@ void checkIncompleteSleeper(MasterQueue* q)
 
 void MasterQueue::checkIncomplete()
 {
-    
+    transcribeBatchQueue.checkIncomplete();    
     
     pthread_rwlock_rdlock(&semResults);
     for (auto ele : results)
@@ -115,6 +115,9 @@ MasterQueue::MasterQueue() {
     addTestSpottings();
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
+    numCFalse=numCTrue=0;
+
+    
     ///end testing
 }
 
@@ -127,7 +130,8 @@ void MasterQueue::addTestSpottings()
     map<string,SpottingResults*> spottingResults;
     
     
-    ifstream in("./data/GW_agSpottings_fold1_0.100000.csv");
+    ifstream in("./data/GW_spottings_fold1_0.100000.csv");
+    assert(in.is_open());
     string line;
     
     //std::getline(in,line);
@@ -172,7 +176,7 @@ void MasterQueue::addTestSpottings()
         float score=-1*stof(strV[7]);
         bool truth = strV[8].find("true")!= string::npos?true:false;
         
-        Spotting spotting(tlx, tly, brx, bry, 0, &pages[page], ngram, score);
+        Spotting spotting(tlx, tly, brx, bry, stoi(page), &pages[page], ngram, score);
         spottingResults[spottingId]->add(spotting);
         test_groundTruth[spottingResults[spottingId]->getId()][spotting.id]=truth;
         test_total[spottingResults[spottingId]->getId()]++;
@@ -192,13 +196,13 @@ void MasterQueue::addTestSpottings()
 
 bool MasterQueue::test_autoBatch()
 {
-    SpottingsBatch* b = getBatch(5, false, 300,0,"");
+    SpottingsBatch* b = getSpottingsBatch(5, false, 300,0,"");
     if (b==NULL)
         return false;
     vector<string> ids;
     vector<int> userClassifications;
-    
-    cout<<b->ngram<<": ";
+    assert(b->size()>0);
+    //cout<<b->ngram<<": ";
     
     for (int i=0; i<b->size(); i++)
     {
@@ -210,24 +214,28 @@ bool MasterQueue::test_autoBatch()
         else
             userClassifications.push_back(0);
         
-        cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
+        //cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
     }
-    cout<<endl;
+    //cout<<endl;
     vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
     delete tmp;
     return true;
 }
-SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
+SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_rdlock(&semResultsQueue);
     //cout<<"got rw lock"<<endl;
+#if ROTATE
     int test_loc=0;
+#endif
     for (auto ele : resultsQueue)
     {
+#if ROTATE
         if (test_loc++<test_rotate/2)
             continue;
+#endif
         
         sem_t* sem = ele.second.first;
         SpottingResults* res = ele.second.second;
@@ -238,17 +246,19 @@ SpottingsBatch* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard,
             pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             //test
+#if ROTATE
             pthread_rwlock_wrlock(&semResultsQueue);
             if (test_rotate++>2*(resultsQueue.size()-1))
                 test_rotate=0;
             pthread_rwlock_unlock(&semResultsQueue);
+#endif
             //test
             
             bool done=false;
-            //cout << "getBatch "<<prevNgram<<endl;
+            cout << "getBatch   prev:"<<prevNgram<<endl;
             batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram);
             if (done)
-            {   //cout <<"done in queue "<<endl;
+            {   cout <<"done in queue "<<endl;
                 //TODO return the results that are above the accept threhsold
                 
                 pthread_rwlock_wrlock(&semResultsQueue);
@@ -323,7 +333,14 @@ void MasterQueue::test_showResults(unsigned long id,string ngram)
 //not thread safe
 vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
 {
-    
+    assert(ids.size()>0 && userClassifications.size()>0);
+    for (int c : userClassifications)
+    {
+        if (c)
+            numCTrue++;
+        else
+            numCFalse++;
+    }
     test_numDone[id]+=ids.size();
     vector<Spotting>* res = feedback(id, ids, userClassifications,0);
     for (Spotting s : *res)
@@ -339,15 +356,17 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
         }
     }
     
-    if (res->size()>ids.size())
+    if (results.find(id)==results.end())
         test_showResults(id,"");
     return res;
 }
 
 vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent)
 {
+    cout <<"got feedback for: "<<id<<endl;
     vector<Spotting>* ret = NULL;
     bool succ=false;
+    int test=0;
     while (!succ)
     {
         pthread_rwlock_rdlock(&semResults);
@@ -360,7 +379,9 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             if (succ)
             {
                 bool done=false;
+                cout <<"res feedback"<<endl;
                 ret = res->feedback(&done,ids,userClassifications,resent);
+                cout <<"END res feedback"<<endl;
                 
                 if (done)
                 {cout <<"done done "<<endl;
@@ -376,13 +397,23 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
                 else
                     sem_post(sem);
             }
+            else
+                cout<<"Failed to get lock for: "<<id<<endl;
         }
         else
         {
+            cout <<"Results not found for: "<<id<<endl;
             pthread_rwlock_unlock(&semResults);
             break;
         }
+        if (test++>2000)
+        {
+            cout<<"ERROR, unable to find match"<<endl;
+            assert(false);
+            break;
+        }
     }
+    cout<<"END feedback"<<endl;
     return ret;
 }
 

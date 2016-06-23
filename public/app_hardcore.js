@@ -9,9 +9,11 @@ var spinner;
 
 var ondeck;
 var theWindow;
+var gradient;
+var icons;
 
 var toBeInQueue=3;
-
+var swipeOn=true;
 
 
 
@@ -24,7 +26,7 @@ function handleTouchStart(evt) {
 };                                                
 
 function handleTouchMove(evt) {
-    if ( ! this.xDown) {
+    if ( ! this.xDown || !swipeOn) {
         return;
     }
     
@@ -68,7 +70,7 @@ function removeSpotting(OK) {
     }
     
     
-    ondeck.classList.toggle('spotting');
+    ondeck.classList.toggle('batchEl');
     ondeck.classList.toggle('collapser');
     
     
@@ -90,8 +92,8 @@ function undo() {
         countUndos++;
         ondeck.classList.toggle('ondeck');
         var ondeckHeader = document.getElementById('b'+batchQueue[0].id)
-            if (ondeckHeader)
-                ondeckHeader.classList.toggle('ondeck');
+        if (ondeckHeader)
+            ondeckHeader.classList.toggle('ondeck');
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         ondeck=lastRemovedEle.pop();
@@ -101,10 +103,11 @@ function undo() {
             //colorIndex = (++colorIndex)%headerColors.length;
             ondeck.style.background=spottingColors[ondeck.colorIndex];
         }
-        ondeck.classList.toggle('spotting');
+        ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
-        batches[ondeck.batch].spottings[ondeck.id]=null
-        
+        if (ondeck.classList.contains('spottings'))
+            batches[ondeck.batch].spottings[ondeck.id]=null;
+        typeSetup(ondeck);
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
             //console.log(pastInfo +' ?= '+batchQueue[0].id)
@@ -121,6 +124,8 @@ function undo() {
 }
 
 function handleTouchEnd(evt) {
+    if (!swipeOn)
+        return;
     //var xUp = evt.touches[0].clientX;    
     //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
     
@@ -143,14 +148,10 @@ function setup() {
     spinner = document.getElementById("spinner");
     var windows = document.getElementsByClassName('window');
     theWindow=windows[0];
-    //for (var i = 0; i < windows.length; i++) {
-    //    //initSlider(windows[i]);
-    //windows[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
-    //windows[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
-    //initSlider(theWindow);
+    gradient = document.getElementById("overlay");
+    icons = document.getElementById("icons");
     
     
-    //}
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
     containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
@@ -163,11 +164,10 @@ function setup() {
     getNextBatch(toBeInQueue,function() { 
         highlightLast();
         var headers = theWindow.getElementsByClassName('batchHeader');
-        headers[headers.length-1].classList.toggle('ondeck');
+        if (headers.length>0)
+            headers[headers.length-1].classList.toggle('ondeck');
     });
     
-    //document.getElementById('leftIcon').addEventListener('mouseup', function(e){removeSpotting(false); e.preventDefault();}, false);
-    //document.getElementById('rightIcon').addEventListener('mouseup', function(e){removeSpotting(true); e.preventDefault();}, false);
     
     if (testMode) {
         document.getElementById('instructions').addEventListener('mouseup', function(e){
@@ -181,14 +181,15 @@ function setup() {
 function createSlider(im,id,batchId) {
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('spotting');
+    genDiv.classList.toggle('batchEl');
     genDiv.appendChild(im);
     genDiv.id=id;
     genDiv.batch=batchId;
     //initSlider(genDiv);
     genDiv.style.background=spottingColors[colorIndex];
     genDiv.colorIndex=colorIndex;
-    genDiv.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
-    genDiv.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+    genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+    genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
     return genDiv;
 }
 
@@ -281,7 +282,28 @@ function getNextBatch(toload,callback) {
                 }
                 spinner.hidden=true;
                 
+            } else if (jres.batchType=='transcription') {
+                //batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
+	            
+	        if (jres.batchId!=='R' && jres.batchId!=='X') {
+	            batchQueue.push({ngram:'#', id:jres.batchId, transcription:'#'});
+	            //console.log("got "+jres.resultsId)
+                } else if (jres.batchId=='R') {
+                    location.reload(true);
+                } 
+                
+                var wordImg = new Image();
+                wordImg.src='data:image/png;base64,'+jres.wordImg;
+                var ngramImg = new Image();
+                ngramImg.src='data:image/png;base64,'+jres.ngramImg;
+                theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,ngramImg,jres.possibilities),theWindow.childNodes[0]);
+                spinner.hidden=true;
+                
             }
+            if (colorIndex==1)
+                colorIndex=-1;
+            else
+                colorIndex=2;
             if (toload!==undefined && --toload>0)
                 getNextBatch(toload,callback);
             else if (callback!==undefined)
@@ -295,47 +317,137 @@ function getNextBatch(toload,callback) {
 }
 
 function highlightLast() {
-    var spottings = theWindow.getElementsByClassName('spotting');
+    var spottings = theWindow.getElementsByClassName('batchEl');
     ondeck=spottings[spottings.length-1];
     if (ondeck) {
         ondeck.classList.toggle('ondeck');
-    
-        ondeck.style.background=ondeckColors[ondeck.colorIndex];
+        typeSetup(ondeck);
+    }
+}
+
+function typeSetup(ele) {
+    if (ele.classList.contains('spotting')) {
+        ele.style.background=ondeckColors[ele.colorIndex];
+        gradient.hidden=false;
+        icons.hidden=false;
+        swipeOn=true;
+    } else {
+        gradient.hidden=true;
+        icons.hidden=true;
+        swipeOn=false;
     }
 }
 
 function isBatchDone(batchId) {
     
-    for (spottingId in batches[batchId].spottings)
-        if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
-            return;
+    if (batchQueue[0].ngram != '#')
+        for (spottingId in batches[batchId].spottings)
+            if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
+                return;
     
     //base
     batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
     //base
-    var nextHeader=null;
+    var nextElement=null;
     if (batchQueue.length>0) {
-        nextHeader=document.getElementById('b'+batchQueue[0].id);
+        nextElement=document.getElementById('b'+batchQueue[0].id);
     }
-    if (nextHeader)
-        nextHeader.classList.toggle('ondeck');
-    var header = document.getElementById('b'+batchId);
-    if (header) {
-        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
-            theWindow.removeChild(header);
-            
-            //we shift the header past the collapsing element to provide the illusion of a smooth transition
-            if (nextHeader) {
-                theWindow.removeChild(nextHeader);
-                theWindow.appendChild(nextHeader);
+    if (nextElement) {
+        nextElement.classList.toggle('ondeck');
+        //if (batchQueue[0].ngram=='#') {
+            //TODO hide gradient
+            //gradient.hidden=true;
+        //}
+    }
+    //highlightLast();
+    var oldElement = document.getElementById('b'+batchId);
+    if (oldElement) {
+        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram!='#') {
+            if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
+                theWindow.removeChild(oldElement);
+                
+                //we shift the header past the collapsing element to provide the illusion of a smooth transition
+                if (nextElement) {
+                    theWindow.removeChild(nextElement);
+                    theWindow.appendChild(nextElement);
+                }
+            } else {
+                oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+                oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+                oldElement.classList.toggle('batchHeader');
+                oldElement.classList.toggle('collapserH');
             }
         } else {
-            header.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
-            header.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
-            header.classList.toggle('batchHeader');
-            header.classList.toggle('collapserH');
+            //TODO fix gradient
+            //gradient.hidden=false;
+            /*oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
+            oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+            oldElement.classList.toggle('collapser');*/
         }
     }
+}
+
+function classify(id,word) {
+    return function(ele) {
+        lastRemovedEle.push(ondeck);
+        
+        if (lastRemovedEle.length>10) {
+            var removed=lastRemovedEle.shift();
+            if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].id) {
+                lastRemovedBatchInfo.shift();
+                //console.log(lastRemovedBatchInfo)
+            }
+        }
+        if (batchQueue[0].ngram!='#') {
+            console.log('ERROR, wrong inst in batchQueue');
+            console.log(batchQueue);
+        }
+        batchQueue[0].transcription=word;
+        ondeck.classList.toggle('batchEl');
+        ondeck.classList.toggle('collapser');
+        isBatchDone(id);
+        highlightLast();
+    };
+}
+
+function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
+{
+    
+    var genDiv = document.createElement("div");
+    genDiv.classList.toggle('transcription');
+    genDiv.classList.toggle('batchEl');
+    //var imagesDiv = document.createElement("div");
+    //imagesDiv.classList.toggle('images');
+    genDiv.appendChild(wordImg);
+    //ngramImg.hidden=true;
+    ngramImg.classList.toggle('meat');
+    genDiv.appendChild(ngramImg);
+    //genDiv.appendChild(imagesDiv);
+    var totalHeight = wordImg.height + ngramImg.height;
+    genDiv.id='bt'+id;
+    genDiv.batch=id;
+    var selectionDiv = document.createElement("div");
+    selectionDiv.classList.toggle('selections');
+    selectionDiv.classList.toggle('meat');
+    //selectionDiv.hidden=true;
+    selectionDiv.style.height = screenHeight - totalHeight - padding;
+    for (var word of possibilities) {
+        var wordDiv = document.createElement("div");
+        wordDiv.classList.toggle('selection');
+        wordDiv.innerHTML='<div>'+word+'</div>';
+        wordDiv.addEventListener('mouseup', classify(id,word), false);
+        /*if (totalHeight>0) {
+            wordDiv.style['margin-top']=totalHeight+'px';
+            console.log("margin set: "+totalHeight);
+            totalHeight=0;
+        }*/
+        selectionDiv.appendChild(wordDiv);
+    }
+    genDiv.appendChild(selectionDiv);
+    genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+    genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+
+    return genDiv;
 }
 
 /*window.onbeforeunload = confirmExit;

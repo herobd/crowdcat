@@ -6,6 +6,8 @@
 #define BUFFERSIZE 65536
 
 #include "MasterQueue.h"
+#include "Knowledge.h"
+#include "Lexicon.h"
 #include "TestQueue.h"
 
 using namespace Nan;
@@ -14,13 +16,18 @@ using namespace v8;
 
 #include "BatchRetrieveWorker.cpp"
 #include "SpottingBatchUpdateWorker.cpp"
+#include "TranscriptionBatchUpdateWorker.cpp"
 #include "TestBatchRetrieveWorker.cpp"
 #include "SpottingTestBatchUpdateWorker.cpp"
 #include "ClearTestUsersWorker.cpp"
+#include "MiscWorker.cpp"
+
+//test
+#include "SpottingResults.h"
 
 MasterQueue* masterQueue;
+Knowledge::Corpus* corpus;
 TestQueue* testQueue;
-
 
 
 NAN_METHOD(getNextBatch) {
@@ -73,7 +80,34 @@ NAN_METHOD(spottingBatchDone) {//TODO
     int resent = To<int>(info[3]).FromJust();
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,resultsId,ids,labels,resent));
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,corpus,resultsId,ids,labels,resent));
+}
+
+NAN_METHOD(getNextTranscriptionBatch) {
+    int width = To<int>(info[0]).FromJust();
+    
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue));
+}
+
+NAN_METHOD(transcriptionBatchDone) {
+    //string batchId = To<string>(info[0]).FromJust();
+    //string resultsId = To<string>(info[0]).FromJust();
+    String::Utf8Value resultsIdNAN(info[0]);
+    string id = string(*resultsIdNAN);
+    String::Utf8Value resultNAN(info[1]);
+    string transcription = string(*resultNAN);
+    
+    Callback *callback = new Callback(info[2].As<Function>());
+
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,id,transcription));
+}
+
+NAN_METHOD(showCorpus) {
+    Callback *callback = new Callback(info[0].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",masterQueue,corpus));
 }
 
 NAN_METHOD(getNextTestBatch) {
@@ -127,13 +161,43 @@ NAN_METHOD(clearTestUsers) {
 NAN_MODULE_INIT(Init) {
     
     masterQueue = new MasterQueue();
-    
-    
+    Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
+    corpus = new Knowledge::Corpus();
+    corpus->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
+
+    //test
+
+        Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);
+        Spotting s2(1196, 1429, 1288, 1491, 2720272, corpus->imgForPageId(2720272), "ch", 0.01);
+        Spotting s3(1114, 1465, 1182, 1496, 2720272, corpus->imgForPageId(2720272), "ar", 0.01);
+        Spotting s4(345, 956, 415, 986, 2720272, corpus->imgForPageId(2720272), "or", 0.01);
+        Spotting s5(472, 957, 530, 987, 2720272, corpus->imgForPageId(2720272), "er", 0.01);
+        Spotting s6(535, 943, 634, 986, 2720272, corpus->imgForPageId(2720272), "ed", 0.01);
+        Spotting s7(355, 1046, 455, 1071, 2720272, corpus->imgForPageId(2720272), "un", 0.01);
+        Spotting s8(492, 1030, 553, 1069, 2720272, corpus->imgForPageId(2720272), "it", 0.01);
+        Spotting s9(439, 1024, 507, 1096, 2720272, corpus->imgForPageId(2720272), "fi", 0.01);
+        vector<Spotting> toAdd={s1,s2,s3,s4,s5,s6,s7,s8,s9};
+        vector<TranscribeBatch*> newBatches = corpus->addSpottings(&toAdd);
+        assert(newBatches.size()>0);
+        masterQueue->enqueueTranscriptionBatches(newBatches);
+        
+    //test
+
+
     Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
     
     Nan::Set(target, New<String>("spottingBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(spottingBatchDone)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("getNextTranscriptionBatch").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(getNextTranscriptionBatch)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("transcriptionBatchDone").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(transcriptionBatchDone)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     
     testQueue = new TestQueue();
     

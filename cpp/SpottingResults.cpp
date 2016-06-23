@@ -104,8 +104,9 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if ((*tracer)->score>=rejectThreshold && tracer!=instancesByScore.begin())
         tracer--;
     
-    if ((*tracer)->score<=acceptThreshold)
-        tracer++;
+    //*The commented out regoins seem prinicpled, but empirical results showed that it was better to leave them out
+    //*if ((*tracer)->score<=acceptThreshold)
+    //*    tracer++;
     if (tracer==instancesByScore.end())
         tracer--;
     
@@ -119,7 +120,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
             *done=true;
         }
         
-        if ((i%2==0 || tracer==instancesByScore.end() || (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin() && (*tracer)->score>acceptThreshold)
+        if ((i%2==0 || tracer==instancesByScore.end() || (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin() )//*&& (*tracer)->score>acceptThreshold)
         {
             tracer--;
         }
@@ -159,21 +160,21 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         }
     }
     
-    //if (classById.size()<20)
-    //    *done=false;
+    
     
     if (*done)
         allBatchesSent=true;
     
     //cout<<"batch is "<<ret->size()<<endl;
+    //cout << "send: ";
     for (int i=0; i<ret->size(); i++)
     {   
         starts[ret->at(i).id] = chrono::system_clock::now();
         
         //time_t tt= chrono::system_clock::to_time_t ( starts[ret->at(i).id] );
-        //cout << ret->at(i).id<<" at time "<< ctime(&tt)<<endl;
+        //cout << ret->at(i).id<<", ";//" at time "<< ctime(&tt)<<endl;
     }
-        
+        //cout <<endl;
     //sem_post(&mutexSem);
     //numBatches++;
     
@@ -182,7 +183,12 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
 
 vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent)
 {
-    
+    /*cout << "fed: ";
+    for (int i=0; i<ids.size(); i++)
+    {   
+        cout << ids[i]<<", ";
+    }
+    cout<<endl;*/
     
     vector<Spotting>* ret = new vector<Spotting>();
     
@@ -213,7 +219,10 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     }
     EMThresholds();
     
-    
+    ///test
+    cout<<"["<<id<<"]:"<<ngram<<", all sent: "<<allBatchesSent<<", waiting for "<<starts.size()<<", num left "<<instancesByScore.size()<<endl;
+    ///test
+
     if (resent==0 && starts.size()==0 && allBatchesSent)
     {
         *done=true;
@@ -243,7 +252,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
 void SpottingResults::EMThresholds(bool init)
 {
     float oldMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
-    /*This will likely predict very narrow and ditinct distributions
+    /*This will likely predict very narrow and distinct distributions
      *initailly. This should be fine as we sample from the middle of
      *the thresholds outward.
      */
@@ -422,7 +431,7 @@ void SpottingResults::EMThresholds(bool init)
             initV=false;
         pullFromScore = trueMean;*/
     //}
-    pullFromScore = trueMean;
+    pullFromScore = trueMean-sqrt(trueVariance);
     
     //cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
     //cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
