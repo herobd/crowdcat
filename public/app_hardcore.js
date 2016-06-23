@@ -14,7 +14,7 @@ var icons;
 
 var toBeInQueue=3;
 var swipeOn=true;
-
+var screenHeight;
 
 
 function handleTouchStart(evt) {
@@ -133,10 +133,10 @@ function handleTouchEnd(evt) {
     ondeck.style.left = '0px';
     //var xDiff = this.xDown - xUp;
     if (this.xDiff>OK_THRESH) {
-        removeSpotting.call(this,true);
+        removeSpotting(true);
         
     } else if (this.xDiff<BAD_THRESH) {
-        removeSpotting.call(this,false);
+        removeSpotting(false);
     } else {
     
         
@@ -154,13 +154,26 @@ function setup() {
     
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
-    containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
+    /*containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
     containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
-    
+    */
+    var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    x = w.innerWidth || e.clientWidth || g.clientWidth,
+    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+    screenHeight=y;
     while (!imgWidth)
-        imgWidth=Math.min(document.defaultView.innerWidth,maxImgWidth);
+        imgWidth=Math.min(x,maxImgWidth);
     console.log(imgWidth);
-    document.onresize=function(){imgWidth=Math.min(document.defaultView.innerWidth,maxImgWidth);};
+    document.onresize=function(){
+        var e = d.documentElement,
+        g = d.getElementsByTagName('body')[0],
+        x = w.innerWidth || e.clientWidth || g.clientWidth,
+        y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+        imgWidth=Math.min(x,maxImgWidth);
+    };
     getNextBatch(toBeInQueue,function() { 
         highlightLast();
         var headers = theWindow.getElementsByClassName('batchHeader');
@@ -426,16 +439,19 @@ function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
     var totalHeight = wordImg.height + ngramImg.height;
     genDiv.id='bt'+id;
     genDiv.batch=id;
+    genDiv.style.height=(screenHeight-50)+'px';
     var selectionDiv = document.createElement("div");
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
     //selectionDiv.hidden=true;
-    selectionDiv.style.height = screenHeight - totalHeight - padding;
+    var padding = 50+20+5; //border+border+extra
+    selectionDiv.style.height = (screenHeight - totalHeight - padding)+'px';
     for (var word of possibilities) {
         var wordDiv = document.createElement("div");
         wordDiv.classList.toggle('selection');
         wordDiv.innerHTML='<div>'+word+'</div>';
         wordDiv.addEventListener('mouseup', classify(id,word), false);
+        wordDiv.addEventListener('touchup', classify(id,word), false);
         /*if (totalHeight>0) {
             wordDiv.style['margin-top']=totalHeight+'px';
             console.log("margin set: "+totalHeight);
@@ -443,11 +459,28 @@ function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
         }*/
         selectionDiv.appendChild(wordDiv);
     }
+
+    var errDiv = document.createElement("div");
+    errDiv.classList.toggle('selection');
+    errDiv.classList.toggle('error');
+    errDiv.innerHTML="<div>Error (something's not right)</div>";
+    errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
+    errDiv.addEventListener('touchup', classify(id,'$ERROR$'), false);
+    selectionDiv.appendChild(errDiv);
+    
     genDiv.appendChild(selectionDiv);
     genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
     genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
 
     return genDiv;
+}
+
+function pass() {
+    if (ondeck.classList.contains('transcription')) {
+        classify(batchQueue[0].id,'$PASS$')();
+    } else if (ondeck.classList.contains('spotting')) {
+        removeSpotting(-1);//-1 means pass to spottingAddon
+    }
 }
 
 /*window.onbeforeunload = confirmExit;

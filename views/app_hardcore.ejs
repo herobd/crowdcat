@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
-
 <link href="app_hardcore.css" rel="stylesheet" type="text/css" />
 <script> 
     <% if (testMode) { %>
@@ -22,15 +21,21 @@
 <script type="text/javascript" src="app_base.js"></script>
 <script type="text/javascript" src="<%= app_version %>.js"></script>
 <div id="topper">
-    <div id="title">
+    <!--<div id="title">
         <div>Subword user correction UI</div>
         
         <form action="/logout" method="post" hidden>
             <input type="submit" value="Log out"/>
         </form>
-    </div>
+    </div>-->
     <button type="button" id="undoButton" onclick="undo()">undo</button>
-    
+    <button type="button" id="menuButton" onclick="menu()">menu</button>
+    <button type="button" id="passButton" onclick="pass()">pass</button>
+    <div id="menu" class="hidden">
+        <div class="menuItem">a menu item</div>
+        <div class="menuItem">another menu item</div>
+        <div class="menuItem">and another menu item</div>
+    </div>
 </div>
 <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
 

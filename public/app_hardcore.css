@@ -17,17 +17,92 @@ h {
 button {
   
   font-family: Arial;
-  color: #ffffff;
   font-size: 22px;
-  background: #a15757;
   padding: 10px 20px 10px 20px;
   text-decoration: none;
-  
+  width: 33.33%;  
   
   text-align:center;
   pointer-events: all;
   touch-actions: auto;
+  float:left;
 }
+#undoButton {
+  color: #ffffff;
+  background: #a15757;
+}
+#menuButton {
+  color: #ffffff;
+  background: #380B61;
+}
+#passButton {
+  color: #ffffff;
+  background: #F4D03F;
+}
+
+.menuItem {
+    background:lightgray;
+    color: #111111;
+    width:80%;
+    min-height: 50px;
+    margin: auto;
+    left:0;
+}
+
+#menu {
+    width:100%;
+    text-align:center;
+    overflow: hidden;
+    max-height:300px;
+    min-height:100px;
+    animation-duration: 0.2s;
+    animation-name: open;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: open;
+}
+
+#menu.hidden {
+    
+    max-height:0px;
+    min-height:0px;
+    animation-duration: 0.2s;
+    animation-name: close;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: close;
+}
+/*#menu.show {
+    max-height:300px;
+    min-height:100px;
+    animation-duration: 0.2s;
+    animation-name: open;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-name: open;
+}*/
+@keyframes open {
+    from   {max-height:0px;
+          min-height:0px;}
+    to {max-height:300px;
+          min-height:100px;}
+}
+@-webkit-keyframes open {
+    from   {max-height:0px;
+          min-height:0px;}
+    to {max-height:300px;
+          min-height:100px;}
+}
+@keyframes close {
+    from {max-height:300px;
+          min-height:100px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+@-webkit-keyframes close {
+    from {max-height:300px;
+          min-height:100px;}
+    to   {max-height:0px;
+          min-height:0px;}
+}
+
 .text {
     
     padding: 2px 5px
@@ -79,7 +154,7 @@ button {
     bottom: 10px;
     
     pointer-events: none;
-    touch-actions: none;
+    touch-action: none;
     
     /*-moz-column-count: 2;
     -moz-column-gap: 80%;
@@ -199,6 +274,8 @@ button {
     border-width:0px;
     
     
+    pointer-events: none;
+    touch-action: none;
 }
 
 .spotting img {
@@ -238,7 +315,10 @@ div.transcription {
     overflow-x: hidden;*/
     overflow:hidden;
 }
+.transcription.ondeck {
+    border-width: 20px 0px 0px 0px;
 
+}
 .transcription img {
     position: relative;
     left: 0;
@@ -286,6 +366,14 @@ div.selection {
     padding: 5px;
 }
 
+div.selection.error {
+    font-size: 22px;
+    color: #ffffff;
+}
+
+.selection.error div {
+    background: #a15757;
+}
 @keyframes expand {
     from {max-height:0px;
           min-height:0px;}

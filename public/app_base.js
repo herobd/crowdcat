@@ -5,6 +5,11 @@ var imgWidth=null;
 var allReceived=false;
 var countUndos=0;
 var startTime = new Date().getTime();
+function menu() {
+    var m = document.getElementById('menu');
+    m.classList.toggle('hidden');
+    m.classList.toggle('show');
+}
 /*var batchQueue=[];
 var lastNgram='';
 function getNextBatch(window,toload) {
@@ -230,8 +235,9 @@ function batchShiftAndSend(batchId,callback) {
         var ids = [];
         for (var id in batches[batchId].spottings){
             if (batches[batchId].spottings.hasOwnProperty(id)) {
+                var label=batches[batchId].spottings[id];
                 ids.push(id);
-                labels.push(batches[batchId].spottings[id]);
+                labels.push(label);
             }
         }
         httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){

@@ -38,22 +38,27 @@ private:
     WordBackPointer* origin;
     vector<string> possibilities;
     cv::Mat wordImg;
+    cv::Mat newWordImg;
     cv::Mat textImg;
+    cv::Mat newTextImg;
+    const cv::Mat* origImg;
     const multimap<int,Spotting>* spottings;
     unsigned int imgWidth;
     unsigned long id;
     int tlx, tly, brx, bry;
     static vector< cv::Vec3f > colors;
+    static cv::Vec3f wordHighlight;
     static std::atomic_ulong _id;
+    static void highlightPix(cv::Vec3b &p, cv::Vec3f color);
 public:
     //TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
     //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
     
-    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat wordImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
+    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
     
     const vector<string>& getPossibilities() {return possibilities;}
-    cv::Mat getImage() { return wordImg; }
-    cv::Mat getTextImage() { return textImg; }
+    cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}
+    cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}
     unsigned long getId() {return id;}
     WordBackPointer* getBackPointer() {return origin;}
     void setWidth(unsigned int width);

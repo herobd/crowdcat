@@ -205,16 +205,21 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         }
         
         // adjust threshs
-        if (userClassifications[i])
+        if (userClassifications[i]>0)
         {
             numberClassifiedTrue++;
             classById[id]=true;
             ret->push_back(instancesById.at(id));
         }
-        else
+        else if (userClassifications[i]==0)
         {
             numberClassifiedFalse++;
             classById[id]=false;
+        }
+        else //someone passed, so we need to add it again
+        { 
+            instancesByScore.insert(&instancesById[id]);
+            tracer = instancesByScore.begin();
         }
     }
     EMThresholds();

@@ -21,7 +21,8 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Debug/spottingaddon")
+//var spottingaddon = require("./cpp/build/Debug/spottingaddon")
+var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 var debug=true;
 numberOfTests=2;

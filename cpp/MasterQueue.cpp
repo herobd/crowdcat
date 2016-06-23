@@ -130,7 +130,7 @@ void MasterQueue::addTestSpottings()
     map<string,SpottingResults*> spottingResults;
     
     
-    ifstream in("./data/GW_spottings_fold1_0.100000.csv");
+    ifstream in("./data/GW_agSpottings_fold1_0.100000.csv");
     assert(in.is_open());
     string line;
     

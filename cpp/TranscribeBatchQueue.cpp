@@ -57,9 +57,21 @@ void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
     lock();
     if (returnMap.find(id) != returnMap.end())
     {
-        returnMap[id]->getBackPointer()->result(transcription);
-        doneMap[id] = returnMap[id]->getBackPointer();
-        delete returnMap[id];
+        if (transcription.compare("$ERROR$")==0)
+        {
+            //TODO returnMap[id]->getBackPointer()->error();//change into manual batch or remove spottings?
+            cout<<"ERROR returned for trans "<<id<<endl;
+        }
+        else if (transcription.compare("$PASS$")==0)
+        {
+            queue.push_front(returnMap[id]);
+        }
+        else
+        {
+            returnMap[id]->getBackPointer()->result(transcription);
+            doneMap[id] = returnMap[id]->getBackPointer();
+            delete returnMap[id];
+        }
         returnMap.erase(id);
         timeMap.erase(id);
     }
@@ -67,7 +79,8 @@ void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
     {
         //This occurs on a resend
         
-        doneMap[id]->result(transcription);
+        if (transcription.compare("$PASS$")!=0)
+            doneMap[id]->result(transcription);
     }
     unlock();
 }
