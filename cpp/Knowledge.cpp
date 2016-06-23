@@ -9,7 +9,7 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
     if (id!=0)
         this->id=id;
     else
-        this->id = ++_id;
+        this->id = --_id;
     for (auto p : scored)
     {
         possibilities.push_back(p.second);

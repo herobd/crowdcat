@@ -107,7 +107,7 @@ function undo() {
         ondeck.classList.toggle('collapser');
         if (ondeck.classList.contains('spottings'))
             batches[ondeck.batch].spottings[ondeck.id]=null;
-        
+        typeSetup(ondeck);
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
             //console.log(pastInfo +' ?= '+batchQueue[0].id)
@@ -164,7 +164,8 @@ function setup() {
     getNextBatch(toBeInQueue,function() { 
         highlightLast();
         var headers = theWindow.getElementsByClassName('batchHeader');
-        headers[headers.length-1].classList.toggle('ondeck');
+        if (headers.length>0)
+            headers[headers.length-1].classList.toggle('ondeck');
     });
     
     
@@ -289,7 +290,6 @@ function getNextBatch(toload,callback) {
                 
             } else if (jres.batchType=='transcription') {
                 //batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
-                
 	            
 	        if (jres.batchId!=='R' && jres.batchId!=='X') {
 	            batchQueue.push({ngram:'#', id:jres.batchId, transcription:'#'});
@@ -306,6 +306,10 @@ function getNextBatch(toload,callback) {
                 spinner.hidden=true;
                 
             }
+            if (colorIndex==1)
+                colorIndex=-1;
+            else
+                colorIndex=2;
             if (toload!==undefined && --toload>0)
                 getNextBatch(toload,callback);
             else if (callback!==undefined)
@@ -322,12 +326,12 @@ function highlightLast() {
     var spottings = theWindow.getElementsByClassName('batchEl');
     ondeck=spottings[spottings.length-1];
     if (ondeck) {
-        highlight(ondeck);
+        ondeck.classList.toggle('ondeck');
+        typeSetup(ondeck);
     }
 }
 
-function highlight(ele) {
-    ele.classList.toggle('ondeck');
+function typeSetup(ele) {
     if (ele.classList.contains('spotting')) {
         ele.style.background=ondeckColors[ele.colorIndex];
         gradient.hidden=false;
@@ -374,8 +378,8 @@ function isBatchDone(batchId) {
                     theWindow.appendChild(nextElement);
                 }
             } else {
-                oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
-                oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+                oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+                oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
                 oldElement.classList.toggle('batchHeader');
                 oldElement.classList.toggle('collapserH');
             }
@@ -400,6 +404,10 @@ function classify(id,word) {
                 //console.log(lastRemovedBatchInfo)
             }
         }
+        if (batchQueue[0].ngram!='#') {
+            console.log('ERROR, wrong inst in batchQueue');
+            console.log(batchQueue);
+        }
         batchQueue[0].transcription=word;
         ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
@@ -414,21 +422,31 @@ function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
+    //var imagesDiv = document.createElement("div");
+    //imagesDiv.classList.toggle('images');
     genDiv.appendChild(wordImg);
     //ngramImg.hidden=true;
     ngramImg.classList.toggle('meat');
     genDiv.appendChild(ngramImg);
+    //genDiv.appendChild(imagesDiv);
+    var totalHeight = wordImg.height + ngramImg.height;
     genDiv.id='bt'+id;
     genDiv.batch=id;
     var selectionDiv = document.createElement("div");
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
     //selectionDiv.hidden=true;
+    selectionDiv.style.height = screenHeight - totalHeight - padding;
     for (var word of possibilities) {
         var wordDiv = document.createElement("div");
         wordDiv.classList.toggle('selection');
-        wordDiv.innerHTML=word;
+        wordDiv.innerHTML='<div>'+word+'</div>';
         wordDiv.addEventListener('mouseup', classify(id,word), false);
+        /*if (totalHeight>0) {
+            wordDiv.style['margin-top']=totalHeight+'px';
+            console.log("margin set: "+totalHeight);
+            totalHeight=0;
+        }*/
         selectionDiv.appendChild(wordDiv);
     }
     genDiv.appendChild(selectionDiv);

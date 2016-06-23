@@ -167,7 +167,7 @@ function getNextBatch(window,toload) {
 var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
 var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
 var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
-var colorIndex=-1;//for testing
+var colorIndex=0;
 
 function httpGetAsync(theUrl, callback)
 {
