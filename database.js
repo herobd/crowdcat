@@ -127,7 +127,61 @@ module.exports =  function() {
                 callback(err,ret);
             } else if (doc != null) {
                 //console.log(doc)
-                ret.push(self.revealEmail(doc.survey.email))
+                if (doc.survey)
+                    ret.push(self.revealEmail(doc.survey.email))
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
+    
+    Database.prototype.listCountPrefAlpha = function(callback) {
+        var ret={app_tap:0, app_hardcore:0};
+        var self=this;
+        var cursor = self.alphaCollection.find({},{survey:1});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+            } else if (doc != null) {
+                //console.log(doc)
+                if (doc.survey.preference==0)
+                    ret.app_tap++;
+                else
+                    ret.app_hardcore++;
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
+    
+    Database.prototype.listCSVDumpAlpha = function(callback) {
+        var ret='id,preference,device,width,height,first,tap_fp,tap_fn,tap_undos,tap_time,swipe_fp,swipe_fn,swipe_undos,swipe_time,response\n';
+        var self=this;
+        var cursor = self.alphaCollection.find({});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+            } else if (doc != null) {
+                //console.log(doc)
+                if (doc.tests.length>1) {
+                    ret+=doc._id+','
+                    if (doc.survey)
+                        ret+=doc.survey.preference+','+doc.survey.device+','+doc.survey.screenwidth+','+doc.survey.screeneheight+',';
+                    else
+                        ret+=' , , , ,';
+                    var first = doc.tests[0].version;
+                    var tap_index=0;
+                    var swipe_index=1;
+                    if (first=='app_hardcore') {
+                        tap_index=1;
+                        swipe_index=0;
+                    }
+                    ret+=first+','+doc.tests[tap_index].fp+','+doc.tests[tap_index].fn+','+doc.tests[tap_index].undos+','+doc.tests[tap_index].time+','+doc.tests[swipe_index].fp+','+doc.tests[swipe_index].fn+','+doc.tests[swipe_index].undos+','+doc.tests[swipe_index].time;
+                    if (doc.survey) {
+                        var resp = doc.survey.response.replace(new RegExp('[,"]', 'g'), '*');
+                        ret+=',"'+resp+'"\n';
+                    }
+                }
             } else {
                 callback(err,ret);
             }

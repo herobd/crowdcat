@@ -210,13 +210,7 @@ function initSlider(ele) {
 
 
 
-function test() {
-    httpGetAsync('/app/test_image?quality=9',function (res){
-        var myImage = new Image(imgWidth);
-        myImage.src=res;
-        document.getElementById('testImageHere').appendChild(myImage);
-    });
-}
+
 var batchQueue=[]
 //var lastNgram='';
 function getNextBatch(toload,callback) {
