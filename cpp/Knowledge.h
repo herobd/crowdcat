@@ -11,6 +11,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <atomic>
+#include <iomanip>
 
 #include "SpottingResults.h"
 #include "Lexicon.h"
@@ -25,11 +26,39 @@ using namespace std;
 //#define THRESH_SCORING 1.0
 #define THRESH_SCORING_COUNT 6
 #define averageCharWidth 40 //GW, totally just making this up
-
+class TranscribeBatch;
 class WordBackPointer
 {
     public:
         virtual void result(string selected)= 0;
+        virtual void error()= 0;
+        virtual TranscribeBatch* removeSpotting(unsigned long sid)= 0;
+};
+
+class SpottingPoint
+{
+    public:
+        SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r) : x(x), ngram(ngram)
+    {
+        stringstream stream;
+        if (b>255)
+            b=255;
+        if (g>255)
+            g=255;
+        if (r>255)
+            r=255;
+        stream << setfill('0') << setw(sizeof(unsigned char)*2) << hex << r<<g<<b;
+        color = stream.str();
+        this->id = to_string(id);
+    }
+        void setPad(int pad) {this->pad=pad;}
+        string getX() {return to_string(pad+x);}
+        string getNgram() {return ngram;}
+        string getColor() {return color;}
+        string getId() {return id;}
+    private:
+        int x, pad;
+        string ngram, color, id;
 };
 
 class TranscribeBatch
@@ -39,13 +68,14 @@ private:
     vector<string> possibilities;
     cv::Mat wordImg;
     cv::Mat newWordImg;
-    cv::Mat textImg;
-    cv::Mat newTextImg;
+    //cv::Mat textImg;
+    //cv::Mat newTextImg;
     const cv::Mat* origImg;
     const multimap<int,Spotting>* spottings;
     unsigned int imgWidth;
     unsigned long id;
     int tlx, tly, brx, bry;
+    vector<SpottingPoint> spottingPoints;
     static vector< cv::Vec3f > colors;
     static cv::Vec3f wordHighlight;
     static std::atomic_ulong _id;
@@ -58,10 +88,11 @@ public:
     
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}
-    cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}
+    //cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}
     unsigned long getId() {return id;}
     WordBackPointer* getBackPointer() {return origin;}
     void setWidth(unsigned int width);
+    vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
 };
 
 namespace Knowledge
@@ -114,7 +145,8 @@ public:
     }
     
     TranscribeBatch* addSpotting(Spotting s);
-    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId);
+    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId=NULL);
+    TranscribeBatch* removeSpotting(unsigned long sid) {return removeSpotting(sid,NULL);}
     
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
@@ -140,6 +172,12 @@ public:
         }
         pthread_rwlock_unlock(&lock);
         //TODO, harvest new ngram exemplars, undo those already harvested
+    }
+
+    void error()
+    {
+        spottings.clear();
+        //TODO, anything more?
     }
 
     const cv::Mat* getPage() {return pagePnt;}
@@ -296,8 +334,9 @@ public:
         pthread_rwlock_destroy(&pagesLock);
     }
     vector<TranscribeBatch*> addSpotting(Spotting s);
-    vector<TranscribeBatch*> addSpottings(vector<Spotting>* spottings);
-    void removeSpotting(unsigned long sid);
+    //vector<TranscribeBatch*> addSpottings(vector<Spotting>* spottings);
+    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings=NULL, vector<unsigned long>* toRemoveBatches=NULL);
+    //void removeSpotting(unsigned long sid);
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     cv::Mat* imgForPageId(int pageId);

@@ -39,15 +39,15 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
     if (wordImg.type()!=CV_8UC3)
         cv::cvtColor(wordImg,wordImg,CV_GRAY2RGB);
 
-    textImg = cv::Mat::zeros(50,wordW,CV_8UC3);
+    //textImg = cv::Mat::zeros(50,wordW,CV_8UC3);
 
     int colorIndex=0;
     for (auto iter : *spottings)
     {
         const Spotting& s = iter.second;
         cv::Point org((int)((min(wordW,(s.brx-tlx))-max(0,(s.tlx-tlx)))*0.2 + max(0,(s.tlx-tlx))) , 33);
-        cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
-            
+        //cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
+        spottingPoints.push_back(SpottingPoint(s.id,org.x,s.ngram,colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255));    
         for (int r= max(0,s.tly-tly); r<min(wordH,(s.bry-tly)); r++)
             for (int c= max(0,s.tlx-tlx); c<min(wordW,(s.brx-tlx)); c++)
             {
@@ -84,23 +84,25 @@ void TranscribeBatch::setWidth(unsigned int width)
 
     int wordH = wordImg.rows;
     int wordW = wordImg.cols;
-    int textH= textImg.rows;
+    //int textH= textImg.rows;
     newWordImg = cv::Mat::zeros(wordH,width,CV_8UC3);
-    newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
+    //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
     int padLeft = max((((int)width)-wordW)/2,0);
+    for (SpottingPoint& sp : spottingPoints)
+        sp.setPad(padLeft);
     double scale=1.0;
     if (width>=wordW)
     {
         if (width>wordW)
             (*origImg)(cv::Rect(tlx-padLeft,tly,width,wordH)).copyTo(newWordImg(cv::Rect(0, 0, width, wordH)));
         wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, 0, wordW, wordH)));
-        textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
+        //textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
     }
     else
     {
         scale = width/(0.0+wordW);
         cv::resize(wordImg(cv::Rect(0,0,wordW,wordH)), newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
-        cv::resize(textImg(cv::Rect(0,0,wordW,textH)), newTextImg, cv::Size(), scale,1, cv::INTER_CUBIC );
+        //cv::resize(textImg(cv::Rect(0,0,wordW,textH)), newTextImg, cv::Size(), scale,1, cv::INTER_CUBIC );
     }
 
 
@@ -135,13 +137,13 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
     cout <<"END addSpotting"<<endl;
     return ret;
 }
-vector<TranscribeBatch*> Knowledge::Corpus::addSpottings(vector<Spotting>* spottings)
+vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings, vector<unsigned long>* toRemoveBatches)
 {
-    cout <<"addSpottings"<<endl;
+    //cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
     vector<Page*> thesePages;
     pthread_rwlock_rdlock(&pagesLock);
-    cout <<"addSpottings: got lock"<<endl;
+    //cout <<"addSpottings: got lock"<<endl;
     bool writing=false;
     for (const Spotting& s : *spottings)
     {
@@ -168,12 +170,45 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpottings(vector<Spotting>* spott
         thesePages.push_back(page);
     }
     pthread_rwlock_unlock(&pagesLock);
-    cout <<"addSpottings: release lock"<<endl;
+    //cout <<"addSpottings: release lock"<<endl;
     
     for (int i=0; i<spottings->size(); i++)
         addSpottingToPage(spottings->at(i),thesePages[i],ret);
-    
-    cout <<"END addSpottings"<<endl;
+
+    //Removing spottings
+    map<unsigned long, vector<Word*> > wordsForIds;
+    if (removeSpottings)
+    {
+        pthread_rwlock_wrlock(&spottingsMapLock);
+        for (unsigned long sid : *removeSpottings)
+        {
+            wordsForIds[sid] = spottingsToWords[sid];
+            spottingsToWords[sid].clear(); 
+        }
+        pthread_rwlock_unlock(&spottingsMapLock);
+        for (unsigned long sid : *removeSpottings)
+        {
+            vector<Word*> words = wordsForIds[sid];
+            for (Word* word : words)
+            {
+                
+                unsigned long retractId=0;  
+                TranscribeBatch* newBatch = word->removeSpotting(sid,&retractId);
+                if (retractId!=0 && newBatch==NULL)
+                {
+                    //retract the batch
+                    if (toRemoveBatches)
+                        toRemoveBatches->push_back(retractId);
+                }
+                else if (newBatch != NULL)
+                {
+                    //modify batch
+                    ret.push_back(newBatch);
+                }
+            }
+        }
+    }
+    //cout <<"END addSpottings"<<endl;
     return ret;
 }
 
@@ -267,7 +302,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     cout<<"  END addSpottingsToPage"<<endl;
 }
 
-void Knowledge::Corpus::removeSpotting(unsigned long sid)
+/*void Knowledge::Corpus::removeSpotting(unsigned long sid)
 {
 
     pthread_rwlock_wrlock(&spottingsMapLock);
@@ -279,7 +314,7 @@ void Knowledge::Corpus::removeSpotting(unsigned long sid)
         
         unsigned long retractId=0;
         TranscribeBatch* newBatch = word->removeSpotting(sid,&retractId);
-        if (retractId!=0 && newBatch==0)
+        if (retractId!=0 && newBatch==NULL)
         {
             //TODO retract the batch
         }
@@ -288,7 +323,7 @@ void Knowledge::Corpus::removeSpotting(unsigned long sid)
             //TODO modify batch
         }
     }
-}
+}*/
 
 TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
 {
@@ -316,7 +351,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
     {
         spottings.emplace(s.tlx,s);//multimap, so they are properly ordered
     }
-    TranscribeBatch* ret=queryForBatch();
+    TranscribeBatch* ret=queryForBatch();//This has an id matching the sent batch (if it exists)
     pthread_rwlock_unlock(&lock);
     return ret;
 }
@@ -357,7 +392,8 @@ TranscribeBatch* Knowledge::Word::queryForBatch()
 TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long* sentBatchId)
 {
     pthread_rwlock_wrlock(&lock);
-    *sentBatchId = this->sentBatchId;
+    if (sentBatchId!=NULL)
+        *sentBatchId = this->sentBatchId;
     for (auto iter= spottings.begin(); iter!=spottings.end(); iter++)
     {
         if (iter->second.id == sid)
@@ -366,7 +402,9 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
             break;
         }
     }
-    TranscribeBatch* ret=queryForBatch();
+    TranscribeBatch* ret=NULL;
+    if (spottings.size()>0)
+        ret=queryForBatch();
     pthread_rwlock_unlock(&lock);
     return ret;
 }

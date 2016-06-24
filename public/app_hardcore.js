@@ -307,16 +307,16 @@ function getNextBatch(toload,callback) {
                 
                 var wordImg = new Image();
                 wordImg.src='data:image/png;base64,'+jres.wordImg;
-                var ngramImg = new Image();
-                ngramImg.src='data:image/png;base64,'+jres.ngramImg;
-                theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,ngramImg,jres.possibilities),theWindow.childNodes[0]);
+                //var ngramImg = new Image();
+                //ngramImg.src='data:image/png;base64,'+jres.ngramImg;
+                theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
                 spinner.hidden=true;
                 
             }
-            if (colorIndex==1)
+            /*if (colorIndex==1)
                 colorIndex=-1;
             else
-                colorIndex=2;
+                colorIndex=2;*/
             if (toload!==undefined && --toload>0)
                 getNextBatch(toload,callback);
             else if (callback!==undefined)
@@ -423,28 +423,41 @@ function classify(id,word) {
     };
 }
 
-function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
+function createTranscriptionSelector(id,wordImg,ngrams,possibilities)
 {
     
+    var padding = 50; //border
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
-    //var imagesDiv = document.createElement("div");
-    //imagesDiv.classList.toggle('images');
     genDiv.appendChild(wordImg);
-    //ngramImg.hidden=true;
-    ngramImg.classList.toggle('meat');
-    genDiv.appendChild(ngramImg);
-    //genDiv.appendChild(imagesDiv);
-    var totalHeight = wordImg.height + ngramImg.height;
+    //ngramImg.classList.toggle('meat');
+    //genDiv.appendChild(ngramImg);
+
+    var ngramDiv = document.createElement("div");
+    ngramDiv.classList.toggle('meat');
+    ngramDiv.classList.toggle('spotteds');
+    for (var ngramP of ngrams) {
+        var d = document.createElement("div");
+        d.classList.toggle('spotted');
+        d.innerHTML=ngramP.ngram+'<br>';
+        d.style.color='#'+ngramP.color;
+        d.style.left=ngramP.x+'px';
+        var closeImg = new Image();
+        closeImg.src='/removeNgram.png';
+        d.appendChild(closeImg);
+        d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+        d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+        ngramDiv.appendChild(d);
+    }
+    genDiv.appendChild(ngramDiv);
+    var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
     genDiv.id='bt'+id;
     genDiv.batch=id;
-    genDiv.style.height=(screenHeight-50)+'px';
+    genDiv.style['max-height']=(screenHeight-padding)+'px';
     var selectionDiv = document.createElement("div");
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
-    //selectionDiv.hidden=true;
-    var padding = 50+20+5; //border+border+extra
     selectionDiv.style.height = (screenHeight - totalHeight - padding)+'px';
     for (var word of possibilities) {
         var wordDiv = document.createElement("div");
@@ -452,11 +465,6 @@ function createTranscriptionSelector(id,wordImg,ngramImg,possibilities)
         wordDiv.innerHTML='<div>'+word+'</div>';
         wordDiv.addEventListener('mouseup', classify(id,word), false);
         wordDiv.addEventListener('touchup', classify(id,word), false);
-        /*if (totalHeight>0) {
-            wordDiv.style['margin-top']=totalHeight+'px';
-            console.log("margin set: "+totalHeight);
-            totalHeight=0;
-        }*/
         selectionDiv.appendChild(wordDiv);
     }
 

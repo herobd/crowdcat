@@ -361,9 +361,9 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
     return res;
 }
 
-vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent)
+vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove)
 {
-    cout <<"got feedback for: "<<id<<endl;
+    //cout <<"got feedback for: "<<id<<endl;
     vector<Spotting>* ret = NULL;
     bool succ=false;
     int test=0;
@@ -379,9 +379,9 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             if (succ)
             {
                 bool done=false;
-                cout <<"res feedback"<<endl;
-                ret = res->feedback(&done,ids,userClassifications,resent);
-                cout <<"END res feedback"<<endl;
+                //cout <<"res feedback"<<endl;
+                ret = res->feedback(&done,ids,userClassifications,resent,remove);
+                //cout <<"END res feedback"<<endl;
                 
                 if (done)
                 {cout <<"done done "<<endl;

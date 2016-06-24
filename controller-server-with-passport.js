@@ -303,7 +303,7 @@ var ControllerApp = function(port) {
                         if (batchType=='spottings')
                             res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
                         else if (batchType=='transcription')
-                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngramImg:arg4,possibilities:arg5});
+                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
                         else
                             res.send({batchType:'ERROR',batchId:-1});
                         //},2000);

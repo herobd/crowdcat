@@ -181,7 +181,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     return ret;
 }
 
-vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent)
+vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* retRemove)
 {
     /*cout << "fed: ";
     for (int i=0; i<ids.size(); i++)
@@ -208,15 +208,18 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         if (userClassifications[i]>0)
         {
             numberClassifiedTrue++;
+            if (!resent || !classById[id])
+                ret->push_back(instancesById.at(id)); //otherwise we've already sent it
             classById[id]=true;
-            ret->push_back(instancesById.at(id));
         }
         else if (userClassifications[i]==0)
         {
             numberClassifiedFalse++;
+            if (!resent || (retRemove && !classById[id]))
+                retRemove->push_back(id);
             classById[id]=false;
         }
-        else //someone passed, so we need to add it again
+        else if (!resent)//someone passed, so we need to add it again, unless this is resent, in whichcase we use the old.
         { 
             instancesByScore.insert(&instancesById[id]);
             tracer = instancesByScore.begin();

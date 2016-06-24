@@ -23,19 +23,19 @@ class BatchRetrieveWorker : public AsyncWorker {
 
         void Execute () {
 
-            if (color==-1)
-            {
-                cout <<"get trans batch"<<endl;
+            //if (color==-1)
+            //{
+                //cout <<"get trans batch"<<endl;
                 TranscribeBatch* b = masterQueue->getTranscriptionBatch(width);
                 if (b!=NULL)
                     batch = new BatchWraperTranscription(b);
                 else
-                    batch = new BatchWraperBlank();
+              //      batch = new BatchWraperBlank();
 
-            }
-            else
+            //}
+            //else
             {
-                cout <<"get spot batch"<<endl;
+                //cout <<"get spot batch"<<endl;
                 //retrieve the next batch from the priority queue
                 //  This will have merely ids and subimage params
                 //retireve subimages and base64 encode them

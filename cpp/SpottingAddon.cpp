@@ -177,10 +177,23 @@ NAN_MODULE_INIT(Init) {
         Spotting s8(492, 1030, 553, 1069, 2720272, corpus->imgForPageId(2720272), "it", 0.01);
         Spotting s9(439, 1024, 507, 1096, 2720272, corpus->imgForPageId(2720272), "fi", 0.01);
         vector<Spotting> toAdd={s1,s2,s3,s4,s5,s6,s7,s8,s9};
-        vector<TranscribeBatch*> newBatches = corpus->addSpottings(&toAdd);
+        vector<TranscribeBatch*> newBatches = corpus->updateSpottings(&toAdd);
         assert(newBatches.size()>0);
         masterQueue->enqueueTranscriptionBatches(newBatches);
         
+
+        vector<unsigned long> toRemoveSpottings={s7.id};
+        vector<unsigned long> toRemoveBatches;        
+        toAdd.clear();
+        Spotting s10(356, 780, 423, 816, 2720272, corpus->imgForPageId(2720272), "on", 0.01);
+        Spotting s11(429, 765, 494, 864, 2720272, corpus->imgForPageId(2720272), "ly", 0.01);
+        toAdd.push_back(s10); toAdd.push_back(s11);
+        newBatches = corpus->updateSpottings(&toAdd,&toRemoveSpottings,&toRemoveBatches);
+        //vector<TranscribeBatch*> modBatches = corpus->removeSpottings(toRemoveSpottings,toRemoveBatches);
+        masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+        cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
+        if (toRemoveBatches.size()>0)
+            cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;            
     //test
 
 
