@@ -41,6 +41,7 @@ void SpottingResults::add(Spotting spotting) {
     instancesById[spotting.id]=spotting;
     assert(spotting.score==spotting.score);
     instancesByScore.insert(&instancesById[spotting.id]);
+    instancesByLocation.insert(&instancesById[spotting.id]);
     tracer = instancesByScore.begin();
     if (spotting.score>maxScore)
     {
@@ -563,4 +564,52 @@ bool SpottingResults::checkIncomplete()
         return true;
     }
     return false;
+}
+
+//combMin
+void SpottingResults::updateSpottings(vector<Spotting> spottings)
+{
+    for (Spotting& spotting : spottings)
+    {
+        bool updated=false;
+        int width = spotting.brx-spotting.tlx;
+        int height = spotting.bry-spotting.tly;
+        for (int tlx=spotting.tlx-width*(1-UPDATE_OVERLAP_THRESH); tlx<spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH); tlx++)
+        {
+            auto itLow = spottingsByLocation.lower_bound(Spotting(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH)));
+            auto itHigh = spottingsByLocation.upper_bound(Spotting(tlx,spotting.tly+height*(1-UPDATE_OVERLAP_THRESH)));
+            for (;itLow!=itHight; itLow++)
+            {
+                int overlapArea = ( min(spotting.brx,itLow->brx) - max(spottings.tlx,itLow->tlx) ) * ( min(spotting.bry,itLow->bry) - max(spottings.tly,itLow->tly) );
+                if (overlapArea/(0.0+ (spotting.brx-spottings.tlx)*(spotting.bry-spottings.tly))>UPDATE_OVERLAPTHRESH)
+                {
+                    updated=true;
+
+                    if (spotting.score < (*itLow)->score)//then replace the spotting
+                    {
+                        //Remove from scores
+                        instancesByScore.erase(*itLow); //erase by value (pointer)
+                        //Remove from locations
+                        instancesByLocation.erase(itLow); //erase by interator
+                        //add
+                        instancesById[spotting.id]=spotting;
+                        instancesByScore.insert(&instancesById[spotting.id]);
+                        instancesByLocation.insert(&instancesById[spotting.id]);
+                        tracer = instancesByScore.begin();
+                    }
+                    tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
+                    break;
+                }
+            }
+        }
+
+        if (!updated)
+        {
+            instancesById[spotting.id]=spotting;
+            instancesByScore.insert(&instancesById[spotting.id]);
+            instancesByLocation.insert(&instancesById[spotting.id]);
+            tracer = instancesByScore.begin();
+        }
+    }
+    EMThresholds();
 }

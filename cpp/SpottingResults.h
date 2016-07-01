@@ -19,6 +19,8 @@ class Spotting {
 public:
     Spotting() :
         tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1) {}
+    Spotting(int tlx, int tly, int brx, int bry) :
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1) {}
     
     Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
         tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score)
@@ -188,6 +190,23 @@ public:
     else return (lhs->score<rhs->score);
   }
 };
+class tlComp
+{
+  bool reverse;
+public:
+  scoreComp(const bool& revparam=false)
+    {reverse=revparam;}
+  bool operator() (const Spotting* lhs, const Spotting* rhs) const
+  {
+      bool ret;
+      if (lhs->tlx == rhs->tlx)
+          ret=lhs->tly < rhs->tly;
+      else
+          ret = lhs->tlx < rhs->tlx;
+    if (reverse) return !ret;
+    else return ret;
+  }
+};
 
 /* This class holds all of the results of a single spotting query.
  * It orders these by score. It tracks an accept and reject 
@@ -228,6 +247,7 @@ public:
     }
     
     void add(Spotting spotting);
+    void updateSpottings(vector<Spotting> spottings);
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
     vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<unsigned long>* retRemove=NULL);
@@ -257,6 +277,7 @@ private:
     
     //This multiset orders the spotting results to ease the extraction of batches
     multiset<Spotting*,scoreComp> instancesByScore;
+    multiset<Spotting*,tlComp> instancesByLocation;
     map<unsigned long,Spotting> instancesById;
     map<unsigned long,bool> classById;
     

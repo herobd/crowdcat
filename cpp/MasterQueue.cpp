@@ -255,16 +255,13 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             //test
             
             bool done=false;
-            cout << "getBatch   prev:"<<prevNgram<<endl;
+            //cout << "getBatch   prev:"<<prevNgram<<endl;
             batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram);
             if (done)
-            {   cout <<"done in queue "<<endl;
-                //TODO return the results that are above the accept threhsold
+            {   //cout <<"done in queue "<<endl;
                 
                 pthread_rwlock_wrlock(&semResultsQueue);
                 resultsQueue.erase(res->getId());
-                
-                
                 
                 pthread_rwlock_unlock(&semResultsQueue);
                 
@@ -413,7 +410,6 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             break;
         }
     }
-    cout<<"END feedback"<<endl;
     return ret;
 }
 
@@ -429,4 +425,51 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
     pthread_rwlock_wrlock(&semResults);
     results[res->getId()] = p;
     pthread_rwlock_unlock(&semResults);
+}
+
+
+unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, unsigned long id)
+{
+    if (id>0)
+    {
+        bool succ=false;
+        int test=0;
+        while (!succ)
+        {
+            pthread_rwlock_rdlock(&semResults);
+            if (results.find(id)!=results.end())
+            {
+                sem_t* sem=results[id].first;
+                SpottingResults* res = results[id].second;
+                succ = 0==sem_trywait(sem);
+                pthread_rwlock_unlock(&semResults);
+                if (succ)
+                {
+                    ret = res->updateSpottings(spottings);
+                    sem_post(sem);
+                    return id;
+                }
+                else
+                    cout<<"Failed to get lock for: "<<id<<endl;
+            }
+            else
+            {
+                //cout <<"Results not found for: "<<id<<endl;
+                pthread_rwlock_unlock(&semResults);
+                break;
+            }
+            if (test++>2000)
+            {
+                cout<<"ERROR, unable to find match"<<endl;
+                //assert(false);
+                break;
+            }
+        }
+    }
+    //if no id, or if somethign goes wrong
+    SpottingResults *n = new SpottingResults(spottings.front().ngram);
+    for (Spotting& s : spottings)
+        n->add(s);
+    addSpottingResults(n);
+    return n->getId();
 }
