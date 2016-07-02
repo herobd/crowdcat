@@ -26,9 +26,10 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
             vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches);
             //vector<TranscribeBatch*> modBatches = corpus->removeSpottings(toRemoveSpottings,toRemoveBatches);
             masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-            cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
-            if (toRemoveBatches.size()>0)
-                cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;            
+            //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
+            //if (toRemoveBatches.size()>0)
+            //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;      
+            spotter->addQueries(toAdd);      
             delete toAdd;
         }
 

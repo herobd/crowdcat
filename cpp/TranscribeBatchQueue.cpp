@@ -65,8 +65,9 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     return ret;
 }
 
-void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
+map<string,Mat> TranscribeBatchQueue::feedback(unsigned long id, string transcription)
 {
+    map<string,Mat> newNgramExemplars;
     lock();
     if (returnMap.find(id) != returnMap.end())
     {
@@ -108,7 +109,7 @@ void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
         }
         else
         {
-            returnMap[id]->getBackPointer()->result(transcription);
+            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription);
             doneMap[id] = returnMap[id]->getBackPointer();
             delete returnMap[id];
         }
@@ -120,9 +121,10 @@ void TranscribeBatchQueue::feedback(unsigned long id, string transcription)
         //This occurs on a resend
         
         if (transcription.compare("$PASS$")!=0)
-            doneMap[id]->result(transcription);
+            newNgramExemplars=doneMap[id]->result(transcription,&harvestedToRetract);
     }
     unlock();
+    return newNgramExemplars;
 }
 
 void TranscribeBatchQueue::checkIncomplete()

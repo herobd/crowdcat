@@ -430,43 +430,51 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 
 unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, unsigned long id)
 {
+    pthread_rwlock_rdlock(&semResults);
     if (id>0)
     {
         bool succ=false;
         int test=0;
-        while (!succ)
+        if (results.find(id)!=results.end())
         {
-            pthread_rwlock_rdlock(&semResults);
-            if (results.find(id)!=results.end())
-            {
-                sem_t* sem=results[id].first;
-                SpottingResults* res = results[id].second;
-                succ = 0==sem_trywait(sem);
-                pthread_rwlock_unlock(&semResults);
-                if (succ)
-                {
-                    ret = res->updateSpottings(spottings);
-                    sem_post(sem);
-                    return id;
-                }
-                else
-                    cout<<"Failed to get lock for: "<<id<<endl;
-            }
-            else
-            {
-                //cout <<"Results not found for: "<<id<<endl;
-                pthread_rwlock_unlock(&semResults);
-                break;
-            }
-            if (test++>2000)
-            {
-                cout<<"ERROR, unable to find match"<<endl;
-                //assert(false);
-                break;
-            }
+            sem_t* sem=results[id].first;
+            SpottingResults* res = results[id].second;
+            pthread_rwlock_unlock(&semResults);
+            sem_wait(sem);
+            res->updateSpottings(spottings);
+            sem_post(sem);
+            return id;
+        }
+        else
+        {
+            //cout <<"Results not found for: "<<id<<endl;
+            //pthread_rwlock_unlock(&semResults);
+            break;
         }
     }
-    //if no id, or if somethign goes wrong
+    
+    for (auto p : results)
+    {
+        
+        sem_t* sem=p.second.first;
+        SpottingResults* res = p.second.second;
+        sem_wait(sem);
+        if (res->getNgram().compare(spottings.front().ngram) == 0)
+        {
+            pthread_rwlock_unlock(&semResults);
+            res->updateSpottings(spottings);
+            sem_post(sem);
+            return res->getId();
+            
+        }
+        else
+        {
+            sem_post(sem);
+        }
+    }
+    pthread_rwlock_unlock(&semResults);
+        
+    //if no id, no matching ngram, or if somethign goes wrong
     SpottingResults *n = new SpottingResults(spottings.front().ngram);
     for (Spotting& s : spottings)
         n->add(s);

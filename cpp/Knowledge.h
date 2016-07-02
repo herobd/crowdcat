@@ -163,21 +163,26 @@ public:
     {
         cout <<"recived trans: "<<selected<<endl;
         pthread_rwlock_wrlock(&lock);
-        transcription=selected;
         if (!done)
             done=true;
         else
         {
-            //TODO this is a resubmission
+            //this is a resubmission
+            if (transcription.compare(selected)!=0)
+            {
+                //TODO Retract harvested ngrams
+            }
         }
+        transcription=selected;
         pthread_rwlock_unlock(&lock);
-        //TODO, harvest new ngram exemplars, undo those already harvested
+        //TODO, harvest new ngram exemplars
+        //Harvested ngrams should be approved before spotting with them
     }
 
     void error()
     {
         spottings.clear();
-        //TODO, anything more?
+        //TODO Retract harvested ngrams
     }
 
     const cv::Mat* getPage() {return pagePnt;}
