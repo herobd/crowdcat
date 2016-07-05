@@ -481,3 +481,11 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, un
     addSpottingResults(n);
     return n->getId();
 }
+
+void MasterQueue::transcriptionFeedback(unsigned long id, string transcription) 
+{
+    multimap<string, const cv::Mat> newExemplars = transcribeBatchQueue.feedback(id, transcription);
+    //TODO enqueue these for approval
+    //Should these be regular spotting batches, or a specail one?
+    //Do we want a specail interface for them?
+}

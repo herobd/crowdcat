@@ -123,6 +123,8 @@ private:
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
     TranscribeBatch* queryForBatch();
+    multimap<string, consts cv::Mat> harvest();
+
     string transcription;
 public:
     Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), query(""), gt(""), done(false), sentBatchId(0)
@@ -159,7 +161,7 @@ public:
         pthread_rwlock_unlock(&lock);
     }
 
-    void result(string selected)
+    multimap<string, const cv::Mat> result(string selected)
     {
         cout <<"recived trans: "<<selected<<endl;
         pthread_rwlock_wrlock(&lock);
@@ -176,6 +178,7 @@ public:
         transcription=selected;
         pthread_rwlock_unlock(&lock);
         //TODO, harvest new ngram exemplars
+        return harvest();
         //Harvested ngrams should be approved before spotting with them
     }
 

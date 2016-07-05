@@ -65,9 +65,9 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     return ret;
 }
 
-map<string,Mat> TranscribeBatchQueue::feedback(unsigned long id, string transcription)
+multimap<string,const cv::Mat> TranscribeBatchQueue::feedback(unsigned long id, string transcription)
 {
-    map<string,Mat> newNgramExemplars;
+    multimap<string,const cv::Mat> newNgramExemplars;
     lock();
     if (returnMap.find(id) != returnMap.end())
     {

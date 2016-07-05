@@ -494,6 +494,130 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
+multimap<string, const cv::Mat> Knowledge::Word::harvest()
+{
+    multimap<string, const cv::Mat> ret;
+    string unspotted = gt;
+    multimap<int,const Spotting*> spottingsByIndex;
+    int curI =0;
+    for (auto p : spottings)
+    {
+        for (; curI<gt.length(); curI++)
+        {
+            if (gt.substr(curI,p.second.ngram.length()).compare(p.second.ngram))
+            {
+                spottingsByIndex[curI]=&p.second;
+                for (int i=curI; i<curI+p.second.ngram.length(); i++)
+                    unspotted[i]='$';
+                break;
+            }
+        }
+    }
+    for (int i=0; i< gt.length()-MIN_N; i++)
+    {
+        for (int n=MIN_N; n<=MAX_N; n++)
+        {
+            if ((i==0||unspotted[i-1]=='$') && (i==gt.length()-n || (i<gt.length-n && unspotted[i+1]=='$')))
+            {
+                bool isNew=false;
+                for (int offset=0; offset<n; offset++)
+                {
+                    if (unspotted[i+offset]!='$')
+                    {
+                        isNew=true;
+                        break;
+                    }
+                }
+                if (isNew)
+                {
+                    string ngram = gt.substr(i,n);
+                    if ( isImportant(ngram) )
+                    {
+                        int etlx, ebrx;
+                        //getting left x location
+                        int lowerBound=0;
+                        int uppperBound=0;
+                        int bc=0;
+                        //start from first char of new exemplar, working backwards
+                        for (int si=i; si>=0; si--)
+                        {
+                            auto startAndEnd = spottingsByIndex(si);
+                            for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
+                            {
+                                if (iter->second.ngram.length()+si==i)
+                                {
+                                    assert(iter->second.ngram[iter->second.ngram.length()-1]==gt[i-1]);
+                                    //bounds from end
+                                    lowerBound += iter->second.brx - (iter->second.brx-iter->second.tlx)/8;
+                                    upperBound += iter->second.brx + (iter->second.brx-iter->second.tlx)/8;
+                                    bc++;
+                                }
+                                else if (iter->second.ngram.length()+si>i)
+                                {
+                                    //bounds from middle
+                                    int numOverlap = iter->second.ngram.length()+si-i;
+                                    for (int oo=0; oo<numOverlap; oo++)
+                                        assert( gt[i+oo]==ngram[oo] );
+                                    int per = (iter->second.brx-iter->second.tlx)/iter->ngram.length;
+                                    int loc = per * (iter->second.ngram.length()-numOverlap) + iter->second.brx;
+                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
+                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                    bc++;
+                                }
+                            }
+                        }
+                        assert(bc>0);
+                        lowerBound/=bc;
+                        uppBounds/=bc;
+                        etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+
+                        //getting right x location
+                        lowerBound=0;
+                        uppperBound=0;
+                        bc=0;
+                        //search from one char into the new exemplar, working forwards
+                        for (int si=i+1; si<=i+n; si++)
+                        {
+                            auto startAndEnd = spottingsByIndex(si);
+                            for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
+                            {
+                                if (si==i+n)
+                                {
+                                    assert(iter->second.ngram[0]==gt[i+n]);
+                                    //bounds from front
+                                    lowerBound += iter->second.tlx - (iter->second.brx-iter->second.tlx)/8;
+                                    upperBound += iter->second.tlx + (iter->second.brx-iter->second.tlx)/8;
+                                    bc++;
+                                }
+                                else if (si<i+n)
+                                {
+                                    //bounds from middle
+                                    int numTo = (i+n)-si;
+                                    int per = (iter->second.brx-iter->second.tlx)/iter->ngram.length;
+                                    int loc = per * (numTo) + iter->second.tlx;
+                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
+                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                    bc++;
+                                }
+                            }
+                        }
+                        assert(bc>0);
+                        lowerBound/=bc;
+                        uppBounds/=bc;
+                        ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+
+                        //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
+                        //toRet.setHarvested();
+                        //ret.push_back(ret);
+                        ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
+                    }
+                }
+            }
+        }
+    }
+    return ret;
+
+}
 
 void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry)
 {
@@ -697,3 +821,4 @@ cv::Mat* Knowledge::Corpus::imgForPageId(int pageId)
     Page* page = pages[pageId];
     return page->getImg();
 }
+
