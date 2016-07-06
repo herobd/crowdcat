@@ -217,10 +217,31 @@ bool MasterQueue::test_autoBatch()
         //cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
     }
     //cout<<endl;
-    vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
+    vector<Spotting> tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
     delete tmp;
     return true;
 }
+
+
+BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
+{
+    int ngramQueueCount;
+    pthread_rwlock_rdlock(&semResultsQueue);
+    ngramQueueCount=resultsQueue.size();
+    pthread_unlock_rdlock(&semResultsQueue);
+
+    BatchWraper* ret=NULL;
+
+    if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
+        ret = new BatchWraperNewExemplars(getNewExemplarsBatch(maxWidth,color));
+    if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
+        ret = new BatchWraperTranscription(getTranscriptionBatch(maxWidth));
+    if (ret==NULL)
+        ret = new BatchWraperSpottings(getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram));
+
+    return ret;
+} 
+
 SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
 {
     SpottingsBatch* batch=NULL;
@@ -328,7 +349,7 @@ void MasterQueue::test_showResults(unsigned long id,string ngram)
 }
 
 //not thread safe
-vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
+vector<Spotting> MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
 {
     assert(ids.size()>0 && userClassifications.size()>0);
     for (int c : userClassifications)
@@ -339,7 +360,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
             numCFalse++;
     }
     test_numDone[id]+=ids.size();
-    vector<Spotting>* res = feedback(id, ids, userClassifications,0);
+    vector<Spotting> res = feedback(id, ids, userClassifications,0);
     for (Spotting s : *res)
     {
         
@@ -358,10 +379,10 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
     return res;
 }
 
-vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove)
+vector<Spotting> MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove)
 {
     //cout <<"got feedback for: "<<id<<endl;
-    vector<Spotting>* ret = NULL;
+    vector<Spotting> ret = NULL;
     bool succ=false;
     int test=0;
     while (!succ)
@@ -484,8 +505,8 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, un
 
 void MasterQueue::transcriptionFeedback(unsigned long id, string transcription) 
 {
-    multimap<string, const cv::Mat> newExemplars = transcribeBatchQueue.feedback(id, transcription);
-    //TODO enqueue these for approval
-    //Should these be regular spotting batches, or a specail one?
-    //Do we want a specail interface for them?
+    vector<Spotting>* newExemplars = transcribeBatchQueue.feedback(id, transcription);
+    //enqueue these for approval
+    if (newExemplars.size()>0)
+        newExemplarsBatchQueue.enqueue(newExemplars);
 }

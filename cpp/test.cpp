@@ -41,13 +41,22 @@ int main() {
         cin >> ngram;
         
         Spotting s(tlx, tly, brx, bry, pageId, &page, ngram, 0.1);
-        vector<TranscribeBatch*> bs = c.addSpotting(s);
-        for (auto b : bs)
+        vector<Spotting> toAdd={s};
+        vector<TranscribeBatch*> bs = c.updateSpottings(&toAdd,NULL,NULL);
+        /*for (auto b : bs)
             if (b!=NULL)
             {
                 cout<<"enqueued"<<endl;
                 q.enqueue(b);
-            }
+            }*/
+        q.enqueueAll(bs);
+        if (toAdd.size()>1)
+        {
+            cout <<"harvested:"<<endl;
+            for (int i=1; i<toAdd.size(); i++)
+                imshow("har: "+toAdd[i].ngram,toAdd[i].img());
+            waitKey();
+        }
     }
     
     while(1)
@@ -64,7 +73,13 @@ int main() {
         string trans;
         cout << "transcription: ";
         cin >> trans;
-        b->getBackPointer()->result(trans);
+        vector<Spotting>* harvested = b->getBackPointer()->result(trans);
+        for (Spotting s: harvested)
+        {
+            imshow("har: "+s.ngram,s.img());
+        }
+        waitKey();
+        delete harvested;
     }
     c.show();
     /*TestQueue t;
@@ -126,7 +141,7 @@ int main() {
                 //cv::imshow("ttt",s->at(i).img());
                 //cv::waitKey(250);
             }
-            vector<Spotting>* res = q.feedback(s->spottingResultsId,ids,labels);
+            vector<Spotting> res = q.feedback(s->spottingResultsId,ids,labels);
             delete res;
             //assert(res->size() == s->size()/2);
             
@@ -150,7 +165,7 @@ int main() {
                 //cv::imshow("ttt",s->at(ii).img());
                 //cv::waitKey(100);
             }
-            vector<Spotting>* res = q2.feedback(s->spottingResultsId,ids,labels);
+            vector<Spotting> res = q2.feedback(s->spottingResultsId,ids,labels);
             //assert(res->size() == s->size()/2);
             delete res;
             delete s;
@@ -179,7 +194,7 @@ int main() {
         #pragma omp barrier
         if (s!=NULL)
         {
-            vector<Spotting>* res = q3.feedback(s->spottingResultsId,ids,labels);
+            vector<Spotting> res = q3.feedback(s->spottingResultsId,ids,labels);
             //assert(res->size() == s->size()/2);
             delete res;
             delete s;
@@ -201,7 +216,7 @@ int main() {
                 ids.push_back(to_string(s->at(ii).id));
                 labels.push_back(1);
             }
-            vector<Spotting>* res = q4.feedback(s->spottingResultsId,ids,labels);
+            vector<Spotting> res = q4.feedback(s->spottingResultsId,ids,labels);
             //assert(res->size() == s->size()/2);
             delete res;
             delete s;
@@ -224,7 +239,7 @@ int main() {
                 ids.push_back(to_string(s->at(ii).id));
                 labels.push_back(0);
             }
-            vector<Spotting>* res = q5.feedback(s->spottingResultsId,ids,labels);
+            vector<Spotting> res = q5.feedback(s->spottingResultsId,ids,labels);
             //assert(res->size() == s->size()/2);
             delete res;
             delete s;
@@ -257,7 +272,7 @@ int main() {
                     ids.push_back(to_string(s->at(i).id));
                     labels.push_back(i%2);
                 }
-                vector<Spotting>* res = q6.feedback(s->spottingResultsId,ids,labels);
+                vector<Spotting> res = q6.feedback(s->spottingResultsId,ids,labels);
                 //assert(res->size() == s->size()/2);
                 delete res;
                 delete s;
@@ -289,7 +304,7 @@ int main() {
                     ids.push_back(to_string(s->at(i).id));
                     labels.push_back(0);
                 }
-                vector<Spotting>* res = q7.feedback(s->spottingResultsId,ids,labels);
+                vector<Spotting> res = q7.feedback(s->spottingResultsId,ids,labels);
                 //assert(res->size() == s->size()/2);
                 delete res;
                 delete s;
@@ -323,7 +338,7 @@ int main() {
             //#pragma omp barrier
             if (s!=NULL)
             {
-                vector<Spotting>* res = q8.feedback(s->spottingResultsId,ids,labels);
+                vector<Spotting> res = q8.feedback(s->spottingResultsId,ids,labels);
                 //assert(res->size() == s->size()/2);
                 delete res;
                 delete s;

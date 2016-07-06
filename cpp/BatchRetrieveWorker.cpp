@@ -7,8 +7,8 @@
 
 #include "MasterQueue.h"
 #include "BatchWraper.h"
-#include "BatchWraperSpottings.h"
-#include "BatchWraperTranscription.h"
+//#include "BatchWraperSpottings.h"
+//#include "BatchWraperTranscription.h"
 using namespace Nan;
 using namespace std;
 using namespace v8;
@@ -26,10 +26,10 @@ class BatchRetrieveWorker : public AsyncWorker {
             //if (color==-1)
             //{
                 //cout <<"get trans batch"<<endl;
-                TranscribeBatch* b = masterQueue->getTranscriptionBatch(width);
-                if (b!=NULL)
-                    batch = new BatchWraperTranscription(b);
-                else
+                //TranscribeBatch* b = masterQueue->getTranscriptionBatch(width);
+                //if (b!=NULL)
+                //    batch = new BatchWraperTranscription(b);
+                //else
               //      batch = new BatchWraperBlank();
 
             //}
@@ -44,12 +44,15 @@ class BatchRetrieveWorker : public AsyncWorker {
                 if (num==-1) {
                     num=5;
                     hard=false;
+                
                 }
-                SpottingsBatch* b = masterQueue->getSpottingsBatch(num,hard,width,color,prevNgram);
+                batch = masterQueue->getBatch(num,hard,width,color,prevNgram);
+
+                /*SpottingsBatch* b = masterQueue->getSpottingsBatch(num,hard,width,color,prevNgram);
                 if (b!=NULL)
                     batch = new BatchWraperSpottings(b);
                 else
-                    batch = new BatchWraperBlank();
+                    batch = new BatchWraperBlank();*/
             }
         }
 

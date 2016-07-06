@@ -116,7 +116,7 @@ Knowledge::Corpus::Corpus()
     threshScoring= 1.0;
 }
 
-vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
+vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting>* newExemplars)
 {
     cout <<"addSpotting"<<endl;
     vector<TranscribeBatch*> ret;
@@ -132,12 +132,12 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s)
         assert(false && "ERROR, page not present");
     }
     
-    addSpottingToPage(s,page,ret);
+    addSpottingToPage(s,page,ret,newExemplars);
     
     cout <<"END addSpotting"<<endl;
     return ret;
 }
-vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings, vector<unsigned long>* toRemoveBatches)
+vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting>* newExemplars)
 {
     //cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
@@ -173,7 +173,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
     //cout <<"addSpottings: release lock"<<endl;
     
     for (int i=0; i<spottings->size(); i++)
-        addSpottingToPage(spottings->at(i),thesePages[i],ret);
+        addSpottingToPage(spottings->at(i),thesePages[i],ret,spottings);
 
     //Removing spottings
     map<unsigned long, vector<Word*> > wordsForIds;
@@ -212,7 +212,8 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
     return ret;
 }
 
-void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret)
+
+void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret, vector<Spotting>* newExemplars)
 {
     cout<<"  addSpottingsToPage"<<endl;
     vector<Line*> possibleLines;
@@ -245,7 +246,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
                     {
                         oneWord=true;
                         //possibleWords.push_back(word);
-                        newBatch = word->addSpotting(s);
+                        newBatch = word->addSpotting(s,newExemplars);
                         pthread_rwlock_wrlock(&spottingsMapLock);
                         spottingsToWords[s.id].push_back(word);
                         pthread_rwlock_unlock(&spottingsMapLock);
@@ -325,7 +326,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     }
 }*/
 
-TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
+TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting>* newExemplars)
 {
     pthread_rwlock_wrlock(&lock);
     //decide if it should be merge with another
@@ -351,12 +352,12 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s)
     {
         spottings.emplace(s.tlx,s);//multimap, so they are properly ordered
     }
-    TranscribeBatch* ret=queryForBatch();//This has an id matching the sent batch (if it exists)
+    TranscribeBatch* ret=queryForBatch(newExemplars);//This has an id matching the sent batch (if it exists)
     pthread_rwlock_unlock(&lock);
     return ret;
 }
 
-TranscribeBatch* Knowledge::Word::queryForBatch()
+TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting>* newExemplars)
 {
 
     string newQuery = generateQuery();
@@ -372,6 +373,9 @@ TranscribeBatch* Knowledge::Word::queryForBatch()
             {
                 transcription=scored.begin()->second;
                 done=true;
+                vector<Spotting> *newE = harvest();
+                newExemplars->insert(newExemplars->end(),newE->begin(),newE->end());
+                delete newE;
             }
             else if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
@@ -494,9 +498,9 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
-multimap<string, const cv::Mat> Knowledge::Word::harvest()
+vector<Spotting>* Knowledge::Word::harvest()
 {
-    multimap<string, const cv::Mat> ret;
+    vector<Spotting>* ret = new vector<Spotting>();
     string unspotted = gt;
     multimap<int,const Spotting*> spottingsByIndex;
     int curI =0;
@@ -606,10 +610,10 @@ multimap<string, const cv::Mat> Knowledge::Word::harvest()
                         uppBounds/=bc;
                         ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
 
-                        //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
+                        Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
                         //toRet.setHarvested();
-                        //ret.push_back(ret);
-                        ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
+                        ret.push_back(toRet);
+                        //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
                     }
                 }
             }

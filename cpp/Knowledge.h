@@ -30,7 +30,7 @@ class TranscribeBatch;
 class WordBackPointer
 {
     public:
-        virtual void result(string selected)= 0;
+        virtual vector<Spotting>* result(string selected)= 0;
         virtual void error()= 0;
         virtual TranscribeBatch* removeSpotting(unsigned long sid)= 0;
 };
@@ -122,8 +122,8 @@ private:
     multimap<float,string> scoreAndThresh(vector<string> match);
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
-    TranscribeBatch* queryForBatch();
-    multimap<string, consts cv::Mat> harvest();
+    TranscribeBatch* queryForBatch(vector<Spotting>* newExemplars);
+    vector<Spotting>* harvest();
 
     string transcription;
 public:
@@ -146,7 +146,7 @@ public:
         pthread_rwlock_destroy(&lock);
     }
     
-    TranscribeBatch* addSpotting(Spotting s);
+    TranscribeBatch* addSpotting(Spotting s,vector<Spotting>* newExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId=NULL);
     TranscribeBatch* removeSpotting(unsigned long sid) {return removeSpotting(sid,NULL);}
     
@@ -161,7 +161,7 @@ public:
         pthread_rwlock_unlock(&lock);
     }
 
-    multimap<string, const cv::Mat> result(string selected)
+    vector<Spotting>* result(string selected)
     {
         cout <<"recived trans: "<<selected<<endl;
         pthread_rwlock_wrlock(&lock);
@@ -227,7 +227,7 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addWord(Spotting s)
+    /*TranscribeBatch* addWord(Spotting s)
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
@@ -237,7 +237,7 @@ public:
         pthread_rwlock_unlock(&lock);
         
         return newWord->addSpotting(s);
-    }
+    }*/
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
         //Becuase this occurs with an absolute word boundary, we adjust the line to match the word
@@ -290,7 +290,7 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addLine(Spotting s)
+    /*TranscribeBatch* addLine(Spotting s)
     {
         Line* newLine = new Line(s.tly, s.bry, &pageImg);
         
@@ -300,7 +300,7 @@ public:
         pthread_rwlock_unlock(&lock);
         
         return newLine->addWord(s);
-    }
+    }*/
 
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
@@ -333,7 +333,7 @@ private:
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
-    void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret);
+    void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting>* newExemplars);
 
 public:
     Corpus();
@@ -341,9 +341,9 @@ public:
     {
         pthread_rwlock_destroy(&pagesLock);
     }
-    vector<TranscribeBatch*> addSpotting(Spotting s);
-    //vector<TranscribeBatch*> addSpottings(vector<Spotting>* spottings);
-    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings=NULL, vector<unsigned long>* toRemoveBatches=NULL);
+    vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting>* newExemplars);
+    //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
+    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings, vector<unsigned long>* toRemoveBatches);
     //void removeSpotting(unsigned long sid);
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);

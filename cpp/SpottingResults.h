@@ -49,7 +49,7 @@ private:
 
 class SpottingImage : public Spotting {
 public:
-    SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram) : 
+    SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram="") : 
         Spotting(s)
     {
         int oneSide = maxWidth/2;
@@ -141,6 +141,10 @@ public:
     {
         return image;
     }
+    cv::Mat ngramImg()
+    {
+        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+    }
 private:
     cv::Mat image;
 };
@@ -194,7 +198,7 @@ class tlComp
 {
   bool reverse;
 public:
-  scoreComp(const bool& revparam=false)
+  tlComp(const bool& revparam=false)
     {reverse=revparam;}
   bool operator() (const Spotting* lhs, const Spotting* rhs) const
   {
@@ -250,7 +254,7 @@ public:
     void updateSpottings(vector<Spotting> spottings);
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
-    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<unsigned long>* retRemove=NULL);
+    vector<Spotting> feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<unsigned long>* retRemove=NULL);
     
     bool checkIncomplete();
     

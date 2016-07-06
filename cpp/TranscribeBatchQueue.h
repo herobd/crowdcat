@@ -20,7 +20,7 @@ class TranscribeBatchQueue
 
         TranscribeBatch* dequeue(unsigned int maxWidth);
 
-        map<string,Mat> feedback(unsigned long id, string transcription);
+        map<string, Spotting>* feedback(unsigned long id, string transcription);
 
         void checkIncomplete();
         void lock() { mutLock.lock(); }

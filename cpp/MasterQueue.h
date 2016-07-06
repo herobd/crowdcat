@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include "SpottingResults.h"
 #include "TranscribeBatchQueue.h"
+#include "NewExemplarsBatchQueue.h"
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -33,6 +34,7 @@ private:
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
     TranscribeBatchQueue transcribeBatchQueue;
+    NewExemplarsBatchQueue newExemplarsBatchQueue;
     thread* incompleteChecker;
     
     //int atID;
@@ -59,15 +61,17 @@ private:
 public:
     MasterQueue();
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
-    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove=NULL);
-    unsigned long updateSpottingResults(vector<Spottings> spottings, unsigned long id=-1);//a negative id means add a new spottingresult
+    vector<Spotting> feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove=NULL);
+    unsigned long updateSpottingResults(vector<Spotting> spottings, unsigned long id=-1);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res);
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
+    NewExemplarsBatch* getNewExemplarsBatch(unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(maxWidth,color);}
+    multimap<string,const cv::Mat> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications) {return newExemplarsBatchQueue.feedback(id, userClassifications); }
     //test
-    vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
+    vector<Spotting> test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();
     ~MasterQueue()
     {

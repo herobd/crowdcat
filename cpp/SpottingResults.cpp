@@ -182,7 +182,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     return ret;
 }
 
-vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* retRemove)
+vector<Spotting> SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* retRemove)
 {
     /*cout << "fed: ";
     for (int i=0; i<ids.size(); i++)
@@ -191,7 +191,7 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     }
     cout<<endl;*/
     
-    vector<Spotting>* ret = new vector<Spotting>();
+    vector<Spotting> ret = new vector<Spotting>();
     
     for (unsigned int i=0; i< ids.size(); i++)
     {
