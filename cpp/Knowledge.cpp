@@ -137,7 +137,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotti
     cout <<"END addSpotting"<<endl;
     return ret;
 }
-vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<unsigned long>* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting>* newExemplars)
+vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long,string> >* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting>* newExemplars)
 {
     //cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
@@ -173,27 +173,27 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
     //cout <<"addSpottings: release lock"<<endl;
     
     for (int i=0; i<spottings->size(); i++)
-        addSpottingToPage(spottings->at(i),thesePages[i],ret,spottings);
+        addSpottingToPage(spottings->at(i),thesePages[i],ret,newExemplars);
 
     //Removing spottings
     map<unsigned long, vector<Word*> > wordsForIds;
     if (removeSpottings)
     {
         pthread_rwlock_wrlock(&spottingsMapLock);
-        for (unsigned long sid : *removeSpottings)
+        for (auto sid : *removeSpottings)
         {
-            wordsForIds[sid] = spottingsToWords[sid];
-            spottingsToWords[sid].clear(); 
+            wordsForIds[sid.first] = spottingsToWords[sid.first];
+            spottingsToWords[sid.first].clear(); 
         }
         pthread_rwlock_unlock(&spottingsMapLock);
         for (unsigned long sid : *removeSpottings)
         {
-            vector<Word*> words = wordsForIds[sid];
+            vector<Word*> words = wordsForIds[sid.first];
             for (Word* word : words)
             {
                 
                 unsigned long retractId=0;  
-                TranscribeBatch* newBatch = word->removeSpotting(sid,&retractId);
+                TranscribeBatch* newBatch = word->removeSpotting(sid.first,&retractId);
                 if (retractId!=0 && newBatch==NULL)
                 {
                     //retract the batch
@@ -298,7 +298,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     {
         //Addline
         //I'm assumming most lines are added prior with a preprocessing step
-        page->addLine(s);
+        page->addLine(s,newExemplars);
     }
     cout<<"  END addSpottingsToPage"<<endl;
 }
@@ -373,9 +373,12 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting>* newExemplars)
             {
                 transcription=scored.begin()->second;
                 done=true;
-                vector<Spotting> *newE = harvest();
-                newExemplars->insert(newExemplars->end(),newE->begin(),newE->end());
-                delete newE;
+                if (newExemplars!=NULL)
+                {
+                    vector<Spotting> *newE = harvest();
+                    newExemplars->insert(newExemplars->end(),newE->begin(),newE->end());
+                    delete newE;
+                }
             }
             else if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
@@ -408,7 +411,7 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     }
     TranscribeBatch* ret=NULL;
     if (spottings.size()>0)
-        ret=queryForBatch();
+        ret=queryForBatch(NULL);
     pthread_rwlock_unlock(&lock);
     return ret;
 }
@@ -500,28 +503,37 @@ string Knowledge::Word::generateQuery()
 
 vector<Spotting>* Knowledge::Word::harvest()
 {
+#ifdef TEST_MODE
+    cout<<"harvesting: "<<transcription<<endl;
+#endif
     vector<Spotting>* ret = new vector<Spotting>();
-    string unspotted = gt;
+    string unspotted = transcription;
     multimap<int,const Spotting*> spottingsByIndex;
     int curI =0;
     for (auto p : spottings)
     {
-        for (; curI<gt.length(); curI++)
+        for (; curI<transcription.length(); curI++)
         {
-            if (gt.substr(curI,p.second.ngram.length()).compare(p.second.ngram))
+            if (transcription.substr(curI,p.second.ngram.length()).compare(p.second.ngram))
             {
-                spottingsByIndex[curI]=&p.second;
+                spottingsByIndex.emplace(curI,&p.second);
                 for (int i=curI; i<curI+p.second.ngram.length(); i++)
                     unspotted[i]='$';
+#ifdef TEST_MODE
+                cout <<"["<<curI<<"]:"<<p.second.ngram<<", ";
+#endif
                 break;
             }
         }
     }
-    for (int i=0; i< gt.length()-MIN_N; i++)
+#ifdef TEST_MODE
+    cout<<endl;
+#endif
+    for (int i=0; i< transcription.length()-MIN_N; i++)
     {
         for (int n=MIN_N; n<=MAX_N; n++)
         {
-            if ((i==0||unspotted[i-1]=='$') && (i==gt.length()-n || (i<gt.length-n && unspotted[i+1]=='$')))
+            if ((i==0||unspotted[i-1]=='$') && (i==transcription.length()-n || (i<transcription.length()-n && unspotted[i+1]=='$')))
             {
                 bool isNew=false;
                 for (int offset=0; offset<n; offset++)
@@ -534,86 +546,94 @@ vector<Spotting>* Knowledge::Word::harvest()
                 }
                 if (isNew)
                 {
-                    string ngram = gt.substr(i,n);
-                    if ( isImportant(ngram) )
+                    string ngram = transcription.substr(i,n);
+                    int rank = Global::knowledge()->getNgramRank(ngram);
+                    if ( rank<=MAX_NGRAM_RANK )
                     {
                         int etlx, ebrx;
                         //getting left x location
                         int lowerBound=0;
-                        int uppperBound=0;
+                        int upperBound=0;
                         int bc=0;
                         //start from first char of new exemplar, working backwards
                         for (int si=i; si>=0; si--)
                         {
-                            auto startAndEnd = spottingsByIndex(si);
+                            auto startAndEnd = spottingsByIndex.equal_range(si);
                             for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
                             {
-                                if (iter->second.ngram.length()+si==i)
+                                if (iter->second->ngram.length()+si==i)
                                 {
-                                    assert(iter->second.ngram[iter->second.ngram.length()-1]==gt[i-1]);
+                                    assert(iter->second->ngram[iter->second->ngram.length()-1]==transcription[i-1]);
                                     //bounds from end
-                                    lowerBound += iter->second.brx - (iter->second.brx-iter->second.tlx)/8;
-                                    upperBound += iter->second.brx + (iter->second.brx-iter->second.tlx)/8;
+                                    lowerBound += iter->second->brx - (iter->second->brx-iter->second->tlx)/8;
+                                    upperBound += iter->second->brx + (iter->second->brx-iter->second->tlx)/8;
                                     bc++;
                                 }
-                                else if (iter->second.ngram.length()+si>i)
+                                else if (iter->second->ngram.length()+si>i)
                                 {
                                     //bounds from middle
-                                    int numOverlap = iter->second.ngram.length()+si-i;
+                                    int numOverlap = iter->second->ngram.length()+si-i;
                                     for (int oo=0; oo<numOverlap; oo++)
-                                        assert( gt[i+oo]==ngram[oo] );
-                                    int per = (iter->second.brx-iter->second.tlx)/iter->ngram.length;
-                                    int loc = per * (iter->second.ngram.length()-numOverlap) + iter->second.brx;
-                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
-                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                        assert( tramscription[i+oo]==ngram[oo] );
+                                    int per = (iter->second->brx-iter->second->tlx)/iter->second->ngram.length();
+                                    int loc = per * (iter->second->ngram.length()-numOverlap) + iter->second->brx;
+                                    lowerBound += loc - (iter->second->brx-iter->second->tlx)/5;
+                                    upperBound += loc + (iter->second->brx-iter->second->tlx)/5;
                                     bc++;
                                 }
                             }
                         }
                         assert(bc>0);
                         lowerBound/=bc;
-                        uppBounds/=bc;
+                        upperBound/=bc;
                         etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
 
                         //getting right x location
                         lowerBound=0;
-                        uppperBound=0;
+                        upperBound=0;
                         bc=0;
                         //search from one char into the new exemplar, working forwards
                         for (int si=i+1; si<=i+n; si++)
                         {
-                            auto startAndEnd = spottingsByIndex(si);
+                            auto startAndEnd = spottingsByIndex.equal_range(si);
                             for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
                             {
                                 if (si==i+n)
                                 {
-                                    assert(iter->second.ngram[0]==gt[i+n]);
+                                    assert(iter->second->ngram[0]==tramscription[i+n]);
                                     //bounds from front
-                                    lowerBound += iter->second.tlx - (iter->second.brx-iter->second.tlx)/8;
-                                    upperBound += iter->second.tlx + (iter->second.brx-iter->second.tlx)/8;
+                                    lowerBound += iter->second->tlx - (iter->second->brx-iter->second->tlx)/8;
+                                    upperBound += iter->second->tlx + (iter->second->brx-iter->second->tlx)/8;
                                     bc++;
                                 }
                                 else if (si<i+n)
                                 {
                                     //bounds from middle
                                     int numTo = (i+n)-si;
-                                    int per = (iter->second.brx-iter->second.tlx)/iter->ngram.length;
-                                    int loc = per * (numTo) + iter->second.tlx;
-                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
-                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                    int per = (iter->second->brx-iter->second->tlx)/iter->second->ngram.length();
+                                    int loc = per * (numTo) + iter->second->tlx;
+                                    lowerBound += loc - (iter->second->brx-iter->second->tlx)/5;
+                                    upperBound += loc + (iter->second->brx-iter->second->tlx)/5;
                                     bc++;
                                 }
                             }
                         }
                         assert(bc>0);
                         lowerBound/=bc;
-                        uppBounds/=bc;
+                        upperBound/=bc;
                         ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
 
                         Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
+                        toRet.type=SPOTTING_TYPE_EXEMPLAR;
+                        toRet.ngramRank=rank;
                         //toRet.setHarvested();
-                        ret.push_back(toRet);
+                        ret->push_back(toRet);
                         //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
+#ifdef TEST_MODE
+                        cout <<"harvested: "<<ngram<<endl;
+                        cv::imshow("harvested",toRet.img());
+                        cv::waitKey();
+#endif
                     }
                 }
             }
@@ -621,6 +641,138 @@ vector<Spotting>* Knowledge::Word::harvest()
     }
     return ret;
 
+}
+
+
+int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt)
+{
+    int retX;
+    cv::Mat b;// = otsu(*t.pagePnt);
+    int blockSize = max((rxBound-lxBound)/2,(by-ty)/2);
+    if (blockSize%2==0)
+        blockSize++;
+    cv::Mat orig = *pagePnt;
+    if (orig.type()==CV_8UC3)
+        cv::cvtColor(orig,orig,CV_RGB2GRAY);
+    cv::adaptiveThreshold(orig, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
+    
+    cv::Mat hist(b.cols,1,CV_32F);
+    cv::Mat tb(b.cols,1,CV_32F);
+    //vector<int> top(b.cols,9999);
+    //vector<int> bot(b.cols,-9999);
+    for (int c=0; c<b.cols; c++)
+    {
+        int top=9999;
+        int bot=-9999;
+        bool hitTop=false;
+        for (int r=0; r<b.rows; r++)
+        {
+            hist.at<float>(c,0)+=orig.at<unsigned char>(r,c);
+            if (b.at<unsigned char>(r,c))
+            {
+                if (!hitTop)
+                {
+                    top=r;
+                    hitTop=true;
+                }
+                bot=r;
+            }
+        }
+        
+        tb.at<float>(c,0)=bot-top;
+    }
+    float kernelData[5] = {.1,.5,.7,.5,.1};
+    cv::Mat kernel = cv::Mat(5,1,CV_32F,kernelData);
+    cv::filter2D(hist, hist, -1 , kernel );
+    cv::filter2D(tb, tb, -1 , kernel );
+    float minHist=99999;
+    float maxHist=-99999;
+    float minTb=99999;
+    float maxTb=-99999;
+    for (int i=2; i<b.cols-2; i++)
+    {
+        float vHist = hist.at<float>(i,0);
+        float vTb = tb.at<float>(i,0);
+        if (vHist>maxHist)
+            maxHist=vHist;
+        if (vHist<minHist)
+            minHist=vHist;
+        if (vTb>maxTb)
+            maxTb=vTb;
+        if (vTb<minTb)
+            minTb=vTb;
+    }
+    hist = (hist-minHist)/maxHist;
+    tb = (tb-minTb)/maxTb;
+    
+    float min=99999;
+    for (int i=2; i<b.cols-2; i++)
+    {
+        float v = hist.at<float>(i,0) + tb.at<float>(i,0);
+        if (v<min)
+        {
+            min=v;
+            retX=i;
+        }
+    }
+
+#ifdef TEST_MODE
+    orig=orig.clone();
+    for (int r=0; r<orig.rows; r++)
+        orig.at<unsigned char>(r,retX)=0;
+    cv::imshow("break point",orig);
+    cv::waitKey();
+#endif
+    /*GraphType *g = new GraphType(width*height, 4*(width-1)*(height-1)-(height+width));
+
+    for (int i=0; i<width*height; i++)
+    {
+        g->add_node();
+    }
+
+                if (img.pixel(i,j))
+                {
+                    int index = i+width*j;
+                    g -> add_tweights(index, anchor_weight,0);//invDistMap[index], 0);
+                    count_source--;
+                }
+    for (int i=0; i<width; i++)
+    {
+        for (int j=0; j<height; j++)
+        {
+            if (i+1<width)
+            {
+                setEdge(i,j,i+1,j,g,img,invDistMap,BLACK_TO_BLACK_H_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_H_BIAS,reducer,width);
+            }
+
+            if (j+1<height)
+            {
+                setEdge(i,j,i,j+1,g,img,invDistMap,BLACK_TO_BLACK_V_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_V_BIAS,reducer,width);
+            }
+
+            if (j>0 && i<width-1)
+            {
+                setEdge(i,j,i+1,j-1,g,img,invDistMap,BLACK_TO_BLACK_D_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_D_BIAS,reducer,width);
+            }
+
+            if (j<height-1 && i<width-1)
+            {
+                setEdge(i,j,i+1,j+1,g,img,invDistMap,BLACK_TO_BLACK_D_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_D_BIAS,reducer,width);
+            }
+        }
+    }
+    int ret = g -> maxflow();
+    for (int index=0; index<width*height; index++)
+    {
+        if (img.pixelIsMine(index%width,index/width))
+        {
+            if (g->what_segment(index) == GraphType::SOURCE)
+            {
+            }
+        }
+    }*/
+
+    return retX;
 }
 
 void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry)

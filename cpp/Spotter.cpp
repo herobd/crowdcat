@@ -6,7 +6,7 @@ Spotter::Spotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir
     this->corpus=corpus;
     //TODO init spotting implementations from modelDir
     
-    int _setId=0;
+    //int _setId=0;
     cont.store(1);
     //run(numThreads);
 }
@@ -24,27 +24,82 @@ void Spotter::run(int numThreads)
             mutLock.unlock();
             vector<Spotting> results;
             //TODO run query
+            bool cont=true;
+            emLock.lock();
+            auto iter = emList.find(query->getId());
+            if (iter !=emList.end()) //has the exemplar I used been revoked?
+            {
+                emList.erase(iter);
+                cont=false;
+            }
+            emLock.unlock();
+            if (cont)
+                masterQueue.updateSpottings(results);
             delete query;
-            masterQueue.updateSpottings(results);
         }
     }
 }
 
-void Spotter::addQuery(vector<Spotting> exemplars)
+void Spotter::addQueries(vector<Spotting>* exemplars)
 {
-    string ngram = exemplars[0].ngram;
-    int setId = ++_setId;
+    //int setId = ++_setId;
     mutLock.lock();
-    for (Spotting exemplar : exemplars)
+    for (Spotting exemplar : *exemplars)
     {
-        assert(ngram.compare(exemplar.ngram)==0);
-        SpottingQuery query = new SpottingQuery(exemplar);
-        enqueue(query);
-        sem_post(semLock);
+        if (exemplar.type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
+        {
+            SpottingQuery query = new SpottingQuery(exemplar);
+            enqueue(query);
+            sem_post(semLock);
+        }
+    }
+    mutLock.unlock();
+}
+
+void Spotter::removeQueries(vector<pair<unsigned long,string> >* toRemove)
+{
+    mutLock.lock();
+    for (auto r : *toRemove)
+    {
+        bool found=false;
+        for (auto iter = ngramQueues[r.second].begin(); iter!=ngramQueues[r.second].end(); iter++)
+        {
+            if ((*iter)->getId() == r.first)
+            {
+                ngramQueues[r.second].erase(iter);
+                found=true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            for (auto iter=onDeck.begin(); iter!=onDeck.end(); iter++)
+            {
+                if ((*iter)->getId() == r.first)
+                {
+                    onDeck.erase(iter);
+                    found=true;
+                    if (ngramQueues[r.second].size()>0)
+                    {
+                        onDeck.push_back(ngramQueues[r.second()].front());
+                        ngramQueues[r.second()].pop_front();
+                    }
+                    break;
+                }
+            }
+            if (!found)
+            {
+                //Oh, dear! We've spotted or are spotting it.
+                emLock.lock();
+                emList.emplace(r.first);
+                emLock.unlock();
+            }
+        }
 
     }
     mutLock.unlock();
 }
+
 
 void Spotter::enqueue(SpottingQuery* q)
 {

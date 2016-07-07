@@ -217,12 +217,13 @@ bool MasterQueue::test_autoBatch()
         //cout << b->at(i).score <<" "<<test_groundTruth[b->spottingResultsId][id]<< ", ";
     }
     //cout<<endl;
-    vector<Spotting> tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
-    delete tmp;
+    vector<Spotting>* tmp = test_feedback(b->spottingResultsId, ids, userClassifications);
+    if (tmp!=NULL)
+        delete tmp;
     return true;
 }
 
-
+#ifndef TEST_MODE
 BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
 {
     int ngramQueueCount;
@@ -233,7 +234,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     BatchWraper* ret=NULL;
 
     if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
-        ret = new BatchWraperNewExemplars(getNewExemplarsBatch(maxWidth,color));
+        ret = new BatchWraperNewExemplars(getNewExemplarsBatch(numberOfInstances,maxWidth,color));
     if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
         ret = new BatchWraperTranscription(getTranscriptionBatch(maxWidth));
     if (ret==NULL)
@@ -241,6 +242,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
 
     return ret;
 } 
+#endif
 
 SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
 {
@@ -349,7 +351,7 @@ void MasterQueue::test_showResults(unsigned long id,string ngram)
 }
 
 //not thread safe
-vector<Spotting> MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
+vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications)
 {
     assert(ids.size()>0 && userClassifications.size()>0);
     for (int c : userClassifications)
@@ -360,7 +362,7 @@ vector<Spotting> MasterQueue::test_feedback(unsigned long id, const vector<strin
             numCFalse++;
     }
     test_numDone[id]+=ids.size();
-    vector<Spotting> res = feedback(id, ids, userClassifications,0);
+    vector<Spotting>* res = feedback(id, ids, userClassifications,0);
     for (Spotting s : *res)
     {
         
@@ -379,10 +381,10 @@ vector<Spotting> MasterQueue::test_feedback(unsigned long id, const vector<strin
     return res;
 }
 
-vector<Spotting> MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* remove)
+vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long, string> >* remove)
 {
     //cout <<"got feedback for: "<<id<<endl;
-    vector<Spotting> ret = NULL;
+    vector<Spotting>* ret=NULL;
     bool succ=false;
     int test=0;
     while (!succ)
@@ -449,7 +451,7 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 }
 
 
-unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, unsigned long id)
+unsigned long MasterQueue::updateSpottingResults(vector<Spotting> spottings, unsigned long id)
 {
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
@@ -468,9 +470,8 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, un
         }
         else
         {
-            //cout <<"Results not found for: "<<id<<endl;
+            cout <<"Resultss not found for: "<<id<<endl;
             //pthread_rwlock_unlock(&semResults);
-            break;
         }
     }
     
@@ -480,7 +481,7 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spottings> spottings, un
         sem_t* sem=p.second.first;
         SpottingResults* res = p.second.second;
         sem_wait(sem);
-        if (res->getNgram().compare(spottings.front().ngram) == 0)
+        if (res->ngram.compare(spottings.front().ngram) == 0)
         {
             pthread_rwlock_unlock(&semResults);
             res->updateSpottings(spottings);
@@ -507,6 +508,7 @@ void MasterQueue::transcriptionFeedback(unsigned long id, string transcription)
 {
     vector<Spotting>* newExemplars = transcribeBatchQueue.feedback(id, transcription);
     //enqueue these for approval
-    if (newExemplars.size()>0)
+    if (newExemplars->size()>0)
         newExemplarsBatchQueue.enqueue(newExemplars);
+    delete newExemplars;
 }

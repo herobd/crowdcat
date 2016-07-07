@@ -21,16 +21,19 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
 
         void Execute () {
             //cout <<"Recieved batch for "<<resultsId<<endl;
-            vector<unsigned long> toRemoveSpottings, toRemoveBatches;        
-            vector<Spotting> toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
-            vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches);
-            //vector<TranscribeBatch*> modBatches = corpus->removeSpottings(toRemoveSpottings,toRemoveBatches);
+            vector<pair<unsigned long,string> > toRemoveSpottings;        
+            vector<unsigned long> toRemoveBatches;        
+            vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
+            vector<Spotting> newExemplars;
+            vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars);
             masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+            masterQueue->enqueueNewExemplars(&newExemplars);
             //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
             //if (toRemoveBatches.size()>0)
             //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
+            spotter->removeQueries(&toRemoveSpottings);
             spotter->addQueries(toAdd);
-            //delete toAdd;
+            delete toAdd;
         }
 
         // We have the results, and we're back in the event loop.

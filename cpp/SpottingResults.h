@@ -12,24 +12,34 @@
 #include <iostream>
 
 #define FUZZY 12
+#define UPDATE_OVERLAP_THRESH 0.3
 
 using namespace std;
+
+
+
+#define SPOTTING_TYPE_NONE 1
+#define SPOTTING_TYPE_APPROVED 2
+#define SPOTTING_TYPE_THRESHED 3
+#define SPOTTING_TYPE_EXEMPLAR 4
 
 class Spotting {
 public:
     Spotting() :
-        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1) {}
+        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
     Spotting(int tlx, int tly, int brx, int bry) :
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1) {}
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
+    Spotting(int tlx, int tly) :
+        tlx(tlx), tly(tly), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
     
     Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score)
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1)
     {
         id = _id++;
     }
     
     Spotting(const Spotting& s) : 
-        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score)
+        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank)
     {
         id = s.id;
     }
@@ -39,10 +49,13 @@ public:
     string ngram;
     float score;
     unsigned long id;
+    unsigned char type;
     virtual cv::Mat img()
     {
         return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
     }
+    int ngramRank;
+
 private:
     static unsigned long _id;
 };
@@ -254,7 +267,7 @@ public:
     void updateSpottings(vector<Spotting> spottings);
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
-    vector<Spotting> feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<unsigned long>* retRemove=NULL);
+    vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);
     
     bool checkIncomplete();
     

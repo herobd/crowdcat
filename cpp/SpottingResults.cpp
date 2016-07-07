@@ -182,7 +182,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     return ret;
 }
 
-vector<Spotting> SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<unsigned long>* retRemove)
+vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* retRemove)
 {
     /*cout << "fed: ";
     for (int i=0; i<ids.size(); i++)
@@ -191,7 +191,7 @@ vector<Spotting> SpottingResults::feedback(bool* done, const vector<string>& ids
     }
     cout<<endl;*/
     
-    vector<Spotting> ret = new vector<Spotting>();
+    vector<Spotting>* ret = new vector<Spotting>();
     
     for (unsigned int i=0; i< ids.size(); i++)
     {
@@ -210,14 +210,20 @@ vector<Spotting> SpottingResults::feedback(bool* done, const vector<string>& ids
         {
             numberClassifiedTrue++;
             if (!resent || !classById[id])
+            {
+                instancesById.at(id).type=SPOTTING_TYPE_APPROVED;
                 ret->push_back(instancesById.at(id)); //otherwise we've already sent it
+            }
             classById[id]=true;
         }
         else if (userClassifications[i]==0)
         {
             numberClassifiedFalse++;
             if (!resent || (retRemove && !classById[id]))
-                retRemove->push_back(id);
+            {
+                instancesById.at(id).type=SPOTTING_TYPE_NONE;
+                retRemove->push_back(make_pair(id,instancesById.at(id).ngram));
+            }
             classById[id]=false;
         }
         else if (!resent)//someone passed, so we need to add it again, unless this is resent, in whichcase we use the old.
@@ -240,6 +246,7 @@ vector<Spotting> SpottingResults::feedback(bool* done, const vector<string>& ids
         tracer = instancesByScore.begin();
         while (tracer!=instancesByScore.end() && (*tracer)->score < acceptThreshold)
         {
+            (**tracer).type=SPOTTING_TYPE_THRESHED;
             ret->push_back(**tracer);
             tracer++;
             numberAccepted++;
@@ -576,12 +583,14 @@ void SpottingResults::updateSpottings(vector<Spotting> spottings)
         int height = spotting.bry-spotting.tly;
         for (int tlx=spotting.tlx-width*(1-UPDATE_OVERLAP_THRESH); tlx<spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH); tlx++)
         {
-            auto itLow = spottingsByLocation.lower_bound(Spotting(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH)));
-            auto itHigh = spottingsByLocation.upper_bound(Spotting(tlx,spotting.tly+height*(1-UPDATE_OVERLAP_THRESH)));
-            for (;itLow!=itHight; itLow++)
+            Spotting lb(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH));
+            Spotting ub(tlx,spotting.tly+height*(1-UPDATE_OVERLAP_THRESH));
+            auto itLow = instancesByLocation.lower_bound(&lb);
+            auto itHigh = instancesByLocation.upper_bound(&ub);
+            for (;itLow!=itHigh; itLow++)
             {
-                int overlapArea = ( min(spotting.brx,itLow->brx) - max(spottings.tlx,itLow->tlx) ) * ( min(spotting.bry,itLow->bry) - max(spottings.tly,itLow->tly) );
-                if (overlapArea/(0.0+ (spotting.brx-spottings.tlx)*(spotting.bry-spottings.tly))>UPDATE_OVERLAPTHRESH)
+                int overlapArea = ( min(spotting.brx,(*itLow)->brx) - max(spotting.tlx,(*itLow)->tlx) ) * ( min(spotting.bry,(*itLow)->bry) - max(spotting.tly,(*itLow)->tly) );
+                if (overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>UPDATE_OVERLAP_THRESH)
                 {
                     updated=true;
 

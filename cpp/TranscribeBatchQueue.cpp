@@ -121,7 +121,7 @@ vector<Spotting>* TranscribeBatchQueue::feedback(unsigned long id, string transc
         //This occurs on a resend
         
         if (transcription.compare("$PASS$")!=0)
-            newNgramExemplars=doneMap[id]->result(transcription,&harvestedToRetract);
+            newNgramExemplars=doneMap[id]->result(transcription);
     }
     unlock();
     return newNgramExemplars;

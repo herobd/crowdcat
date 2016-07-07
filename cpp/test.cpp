@@ -55,30 +55,34 @@ int main() {
             cout <<"harvested:"<<endl;
             for (int i=1; i<toAdd.size(); i++)
                 imshow("har: "+toAdd[i].ngram,toAdd[i].img());
-            waitKey();
+            cv::waitKey();
         }
     }
     
     while(1)
     {
-        TranscribeBatch* b = q.dequeue();
+        TranscribeBatch* b = q.dequeue(500);
         if (b==NULL)
             break;
+        cout<<"Spotted : ";
+        for (SpottingPoint sp : b->getSpottingPoints())
+            cout<<sp.getNgram()<<", ";
+        cout<<endl;
         cout<<"Poss: "<<endl;
         for (string p : b->getPossibilities())
             cout<<"  "<<p<<endl;
         cv::imshow("word",b->getImage());
-        cv::imshow("ngrams",b->getTextImage());
+        //cv::imshow("ngrams",b->getTextImage());
         cv::waitKey();
         string trans;
         cout << "transcription: ";
         cin >> trans;
         vector<Spotting>* harvested = b->getBackPointer()->result(trans);
-        for (Spotting s: harvested)
+        for (Spotting s: *harvested)
         {
             imshow("har: "+s.ngram,s.img());
         }
-        waitKey();
+        cv::waitKey();
         delete harvested;
     }
     c.show();
