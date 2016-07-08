@@ -3,6 +3,7 @@
 vector< cv::Vec3f > TranscribeBatch::colors = {cv::Vec3f(1.15,1.15,0.85),cv::Vec3f(1.15,0.85,1.15),cv::Vec3f(0.86,0.96,1.2),cv::Vec3f(0.87,1.2,0.87),cv::Vec3f(1.2,0.87,0.87),cv::Vec3f(0.87,0.87,1.2)};
 cv::Vec3f TranscribeBatch::wordHighlight(0.9,1.2,1.2);
 atomic_ulong TranscribeBatch::_id;//I'm assuming 0 is the default value
+int Knowledge::Page::_id=0;
 
 void TranscribeBatch::highlightPix(cv::Vec3b &p, cv::Vec3f color)
 {
@@ -186,7 +187,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
             spottingsToWords[sid.first].clear(); 
         }
         pthread_rwlock_unlock(&spottingsMapLock);
-        for (unsigned long sid : *removeSpottings)
+        for (auto sid : *removeSpottings)
         {
             vector<Word*> words = wordsForIds[sid.first];
             for (Word* word : words)
@@ -350,7 +351,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting>* newE
     }
     if (!merged)
     {
-        spottings.emplace(s.tlx,s);//multimap, so they are properly ordered
+        spottings.insert(make_pair(s.tlx,s));//multimap, so they are properly ordered
     }
     TranscribeBatch* ret=queryForBatch(newExemplars);//This has an id matching the sent batch (if it exists)
     pthread_rwlock_unlock(&lock);
@@ -421,7 +422,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
     //TODO, perhaps find a good thresh point?
     multimap<float,string> ret;
     for (string m : match)
-        ret.emplace(0.1,m);
+        ret.insert(make_pair(0.1,m));
     return ret;
 }
 
@@ -508,15 +509,15 @@ vector<Spotting>* Knowledge::Word::harvest()
 #endif
     vector<Spotting>* ret = new vector<Spotting>();
     string unspotted = transcription;
-    multimap<int,const Spotting*> spottingsByIndex;
+    multimap<int,Spotting> spottingsByIndex;
     int curI =0;
     for (auto p : spottings)
     {
         for (; curI<transcription.length(); curI++)
         {
-            if (transcription.substr(curI,p.second.ngram.length()).compare(p.second.ngram))
+            if (transcription.substr(curI,p.second.ngram.length()).compare(p.second.ngram)==0)
             {
-                spottingsByIndex.emplace(curI,&p.second);
+                spottingsByIndex.insert(make_pair(curI,p.second));
                 for (int i=curI; i<curI+p.second.ngram.length(); i++)
                     unspotted[i]='$';
 #ifdef TEST_MODE
@@ -527,26 +528,45 @@ vector<Spotting>* Knowledge::Word::harvest()
         }
     }
 #ifdef TEST_MODE
-    cout<<endl;
+    cout<<endl<<"unspotted: "<<unspotted<<endl;;
 #endif
-    for (int i=0; i< transcription.length()-MIN_N; i++)
+    for (int i=0; i< 1+transcription.length()-MIN_N; i++)
     {
         for (int n=MIN_N; n<=MAX_N; n++)
         {
-            if ((i==0||unspotted[i-1]=='$') && (i==transcription.length()-n || (i<transcription.length()-n && unspotted[i+1]=='$')))
+            //if we have anchors on either side
+            if ((i==0|| (unspotted[i-1]=='$' || unspotted[i]=='$')) && (i==transcription.length()-n || (i<transcription.length()-n && (unspotted[i+n]=='$' || unspotted[i+n-1]=='$'))))
             {
-                bool isNew=false;
-                for (int offset=0; offset<n; offset++)
+                bool isNew=true;
+                string ngram = transcription.substr(i,n);
+                /*for (int offset=0; offset<n; offset++)
                 {
                     if (unspotted[i+offset]!='$')
                     {
                         isNew=true;
                         break;
                     }
+                }*/
+                auto startAndEnd = spottingsByIndex.equal_range(i);
+                for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
+                {
+#ifdef TEST_MODE
+                        cout<<"comparing, ["<<ngram<<"] to ["<<iter->second.ngram<<"] at "<<i<<endl;
+#endif
+                    if (iter->second.ngram.compare(ngram)==0)
+                    {
+                        isNew=false;
+#ifdef TEST_MODE
+                        cout<<"Nope, ["<<ngram<<"] already there. "<<i<<endl;
+#endif
+                        break;
+                    }
                 }
                 if (isNew)
                 {
-                    string ngram = transcription.substr(i,n);
+#ifdef TEST_MODE
+                    cout<<"New ngram: "<<ngram<<", at "<<i<<endl;
+#endif
                     int rank = Global::knowledge()->getNgramRank(ngram);
                     if ( rank<=MAX_NGRAM_RANK )
                     {
@@ -558,36 +578,42 @@ vector<Spotting>* Knowledge::Word::harvest()
                         //start from first char of new exemplar, working backwards
                         for (int si=i; si>=0; si--)
                         {
-                            auto startAndEnd = spottingsByIndex.equal_range(si);
+                            startAndEnd = spottingsByIndex.equal_range(si);
                             for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
                             {
-                                if (iter->second->ngram.length()+si==i)
+                                if (iter->second.ngram.length()+si==i)
                                 {
-                                    assert(iter->second->ngram[iter->second->ngram.length()-1]==transcription[i-1]);
+                                    assert(iter->second.ngram[iter->second.ngram.length()-1]==transcription[i-1]);
                                     //bounds from end
-                                    lowerBound += iter->second->brx - (iter->second->brx-iter->second->tlx)/8;
-                                    upperBound += iter->second->brx + (iter->second->brx-iter->second->tlx)/8;
+                                    lowerBound += iter->second.brx - (iter->second.brx-iter->second.tlx)/8;
+                                    upperBound += iter->second.brx + (iter->second.brx-iter->second.tlx)/8;
                                     bc++;
                                 }
-                                else if (iter->second->ngram.length()+si>i)
+                                else if (iter->second.ngram.length()+si>i)
                                 {
                                     //bounds from middle
-                                    int numOverlap = iter->second->ngram.length()+si-i;
+                                    int numOverlap = iter->second.ngram.length()+si-i;
                                     for (int oo=0; oo<numOverlap; oo++)
-                                        assert( tramscription[i+oo]==ngram[oo] );
-                                    int per = (iter->second->brx-iter->second->tlx)/iter->second->ngram.length();
-                                    int loc = per * (iter->second->ngram.length()-numOverlap) + iter->second->brx;
-                                    lowerBound += loc - (iter->second->brx-iter->second->tlx)/5;
-                                    upperBound += loc + (iter->second->brx-iter->second->tlx)/5;
+                                        assert( transcription[i+oo]==ngram[oo] );
+                                    int per = (iter->second.brx-iter->second.tlx)/iter->second.ngram.length();
+                                    int loc = per * (iter->second.ngram.length()-numOverlap) + iter->second.brx;
+                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
+                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
                                     bc++;
                                 }
                             }
                         }
-                        assert(bc>0);
-                        lowerBound/=bc;
-                        upperBound/=bc;
-                        etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
-
+                        if (bc>0)
+                        {
+                            lowerBound/=bc;
+                            upperBound/=bc;
+                            etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+                        }
+                        else
+                        {
+                            assert(i==0);
+                            etlx=tlx;
+                        }
                         //getting right x location
                         lowerBound=0;
                         upperBound=0;
@@ -600,28 +626,35 @@ vector<Spotting>* Knowledge::Word::harvest()
                             {
                                 if (si==i+n)
                                 {
-                                    assert(iter->second->ngram[0]==tramscription[i+n]);
+                                    assert(iter->second.ngram[0]==transcription[i+n]);
                                     //bounds from front
-                                    lowerBound += iter->second->tlx - (iter->second->brx-iter->second->tlx)/8;
-                                    upperBound += iter->second->tlx + (iter->second->brx-iter->second->tlx)/8;
+                                    lowerBound += iter->second.tlx - (iter->second.brx-iter->second.tlx)/8;
+                                    upperBound += iter->second.tlx + (iter->second.brx-iter->second.tlx)/8;
                                     bc++;
                                 }
                                 else if (si<i+n)
                                 {
                                     //bounds from middle
                                     int numTo = (i+n)-si;
-                                    int per = (iter->second->brx-iter->second->tlx)/iter->second->ngram.length();
-                                    int loc = per * (numTo) + iter->second->tlx;
-                                    lowerBound += loc - (iter->second->brx-iter->second->tlx)/5;
-                                    upperBound += loc + (iter->second->brx-iter->second->tlx)/5;
+                                    int per = (iter->second.brx-iter->second.tlx)/iter->second.ngram.length();
+                                    int loc = per * (numTo) + iter->second.tlx;
+                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
+                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
                                     bc++;
                                 }
                             }
                         }
-                        assert(bc>0);
-                        lowerBound/=bc;
-                        upperBound/=bc;
-                        ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+                        if (bc>0)
+                        {
+                            lowerBound/=bc;
+                            upperBound/=bc;
+                            ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+                        }
+                        else
+                        {
+                            assert(i==transcription.length()-n);
+                            ebrx=brx;
+                        }
 
                         Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
                         toRet.type=SPOTTING_TYPE_EXEMPLAR;
@@ -651,7 +684,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
     int blockSize = max((rxBound-lxBound)/2,(by-ty)/2);
     if (blockSize%2==0)
         blockSize++;
-    cv::Mat orig = *pagePnt;
+    cv::Mat orig = (*pagePnt)(cv::Rect(lxBound,ty,rxBound-lxBound+1,by-ty+1));
     if (orig.type()==CV_8UC3)
         cv::cvtColor(orig,orig,CV_RGB2GRAY);
     cv::adaptiveThreshold(orig, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
@@ -772,7 +805,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
         }
     }*/
 
-    return retX;
+    return retX+lxBound;
 }
 
 void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry)

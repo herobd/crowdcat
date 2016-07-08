@@ -7,7 +7,7 @@ Global::Global()
     {
         ifstream in(filePaths[i]);
         string ngram;
-        while(read_line(in,ngram))
+        while(getline(in,ngram))
         {   
             transform(ngram.begin(), ngram.end(), ngram.begin(), ::tolower);
             ngramRanks[i+MIN_N].push_back(ngram);

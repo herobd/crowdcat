@@ -70,7 +70,8 @@ class NewExemplarsBatchQueue
         priority_queue<Spotting, vector<Spotting>, pcomparison> queue;
         map<unsigned long, NewExemplarsBatch*> returnMap;
         map<unsigned long, chrono::system_clock::time_point> timeMap;
-        map<unsigned long, WordBackPointer*> doneMap;
+        map<unsigned long, NewExemplarsBatch*> doneMap;
+        map<unsigned long, chrono::system_clock::time_point> timeDoneMap;
         mutex mutLock;
 };
 #endif

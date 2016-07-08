@@ -1,6 +1,6 @@
 
 #include "NewExemplarsBatchQueue.h"
-
+unsigned long NewExemplarsBatch::_batchId=0;
 NewExemplarsBatchQueue::NewExemplarsBatchQueue()
 {
 
@@ -45,12 +45,12 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
         {
             for (int i=0; i<userClassifications.size(); i++)
             {
-                returnMap[id][i].classified=userClassifications[i];
+                returnMap[id]->at(i).classified=userClassifications[i];
                 if (userClassifications[i]>0)
-                    confirmedNgramExemplars.emplace(returnMap[id][i].ngram,returnMap[id][i].ngramImg());
+                    confirmedNgramExemplars.push_back(Spotting(returnMap[id]->at(i)));
                 else if (userClassifications[i]<0) //PASS
                 {
-                    queue.push(Spotting(returnMap[id][i]));
+                    queue.push(Spotting(returnMap[id]->at(i)));
                 }
             }
             //delete returnMap[id];
@@ -60,8 +60,9 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
         else //Something went wrong...
         {
             cout <<"ERROR: mismatch size between user data ("<<userClassifications.size()<<") and newExemplars length ("<<returnMap[id]->size()<<"). Requeing."<<endl;
-            for (int i=0; i<returnMap[id].size(); i++)
-                queue.push(Spotting(returnMap[id][i]));
+            for (int i=0; i<returnMap[id]->size(); i++)
+                queue.push(Spotting(returnMap[id]->at(i)));
+            delete returnMap[id];
         }
         returnMap.erase(id);
         timeMap.erase(id);
@@ -71,16 +72,16 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
         //This occurs on a resend
         if (doneMap.find(id) != doneMap.end())
         {
-            if (userClassifications.size() == returnMap[id].size())
+            if (userClassifications.size() == returnMap[id]->size())
             {
                 for (int i=0; i<userClassifications.size(); i++)
                 {
-                    if (doneMap[id][i].classified!=-1 && doneMap[id][i].classified!=userClassifications[i])
+                    if (doneMap[id]->at(i).classified!=-1 && doneMap[id]->at(i).classified!=userClassifications[i])
                     {
                         if (userClassifications[i]>0)
-                            confirmedNgramExemplars.emplace(Spotting(returnMap[id][i]);
+                            confirmedNgramExemplars.push_back(Spotting(returnMap[id]->at(i)));
                         else if (userClassifications[i]==0)
-                            toRemoveExemplars->push_back(make_pair(doneMap[id][i].id,doneMap[id][i].ngram));
+                            toRemoveExemplars->push_back(make_pair(doneMap[id]->at(i).id,doneMap[id]->at(i).ngram));
                     }
                 }
             }
@@ -107,8 +108,10 @@ void NewExemplarsBatchQueue::checkIncomplete()
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed
         {
-            queue.push(returnMap[id]);
-
+            for (int i=0; i<returnMap[id]->size(); i++)
+                queue.push(Spotting(returnMap[id]->at(i)));
+            //queue.push(returnMap[id]);
+            delete returnMap[id];
             returnMap.erase(id);
             iter=timeMap.erase(iter);
             iter--;

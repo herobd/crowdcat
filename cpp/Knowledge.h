@@ -34,7 +34,6 @@ class WordBackPointer
         virtual vector<Spotting>* result(string selected)= 0;
         virtual void error()= 0;
         virtual TranscribeBatch* removeSpotting(unsigned long sid)= 0;
-        int classified;
 };
 
 class SpottingPoint
@@ -280,7 +279,7 @@ public:
     }
     Page(string imageLoc) 
     {
-        pageImg = cv::imread(imageLoc);
+        pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         id = ++_id;
         pthread_rwlock_init(&lock,NULL);
     }
@@ -325,6 +324,7 @@ public:
     }
 
     cv::Mat* getImg() {return &pageImg;}
+    int getId() {return id;}
 };
 
 
@@ -350,6 +350,8 @@ public:
     ~Corpus()
     {
         pthread_rwlock_destroy(&pagesLock);
+        for (auto p : pages)
+            delete p.second;
     }
     vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting>* newExemplars);
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
@@ -358,6 +360,12 @@ public:
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     cv::Mat* imgForPageId(int pageId);
+    int addPage(string imagePath) 
+    {
+        Page* p = new Page(imagePath);
+        pages[p->getId()]=p;
+        return p->getId();
+    }
     void show();
 };
 

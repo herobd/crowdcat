@@ -91,7 +91,7 @@ void Spotter::removeQueries(vector<pair<unsigned long,string> >* toRemove)
             {
                 //Oh, dear! We've spotted or are spotting it.
                 emLock.lock();
-                emList.emplace(r.first);
+                emList.insert(r.first);
                 emLock.unlock();
             }
         }

@@ -11,12 +11,12 @@ int main() {
     //TEST
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     Knowledge::Corpus c;
+    c.addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
     TranscribeBatchQueue q;
     //Knowledge::Page* = new Knowledge::Page();
-    int pageId=0;
     //c.addPage(pageId);
-    cv::Mat page = cv::imread("/home/brian/intel_index/data/gw_20p_wannot/2700270.tif",CV_LOAD_IMAGE_GRAYSCALE);
-    assert(page.rows>0);
+    int pageId = 2700270;//c.addPage("/home/brian/intel_index/data/gw_20p_wannot/2700270.tif");
+    assert(c.imgForPageId(pageId)->rows>0);
     while(1)
     {
         int tlx, tly, brx, bry;
@@ -40,9 +40,10 @@ int main() {
         cout << "ngram: ";
         cin >> ngram;
         
-        Spotting s(tlx, tly, brx, bry, pageId, &page, ngram, 0.1);
+        Spotting s(tlx, tly, brx, bry, pageId, c.imgForPageId(pageId), ngram, 0.1);
         vector<Spotting> toAdd={s};
-        vector<TranscribeBatch*> bs = c.updateSpottings(&toAdd,NULL,NULL);
+        vector<Spotting> newExemplars;
+        vector<TranscribeBatch*> bs = c.updateSpottings(&toAdd,NULL,NULL,&newExemplars);
         /*for (auto b : bs)
             if (b!=NULL)
             {
@@ -50,11 +51,11 @@ int main() {
                 q.enqueue(b);
             }*/
         q.enqueueAll(bs);
-        if (toAdd.size()>1)
+        if (newExemplars.size()>0)
         {
             cout <<"harvested:"<<endl;
-            for (int i=1; i<toAdd.size(); i++)
-                imshow("har: "+toAdd[i].ngram,toAdd[i].img());
+            for (int i=1; i<newExemplars.size(); i++)
+                imshow("har: "+newExemplars[i].ngram,newExemplars[i].img());
             cv::waitKey();
         }
     }

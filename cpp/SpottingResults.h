@@ -158,6 +158,7 @@ public:
     {
         return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
     }
+    int classified;
 private:
     cv::Mat image;
 };
