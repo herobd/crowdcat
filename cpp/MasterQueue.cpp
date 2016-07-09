@@ -506,9 +506,10 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting> spottings, uns
 
 void MasterQueue::transcriptionFeedback(unsigned long id, string transcription) 
 {
-    vector<Spotting>* newExemplars = transcribeBatchQueue.feedback(id, transcription);
+    vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription);
+
     //enqueue these for approval
     if (newExemplars->size()>0)
         newExemplarsBatchQueue.enqueue(newExemplars);
-    delete newExemplars;
+    //delete newExemplars;
 }

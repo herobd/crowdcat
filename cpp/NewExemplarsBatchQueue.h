@@ -9,6 +9,7 @@
 #include <mutex>
 #include <iostream>
 
+//#include "Global.h"
 #include "Knowledge.h"
 #include "SpottingResults.h"
 
@@ -17,12 +18,13 @@ using namespace std;
 class NewExemplarsBatch {
 public:
     
-    NewExemplarsBatch(vector<Spotting>* exes, unsigned int maxWidth, int color)
+    NewExemplarsBatch(const vector<Spotting*>& exes, unsigned int maxWidth, int color)
     {
         batchId = _batchId++;
-        for (Spotting& s : *exes)
+        for (Spotting* s : exes)
         {
-            instances.push_back(SpottingImage(s,maxWidth,color));
+            instances.push_back(SpottingImage(*s,maxWidth,color));
+            delete s;
         }
 
     }
@@ -47,9 +49,13 @@ class pcomparison
     public:
     pcomparison()
         {}
-    bool operator() (const Spotting& lhs, const Spotting& rhs) const
+    bool operator() (Spotting* lhs, Spotting* rhs) const
     {
-        return (lhs.ngramRank>rhs.ngramRank);
+        if (lhs->ngramRank==-1)
+            lhs->ngramRank = Global::knowledge()->getNgramRank(lhs->ngram);
+        if (rhs->ngramRank==-1)
+            rhs->ngramRank = Global::knowledge()->getNgramRank(rhs->ngram);
+        return (lhs->ngramRank>rhs->ngramRank);
     }
 };
 
@@ -57,17 +63,17 @@ class NewExemplarsBatchQueue
 {
     public:
         NewExemplarsBatchQueue();
-        void enqueue(vector<Spotting>* batch);
+        void enqueue(const vector<Spotting*>& batch);
 
         NewExemplarsBatch* dequeue(int batchSize, unsigned int maxWidth, int color);
 
-        vector<Spotting> feedback(unsigned long id, const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars);
+        vector<SpottingExemplar*> feedback(unsigned long id, const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars);
 
         void checkIncomplete();
         void lock() { mutLock.lock(); }
         void unlock() { mutLock.unlock(); }
     private:
-        priority_queue<Spotting, vector<Spotting>, pcomparison> queue;
+        priority_queue<Spotting*, vector<Spotting*>, pcomparison> queue;
         map<unsigned long, NewExemplarsBatch*> returnMap;
         map<unsigned long, chrono::system_clock::time_point> timeMap;
         map<unsigned long, NewExemplarsBatch*> doneMap;

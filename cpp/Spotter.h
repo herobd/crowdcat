@@ -12,7 +12,7 @@
 SpottingQuery class
 {
     public:
-    SpottingQuery(const Spotting& e) : id(e.id) {}
+    SpottingQuery(const Spotting* e) : id(e->id) {//use e->ngramImg() to get correct exemplar image}
 };
 
 Spotter class
@@ -22,7 +22,7 @@ Spotter class
 
     void run(int numThreads);
 
-    void addQueries(vector<Spotting>* exemplars);
+    void addQueries(vector<Spotting*>& exemplars);
 
 
     private:

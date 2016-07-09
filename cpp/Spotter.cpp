@@ -40,11 +40,11 @@ void Spotter::run(int numThreads)
     }
 }
 
-void Spotter::addQueries(vector<Spotting>* exemplars)
+void Spotter::addQueries(vector<Spotting*> exemplars)
 {
     //int setId = ++_setId;
     mutLock.lock();
-    for (Spotting exemplar : *exemplars)
+    for (Spotting* exemplar : exemplars)
     {
         if (exemplar.type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
         {

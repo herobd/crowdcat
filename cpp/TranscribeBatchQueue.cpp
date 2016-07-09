@@ -65,9 +65,9 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     return ret;
 }
 
-vector<Spotting>* TranscribeBatchQueue::feedback(unsigned long id, string transcription)
+vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transcription)
 {
-    vector<Spotting>* newNgramExemplars = NULL;
+    vector<Spotting*> newNgramExemplars;
     lock();
     if (returnMap.find(id) != returnMap.end())
     {

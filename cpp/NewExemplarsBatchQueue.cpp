@@ -6,10 +6,10 @@ NewExemplarsBatchQueue::NewExemplarsBatchQueue()
 
 }
 
-void NewExemplarsBatchQueue::enqueue(vector<Spotting>* batch)
+void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch)
 {
     lock();
-    for (Spotting& s : *batch)
+    for (Spotting* s : batch)
         queue.push(s);
     unlock();
 }
@@ -20,14 +20,14 @@ NewExemplarsBatch* NewExemplarsBatchQueue::dequeue(int batchSize, unsigned int m
     NewExemplarsBatch* ret=NULL;
     if (queue.size()>0)
     {
-        vector<Spotting> batch;
+        vector<Spotting*> batch;
         for (int i=0; i<batchSize && queue.size()>0; i++)
         {
            batch.push_back(queue.top());
            queue.pop();
         
         }
-        ret = new NewExemplarsBatch(&batch, maxWidth, color);
+        ret = new NewExemplarsBatch(batch, maxWidth, color);
         returnMap[ret->getId()]=ret;
         timeMap[ret->getId()]=chrono::system_clock::now();
     }
@@ -35,9 +35,9 @@ NewExemplarsBatch* NewExemplarsBatchQueue::dequeue(int batchSize, unsigned int m
     return ret;
 }
 
-vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars)
+vector<SpottingExemplar*> NewExemplarsBatchQueue::feedback(unsigned long id, const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
-    vector<Spotting> confirmedNgramExemplars;
+    vector<SpottingExemplar*> confirmedNgramExemplars;
     lock();
     if (returnMap.find(id) != returnMap.end())
     {
@@ -47,10 +47,10 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
             {
                 returnMap[id]->at(i).classified=userClassifications[i];
                 if (userClassifications[i]>0)
-                    confirmedNgramExemplars.push_back(Spotting(returnMap[id]->at(i)));
+                    confirmedNgramExemplars.push_back(new SpottingExemplar(returnMap[id]->at(i)));
                 else if (userClassifications[i]<0) //PASS
                 {
-                    queue.push(Spotting(returnMap[id]->at(i)));
+                    queue.push(new SpottingExemplar(returnMap[id]->at(i)));
                 }
             }
             //delete returnMap[id];
@@ -61,7 +61,7 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
         {
             cout <<"ERROR: mismatch size between user data ("<<userClassifications.size()<<") and newExemplars length ("<<returnMap[id]->size()<<"). Requeing."<<endl;
             for (int i=0; i<returnMap[id]->size(); i++)
-                queue.push(Spotting(returnMap[id]->at(i)));
+                queue.push(new SpottingExemplar(returnMap[id]->at(i)));
             delete returnMap[id];
         }
         returnMap.erase(id);
@@ -79,7 +79,7 @@ vector<Spotting> NewExemplarsBatchQueue::feedback(unsigned long id, const vector
                     if (doneMap[id]->at(i).classified!=-1 && doneMap[id]->at(i).classified!=userClassifications[i])
                     {
                         if (userClassifications[i]>0)
-                            confirmedNgramExemplars.push_back(Spotting(returnMap[id]->at(i)));
+                            confirmedNgramExemplars.push_back(new SpottingExemplar(returnMap[id]->at(i)));
                         else if (userClassifications[i]==0)
                             toRemoveExemplars->push_back(make_pair(doneMap[id]->at(i).id,doneMap[id]->at(i).ngram));
                     }
@@ -109,7 +109,7 @@ void NewExemplarsBatchQueue::checkIncomplete()
         if (pass.count() > 20) //if 20 mins has passed
         {
             for (int i=0; i<returnMap[id]->size(); i++)
-                queue.push(Spotting(returnMap[id]->at(i)));
+                queue.push(new SpottingExemplar(returnMap[id]->at(i)));
             //queue.push(returnMap[id]);
             delete returnMap[id];
             returnMap.erase(id);

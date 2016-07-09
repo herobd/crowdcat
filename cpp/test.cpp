@@ -42,7 +42,7 @@ int main() {
         
         Spotting s(tlx, tly, brx, bry, pageId, c.imgForPageId(pageId), ngram, 0.1);
         vector<Spotting> toAdd={s};
-        vector<Spotting> newExemplars;
+        vector<Spotting*> newExemplars;
         vector<TranscribeBatch*> bs = c.updateSpottings(&toAdd,NULL,NULL,&newExemplars);
         /*for (auto b : bs)
             if (b!=NULL)
@@ -55,7 +55,7 @@ int main() {
         {
             cout <<"harvested:"<<endl;
             for (int i=1; i<newExemplars.size(); i++)
-                imshow("har: "+newExemplars[i].ngram,newExemplars[i].img());
+                imshow("har: "+newExemplars[i]->ngram,newExemplars[i]->img());
             cv::waitKey();
         }
     }

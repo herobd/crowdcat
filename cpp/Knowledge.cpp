@@ -116,10 +116,8 @@ Knowledge::Corpus::Corpus()
     //averageCharWidth=40;
     threshScoring= 1.0;
 }
-
-vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting>* newExemplars)
+vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
-    cout <<"addSpotting"<<endl;
     vector<TranscribeBatch*> ret;
     pthread_rwlock_rdlock(&pagesLock);
     Page* page = pages[s.pageId];
@@ -135,10 +133,9 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotti
     
     addSpottingToPage(s,page,ret,newExemplars);
     
-    cout <<"END addSpotting"<<endl;
     return ret;
 }
-vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long,string> >* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting>* newExemplars)
+vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long,string> >* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting*>* newExemplars)
 {
     //cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
@@ -214,9 +211,8 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
 }
 
 
-void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret, vector<Spotting>* newExemplars)
+void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret, vector<Spotting*>* newExemplars)
 {
-    cout<<"  addSpottingsToPage"<<endl;
     vector<Line*> possibleLines;
     //pthread_rwlock_rdlock(&page->linesLock);
     vector<Line*> lines = page->lines();
@@ -301,7 +297,6 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
         //I'm assumming most lines are added prior with a preprocessing step
         page->addLine(s,newExemplars);
     }
-    cout<<"  END addSpottingsToPage"<<endl;
 }
 
 /*void Knowledge::Corpus::removeSpotting(unsigned long sid)
@@ -327,7 +322,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     }
 }*/
 
-TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting>* newExemplars)
+TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* newExemplars)
 {
     pthread_rwlock_wrlock(&lock);
     //decide if it should be merge with another
@@ -358,7 +353,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting>* newE
     return ret;
 }
 
-TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting>* newExemplars)
+TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
 {
 
     string newQuery = generateQuery();
@@ -376,9 +371,8 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting>* newExemplars)
                 done=true;
                 if (newExemplars!=NULL)
                 {
-                    vector<Spotting> *newE = harvest();
-                    newExemplars->insert(newExemplars->end(),newE->begin(),newE->end());
-                    delete newE;
+                    vector<Spotting*> newE = harvest();
+                    newExemplars->insert(newExemplars->end(),newE.begin(),newE.end());
                 }
             }
             else if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
@@ -502,12 +496,12 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
-vector<Spotting>* Knowledge::Word::harvest()
+vector<Spotting*> Knowledge::Word::harvest()
 {
 #ifdef TEST_MODE
     cout<<"harvesting: "<<transcription<<endl;
 #endif
-    vector<Spotting>* ret = new vector<Spotting>();
+    vector<Spotting*> ret;
     string unspotted = transcription;
     multimap<int,Spotting> spottingsByIndex;
     int curI =0;
@@ -572,8 +566,8 @@ vector<Spotting>* Knowledge::Word::harvest()
                     {
                         int etlx, ebrx;
                         //getting left x location
-                        int lowerBound=0;
-                        int upperBound=0;
+                        int leftLeftBound =0;
+                        int rightLeftBound=0;
                         int bc=0;
                         //start from first char of new exemplar, working backwards
                         for (int si=i; si>=0; si--)
@@ -585,8 +579,8 @@ vector<Spotting>* Knowledge::Word::harvest()
                                 {
                                     assert(iter->second.ngram[iter->second.ngram.length()-1]==transcription[i-1]);
                                     //bounds from end
-                                    lowerBound += iter->second.brx - (iter->second.brx-iter->second.tlx)/8;
-                                    upperBound += iter->second.brx + (iter->second.brx-iter->second.tlx)/8;
+                                    leftLeftBound  += iter->second.brx - (iter->second.brx-iter->second.tlx)/8;
+                                    rightLeftBound += iter->second.brx + (iter->second.brx-iter->second.tlx)/8;
                                     bc++;
                                 }
                                 else if (iter->second.ngram.length()+si>i)
@@ -596,27 +590,29 @@ vector<Spotting>* Knowledge::Word::harvest()
                                     for (int oo=0; oo<numOverlap; oo++)
                                         assert( transcription[i+oo]==ngram[oo] );
                                     int per = (iter->second.brx-iter->second.tlx)/iter->second.ngram.length();
-                                    int loc = per * (iter->second.ngram.length()-numOverlap) + iter->second.brx;
-                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
-                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                    int loc = per * (iter->second.ngram.length()-numOverlap) + iter->second.tlx;
+                                    leftLeftBound  += loc - (iter->second.brx-iter->second.tlx)/5;
+                                    rightLeftBound += loc + (iter->second.brx-iter->second.tlx)/5;
                                     bc++;
                                 }
                             }
                         }
                         if (bc>0)
                         {
-                            lowerBound/=bc;
-                            upperBound/=bc;
-                            etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+                            leftLeftBound /=bc;
+                            rightLeftBound/=bc;
+                            //etlx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
                         }
                         else
                         {
                             assert(i==0);
-                            etlx=tlx;
+                            //etlx=tlx;
+                            leftLeftBound=tlx; 
+                            rightLeftBound=tlx; 
                         }
                         //getting right x location
-                        lowerBound=0;
-                        upperBound=0;
+                        int leftRightBound =0;
+                        int rightRightBound=0;
                         bc=0;
                         //search from one char into the new exemplar, working forwards
                         for (int si=i+1; si<=i+n; si++)
@@ -628,8 +624,8 @@ vector<Spotting>* Knowledge::Word::harvest()
                                 {
                                     assert(iter->second.ngram[0]==transcription[i+n]);
                                     //bounds from front
-                                    lowerBound += iter->second.tlx - (iter->second.brx-iter->second.tlx)/8;
-                                    upperBound += iter->second.tlx + (iter->second.brx-iter->second.tlx)/8;
+                                    leftRightBound  += iter->second.tlx - (iter->second.brx-iter->second.tlx)/7;
+                                    rightRightBound += iter->second.tlx + (iter->second.brx-iter->second.tlx)/7;
                                     bc++;
                                 }
                                 else if (si<i+n)
@@ -638,29 +634,31 @@ vector<Spotting>* Knowledge::Word::harvest()
                                     int numTo = (i+n)-si;
                                     int per = (iter->second.brx-iter->second.tlx)/iter->second.ngram.length();
                                     int loc = per * (numTo) + iter->second.tlx;
-                                    lowerBound += loc - (iter->second.brx-iter->second.tlx)/5;
-                                    upperBound += loc + (iter->second.brx-iter->second.tlx)/5;
+                                    leftRightBound += loc - (iter->second.brx-iter->second.tlx)/4;
+                                    rightRightBound += loc + (iter->second.brx-iter->second.tlx)/4;
                                     bc++;
                                 }
                             }
                         }
                         if (bc>0)
                         {
-                            lowerBound/=bc;
-                            upperBound/=bc;
-                            ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
+                            leftRightBound/=bc;
+                            rightRightBound/=bc;
+                            //ebrx = getBreakPoint(lowerBound,tly,upperBound,bry,pagePnt);
                         }
                         else
                         {
                             assert(i==transcription.length()-n);
-                            ebrx=brx;
+                            //ebrx=brx;
+                            leftRightBound=brx;
+                            rightRightBound=brx;
                         }
-
-                        Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
-                        toRet.type=SPOTTING_TYPE_EXEMPLAR;
+                        SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound);
+                        //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
+                        //toRet.type=SPOTTING_TYPE_EXEMPLAR;
                         toRet.ngramRank=rank;
                         //toRet.setHarvested();
-                        ret->push_back(toRet);
+                        ret.push_back(toRet);
                         //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
 #ifdef TEST_MODE
                         cout <<"harvested: "<<ngram<<endl;
@@ -674,6 +672,279 @@ vector<Spotting>* Knowledge::Word::harvest()
     }
     return ret;
 
+}
+
+inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat &img)
+{
+    float w = (img.at<unsigned char>(y1,x1)+img.at<unsigned char>(y2,x2))/(255.0+255.0);
+    g -> add_edge(x1+y1*img.cols, x2+y2*img.cols,w,w);
+}
+
+SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound)
+{
+    cv::Mat b;
+    int blockSize = (1+bry-tly)/2;
+    if (blockSize%2==0)
+        blockSize++;
+    cv::Mat wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+    if (wordImg.type()==CV_8UC3)
+        cv::cvtColor(wordImg,wordImg,CV_RGB2GRAY);
+    cv::adaptiveThreshold(wordImg, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
+
+    if (topBaseline==-1 || botBaseline==-1)
+        findBaselines(wordImg,b);
+
+
+    GraphType *g = new GraphType(width*height, 4*(width-1)*(height-1)-(height+width));
+
+    for (int i=0; i<width*height; i++)
+    {
+        g->add_node();
+    }
+
+    //Add anchors
+    float baselineH = (botBaseline-topBaseline)/2.0;
+    for (int c=tlx; c<=brx; c++)
+    {
+        float anchor_word=0;
+        float anchor_ngram=0;
+        if (c<leftLeftBound || c>rightRightBound)
+        {
+            anchor_word=1;
+        }
+        else if (c> rightLeftBound && c<leftRightBound)
+        {
+            anchor_ngram=1;
+        }
+        for (int r=topBaseline+1; r<botBaseline; r++)
+        {
+            float str= (baselineH-fabs(r-baselineH))/baselineH;
+            if (b.at<unsigned char>(wordCord(r,c)))
+            {
+                int index = wordIndex(r,c);//i+width*j;
+                g -> add_tweights(index, anchor_word*str,anchor_ngram*str);
+            }
+            else
+                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+        }
+        for (int r=tly; r<topBaseline; r++)
+            if (!b.at<unsigned char>(wordCord(r,c)))
+                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+        for (int r=botBaseline+1; r<bry; r++)
+            if (!b.at<unsigned char>(wordCord(r,c)))
+                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+    }
+
+    //set up graph
+    int width = (brx+1)-tlx;
+    int height = (bry+1)-tly;
+    for (int i=0; i<width; i++)
+    {
+        for (int j=0; j<height; j++)
+        {
+            if (i+1<width)
+            {
+                setEdge(i,j,i+1,j,g,wordImg);
+            }
+
+            if (j+1<height)
+            {
+                setEdge(i,j,i,j+1,g,wordImg);
+            }
+
+            if (j>0 && i<width-1)
+            {
+                setEdge(i,j,i+1,j-1,g,wordImg);
+            }
+
+            if (j<height-1 && i<width-1)
+            {
+                setEdge(i,j,i+1,j+1,g,wordImg);
+            }
+        }
+    }
+    float ret = g -> maxflow();
+
+#ifdef TEST_MODE
+    cv::Mat show;
+    cv::cvtColor(wordImg,show,CV_GRAY2RGB);
+    
+    
+    for (int i=0; i<width; i++)
+    {
+        for (int j=0; j<height; j++)
+        {
+            int index=i+j*width;
+            if (g->what_segment(index) == GraphType::SOURCE)
+            {
+                show.at<cv::Vec3b>(j,i)[0] = 0;
+                //show.at<cv::Vec3b>(j,i)[1] = 255;
+            }
+            else
+            {
+                show.at<cv::Vec3b>(j,i)[1] = 0;
+                //show.at<cv::Vec3b>(j,i)[0] = 255;
+            }
+        }
+    }
+    cv::imshow("seg results",show);
+    cv::waitKey();
+#endif
+
+    return NULL;//TODO
+}
+
+void Knowledge::Word::getBaselines(const cv::Mat& gray, const cv::Mat& bin)
+{
+    
+    //top and botBaseline should have page cords.
+    int avgWhite=0;
+    int countWhite=0;
+    Mat hist = Mat::zeros(gray.rows,1,CV_32F);
+    map<int,int> topPixCounts, botPixCounts;
+    for (int c=0; c<gray.cols; c++)
+    {
+        int topPix=-1;
+        int lastSeen=-1;
+        for (int r=0; r<gray.rows; r++)
+        {
+            if (bin.at<unsigned char>(r,c))
+            {
+                if (topPix==-1)
+                {
+                    topPix=r;
+            }
+                lastSeen=r;
+            }
+            else
+            {
+                avgWhite+=gray.at<unsigned char>(r,c);
+                countWhite++;
+            }
+            hist.at<float>(r,0)+=gray.at<unsigned char>(r,c);
+        }
+        if (topPix!=-1)
+            topPixCounts[topPix]++;
+        if (lastSeen!=-1)
+            botPixCounts[lastSeen]++;
+    }
+    avgWhite /= countWhite;
+
+    int maxTop=-1;
+    int maxTopCount=-1;
+    for (auto c : topPixCounts)
+    {
+        if (c.second > maxTopCount)
+        {
+            maxTopCount=c.second;
+            maxTop=c.first;
+        }
+    }
+    int maxBot=-1;
+    int maxBotCount=-1;
+    for (auto c : botPixCounts)
+    {
+        if (c.second > maxBotCount)
+        {
+            maxBotCount=c.second;
+            maxBot=c.first;
+        }
+    }
+
+    //Mat kernel = Mat::ones( 5, 1, CV_32F )/ (float)(5);
+    //filter2D(hist, hist, -1 , kernel );
+    Mat edges;
+    int pad=5;
+    Mat paddedHist = Mat::ones(hist.rows+2*pad,1,hist.type());
+    double avg=0;
+    double maxHist=-99999;
+    double minHist=99999;
+    for (int r=0; r<hist.rows; r++)
+    {
+        avg+=hist.at<float>(r,0);
+        if (hist.at<float>(r,0)>maxHist)
+            maxHist=hist.at<float>(r,0);
+        if (hist.at<float>(r,0)<minHist)
+            minHist=hist.at<float>(r,0);
+    }
+    avg/=hist.rows;
+    paddedHist *= avg;
+    hist.copyTo(paddedHist(Rect(0,pad,1,hist.rows)));
+    float kernelData[11] = {1,1,1,1,.5,0,-.5,-1,-1,-1,-1};
+    Mat kernel = Mat(11,1,CV_32F,kernelData);
+    filter2D(paddedHist, edges, -1 , kernel );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
+    float kernelData2[11] = {.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1};
+    Mat kernel2 = Mat(11,1,CV_32F,kernelData2);
+    Mat blurred;
+    filter2D(hist, blurred, -1 , kernel2 );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
+    topBaseline=-1;
+    float maxEdge=-9999999;
+    botBaseline=-1;
+    float minEdge=9999999;
+    float minPeak=9999999;
+    float center=-1;
+    for (int r=pad; r<gray.rows+pad; r++)
+    {
+        float v = edges.at<float>(r,0);
+        if (v>maxEdge)
+        {
+            maxEdge=v;
+            topBaseline=r-pad;
+        }
+        if (v<minEdge)
+        {
+            minEdge=v;
+            botBaseline=r-pad;
+        }
+
+        if (blurred.at<float>(r-pad,0) < minPeak) {
+            center=r-pad;
+            minPeak=blurred.at<float>(r-pad,0);
+        }
+    }
+    if (topBaseline>center)
+    {
+        if (maxTop < center)
+            topBaseline=maxTop;
+        else
+        {
+            maxEdge=-999999;
+            for (int r=pad; r<center+pad; r++)
+            {
+                float v = edges.at<float>(r,0);
+                if (v>maxEdge)
+                {
+                    maxEdge=v;
+                    topBaseline=r-pad;
+                }
+            }
+        }
+    }
+    if (botBaseline<center)
+    {
+        if (maxBot > center)
+            botBaseline=maxBot;
+        else
+        {
+            minEdge=999999;
+            for (int r=center+1; r<gray.rows+pad; r++)
+            {
+                float v = edges.at<float>(r,0);
+                if (v<minEdge)
+                {
+                    minEdge=v;
+                    botBaseline=r-pad;
+                }
+            }
+        }
+    }
+    if (botBaseline < topBaseline)//If they fail this drastically, the others won't be much better.
+    {
+        topBaseline=maxTop;
+        botBaseline=maxBot;
+    }
+    topBaseline += tly;
+    botBaseline += tly;
 }
 
 
@@ -756,54 +1027,6 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
     cv::imshow("break point",orig);
     cv::waitKey();
 #endif
-    /*GraphType *g = new GraphType(width*height, 4*(width-1)*(height-1)-(height+width));
-
-    for (int i=0; i<width*height; i++)
-    {
-        g->add_node();
-    }
-
-                if (img.pixel(i,j))
-                {
-                    int index = i+width*j;
-                    g -> add_tweights(index, anchor_weight,0);//invDistMap[index], 0);
-                    count_source--;
-                }
-    for (int i=0; i<width; i++)
-    {
-        for (int j=0; j<height; j++)
-        {
-            if (i+1<width)
-            {
-                setEdge(i,j,i+1,j,g,img,invDistMap,BLACK_TO_BLACK_H_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_H_BIAS,reducer,width);
-            }
-
-            if (j+1<height)
-            {
-                setEdge(i,j,i,j+1,g,img,invDistMap,BLACK_TO_BLACK_V_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_V_BIAS,reducer,width);
-            }
-
-            if (j>0 && i<width-1)
-            {
-                setEdge(i,j,i+1,j-1,g,img,invDistMap,BLACK_TO_BLACK_D_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_D_BIAS,reducer,width);
-            }
-
-            if (j<height-1 && i<width-1)
-            {
-                setEdge(i,j,i+1,j+1,g,img,invDistMap,BLACK_TO_BLACK_D_BIAS,WHITE_TO_BLACK_BIAS,BLACK_TO_WHITE_BIAS,WHITE_TO_WHITE_D_BIAS,reducer,width);
-            }
-        }
-    }
-    int ret = g -> maxflow();
-    for (int index=0; index<width*height; index++)
-    {
-        if (img.pixelIsMine(index%width,index/width))
-        {
-            if (g->what_segment(index) == GraphType::SOURCE)
-            {
-            }
-        }
-    }*/
 
     return retX+lxBound;
 }

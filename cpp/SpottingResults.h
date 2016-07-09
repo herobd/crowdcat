@@ -54,16 +54,21 @@ public:
     {
         return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
     }
+    virtual cv::Mat ngramImg() const
+    {
+        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+    }
     int ngramRank;
 
-private:
+protected:
     static unsigned long _id;
 };
 
-class SpottingImage : public Spotting {
+class SpottingImage : public Spotting 
+{
 public:
     SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram="") : 
-        Spotting(s)
+        Spotting(s), ngramImage(s.ngramImg())
     {
         int oneSide = maxWidth/2;
         int sideFromR = (oneSide- (brx-tlx)/2);
@@ -154,13 +159,39 @@ public:
     {
         return image;
     }
-    cv::Mat ngramImg()
+    cv::Mat ngramImg() const
     {
-        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+        return ngramImage; //(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
     }
     int classified;
 private:
     cv::Mat image;
+    cv::Mat ngramImage;
+};
+
+class SpottingExemplar : public Spotting
+{
+public:
+    SpottingExemplar(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score, cv::Mat ngramImage) : Spotting(tlx,tly,brx,bry,pageId,pagePnt,ngram,score) , ngramImage(ngramImage)
+    {
+        id = _id++;
+        type=SPOTTING_TYPE_EXEMPLAR;
+    }
+    SpottingExemplar(const SpottingImage& s) : Spotting(s) , ngramImage(s.ngramImg())
+    {
+        type=SPOTTING_TYPE_EXEMPLAR;
+    }
+    SpottingExemplar(const SpottingExemplar& s) : Spotting(s) , ngramImage(s.ngramImg())
+    {
+        type=SPOTTING_TYPE_EXEMPLAR;
+    }
+
+    cv::Mat ngramImg() const
+    {
+        return ngramImage; 
+    }
+private:
+    cv::Mat ngramImage;
 };
 
 

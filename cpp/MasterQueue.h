@@ -77,8 +77,8 @@ public:
     void transcriptionFeedback(unsigned long id, string transcription);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
     NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
-    void enqueueNewExemplars(vector<Spotting>* newExemplars) {newExemplarsBatchQueue.enqueue(newExemplars);}
-    vector<Spotting> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) {return newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars); }
+    void enqueueNewExemplars(const vector<Spotting*>& newExemplars) {newExemplarsBatchQueue.enqueue(newExemplars);}
+    vector<SpottingExemplar*> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) {return newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars); }
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();

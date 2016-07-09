@@ -24,7 +24,7 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
             vector<pair<unsigned long,string> > toRemoveSpottings;        
             vector<unsigned long> toRemoveBatches;        
             vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
-            vector<Spotting> newExemplars;
+            vector<Spotting*> newExemplars;
             vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars);
             masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
             masterQueue->enqueueNewExemplars(&newExemplars);

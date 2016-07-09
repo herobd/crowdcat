@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <atomic>
 #include <iomanip>
+#include "maxflow/graph.h"
 
 #include "SpottingResults.h"
 #include "Lexicon.h"
@@ -19,6 +20,7 @@
 
 using namespace std;
 
+typedef Graph<float,float,float> GraphType;
 
 #define OVERLAP_LINE_THRESH 0.45
 #define OVERLAP_WORD_THRESH 0.45
@@ -31,7 +33,7 @@ class TranscribeBatch;
 class WordBackPointer
 {
     public:
-        virtual vector<Spotting>* result(string selected)= 0;
+        virtual vector<Spotting*> result(string selected)= 0;
         virtual void error()= 0;
         virtual TranscribeBatch* removeSpotting(unsigned long sid)= 0;
 };
@@ -118,28 +120,32 @@ private:
     Meta meta;
     const cv::Mat* pagePnt;
     int pageId;
-    
+   
+    int topBaseline, botBaseline;
+
     multimap<int,Spotting> spottings;
     bool done;
     unsigned long sentBatchId;
     multimap<float,string> scoreAndThresh(vector<string> match);
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
-    TranscribeBatch* queryForBatch(vector<Spotting>* newExemplars);
-    vector<Spotting>* harvest();
+    TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
+    vector<Spotting*> harvest();
+    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound);
+    void getBaselines(const cv::Mat& gray, const cv::Mat& bin);
 
     string transcription;
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0)
+    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -149,7 +155,7 @@ public:
         pthread_rwlock_destroy(&lock);
     }
     
-    TranscribeBatch* addSpotting(Spotting s,vector<Spotting>* newExemplars);
+    TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId=NULL);
     TranscribeBatch* removeSpotting(unsigned long sid) {return removeSpotting(sid,NULL);}
     
@@ -164,7 +170,7 @@ public:
         pthread_rwlock_unlock(&lock);
     }
 
-    vector<Spotting>* result(string selected)
+    vector<Spotting*> result(string selected)
     {
         cout <<"recived trans: "<<selected<<endl;
         pthread_rwlock_wrlock(&lock);
@@ -231,7 +237,7 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addWord(Spotting s,vector<Spotting>* newExemplars)
+    TranscribeBatch* addWord(Spotting s,vector<Spotting*>* newExemplars)
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
@@ -299,7 +305,7 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addLine(Spotting s,vector<Spotting>* newExemplars)
+    TranscribeBatch* addLine(Spotting s,vector<Spotting*>* newExemplars)
     {
         Line* newLine = new Line(s.tly, s.bry, &pageImg, id);
         
@@ -343,7 +349,7 @@ private:
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
-    void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting>* newExemplars);
+    void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 
 public:
     Corpus();
@@ -353,9 +359,9 @@ public:
         for (auto p : pages)
             delete p.second;
     }
-    vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting>* newExemplars);
+    vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
-    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting>* newExemplars);
+    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars);
     //void removeSpotting(unsigned long sid);
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
