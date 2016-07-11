@@ -12,7 +12,11 @@
 SpottingQuery class
 {
     public:
-    SpottingQuery(const Spotting* e) : id(e->id) {//use e->ngramImg() to get correct exemplar image}
+    SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram) {}//use e->ngramImg() to get correct exemplar image}
+
+    private:
+    string ngram;
+    unsigned long id;
 };
 
 Spotter class
@@ -24,6 +28,7 @@ Spotter class
 
     void addQueries(vector<Spotting*>& exemplars);
 
+    virtual vector<Spotting> runQuery(SpottingQuery* query);
 
     private:
     MasterQueue* masterQueue;

@@ -22,8 +22,7 @@ void Spotter::run(int numThreads)
             mutLock.lock();
             SpottingQuery* query = dequeue();
             mutLock.unlock();
-            vector<Spotting> results;
-            //TODO run query
+            vector<Spotting*> results = runQuery(query);
             bool cont=true;
             emLock.lock();
             auto iter = emList.find(query->getId());

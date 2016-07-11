@@ -634,8 +634,11 @@ vector<Spotting*> Knowledge::Word::harvest()
                                     int numTo = (i+n)-si;
                                     int per = (iter->second.brx-iter->second.tlx)/iter->second.ngram.length();
                                     int loc = per * (numTo) + iter->second.tlx;
-                                    leftRightBound += loc - (iter->second.brx-iter->second.tlx)/4;
-                                    rightRightBound += loc + (iter->second.brx-iter->second.tlx)/4;
+                                    leftRightBound += loc - (iter->second.brx-iter->second.tlx)/5.5;
+                                    rightRightBound += loc + (iter->second.brx-iter->second.tlx)/5.5;
+                                    //int nloc = getBreakPoint(leftRightBound,tly,rightRightBound,bry,pagePnt);
+                                    //leftRightBound += (nloc-loc)/2;
+                                    //rightRightBound += (nloc-loc)/2;
                                     bc++;
                                 }
                             }
@@ -653,16 +656,17 @@ vector<Spotting*> Knowledge::Word::harvest()
                             leftRightBound=brx;
                             rightRightBound=brx;
                         }
-                        SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound);
+                        SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound,ngram);
                         //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
                         //toRet.type=SPOTTING_TYPE_EXEMPLAR;
-                        toRet.ngramRank=rank;
+                        toRet->ngramRank=rank;
                         //toRet.setHarvested();
                         ret.push_back(toRet);
                         //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
 #ifdef TEST_MODE
                         cout <<"harvested: "<<ngram<<endl;
-                        cv::imshow("harvested",toRet.img());
+                        cv::imshow("harvested",toRet->ngramImg());
+                        cv::imshow("boundary image",toRet->img());
                         cv::waitKey();
 #endif
                     }
@@ -676,11 +680,12 @@ vector<Spotting*> Knowledge::Word::harvest()
 
 inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat &img)
 {
-    float w = (img.at<unsigned char>(y1,x1)+img.at<unsigned char>(y2,x2))/(255.0+255.0);
-    g -> add_edge(x1+y1*img.cols, x2+y2*img.cols,w,w);
+    float w = ((255-img.at<unsigned char>(y1,x1))+(255-img.at<unsigned char>(y2,x2)))/(255.0+255.0);
+    g -> add_edge(x1+y1*img.cols, x2+y2*img.cols,w*w,w*w);
+    //cout << w <<endl;
 }
 
-SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound)
+SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram)
 {
     cv::Mat b;
     int blockSize = (1+bry-tly)/2;
@@ -694,13 +699,19 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
     if (topBaseline==-1 || botBaseline==-1)
         findBaselines(wordImg,b);
 
+    int width = (brx+1)-tlx;
+    int height = (bry+1)-tly;
 
-    GraphType *g = new GraphType(width*height, 4*(width-1)*(height-1)-(height+width));
+    GraphType *g = new GraphType(width*height, 2*(width)*(height)-(height+width));
 
     for (int i=0; i<width*height; i++)
     {
         g->add_node();
     }
+#ifdef TEST_MODE
+    cv::Mat showA;
+    cv::cvtColor(wordImg,showA,CV_GRAY2RGB);
+#endif    
 
     //Add anchors
     float baselineH = (botBaseline-topBaseline)/2.0;
@@ -710,34 +721,50 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
         float anchor_ngram=0;
         if (c<leftLeftBound || c>rightRightBound)
         {
-            anchor_word=1;
+            anchor_word=500;
+            /*for (int r=tly; r<topBaseline; r++)
+                if (b.at<unsigned char>(wordCord(r,c)))
+                    g -> add_tweights(wordIndex(r,c), NGRAM_GRAPH_BIAS,0);
+            for (int r=botBaseline+1; r<bry; r++)
+                if (b.at<unsigned char>(wordCord(r,c)))
+                    g -> add_tweights(wordIndex(r,c), NGRAM_GRAPH_BIAS,0);*/
         }
         else if (c> rightLeftBound && c<leftRightBound)
         {
-            anchor_ngram=1;
+            anchor_ngram=500;
         }
+        /*else if (c>=leftLeftBound && c<leftLeftBound+0.3*(rightLeftBound-leftLeftBound))
+        {
+            anchor_word = ((0.3*(rightLeftBound-leftLeftBound))-(c-leftLeftBound))/(0.3*(rightLeftBound-leftLeftBound));
+        }
+        else if (c<=rightRightBound && c>rightRightBound-0.3*(rightRightBound-leftRightBound))
+        {
+            anchor_ngram = ((0.3*(rightRightBound-leftRightBound))-(rightRightBound-c))/(0.3*(rightRightBound-leftRightBound));
+        }*/
         for (int r=topBaseline+1; r<botBaseline; r++)
         {
-            float str= (baselineH-fabs(r-baselineH))/baselineH;
+            float str= (baselineH-fabs((r-topBaseline)-baselineH))/baselineH;
             if (b.at<unsigned char>(wordCord(r,c)))
             {
-                int index = wordIndex(r,c);//i+width*j;
-                g -> add_tweights(index, anchor_word*str,anchor_ngram*str);
+                g -> add_tweights(wordIndex(r,c), anchor_word*str,anchor_ngram*str);
+#ifdef TEST_MODE
+                showA.at<cv::Vec3b>(wordCord(r,c))[0]=.40*anchor_word*str;
+                showA.at<cv::Vec3b>(wordCord(r,c))[1]=.40*anchor_ngram*str;
+                showA.at<cv::Vec3b>(wordCord(r,c))[2]=0;
+#endif
             }
-            else
-                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+            //else
+            //    g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);
         }
-        for (int r=tly; r<topBaseline; r++)
+        /*for (int r=tly; r<topBaseline; r++)
             if (!b.at<unsigned char>(wordCord(r,c)))
-                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+                g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);
         for (int r=botBaseline+1; r<bry; r++)
             if (!b.at<unsigned char>(wordCord(r,c)))
-                g -> add_tweights(index, 0,NGRAM_GRAPH_BIAS);
+                g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);*/
     }
 
     //set up graph
-    int width = (brx+1)-tlx;
-    int height = (bry+1)-tly;
     for (int i=0; i<width; i++)
     {
         for (int j=0; j<height; j++)
@@ -752,7 +779,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
                 setEdge(i,j,i,j+1,g,wordImg);
             }
 
-            if (j>0 && i<width-1)
+            /*if (j>0 && i<width-1)
             {
                 setEdge(i,j,i+1,j-1,g,wordImg);
             }
@@ -760,11 +787,58 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             if (j<height-1 && i<width-1)
             {
                 setEdge(i,j,i+1,j+1,g,wordImg);
-            }
+            }*/
         }
     }
-    float ret = g -> maxflow();
+    g -> maxflow();
+    
+    cv::Mat mask(b.rows,b.cols,CV_8U);
+    int etlx=99999;
+    int etly=99999;
+    int ebrx=-99999;
+    int ebry=-99999;
 
+    for (int i=0; i<width; i++)
+    {
+        for (int j=0; j<height; j++)
+        {
+            int index=i+j*width;
+            if (g->what_segment(index) == GraphType::SOURCE)
+            {
+                mask.at<unsigned char>(j,i) = 0;
+            }
+            else
+            {
+                mask.at<unsigned char>(j,i) = 1;
+                if (b.at<unsigned char>(j,i))
+                {
+                    if (i<etlx)
+                        etlx=i;
+                    if (j<etly)
+                        etly=j;
+                    if (i>ebrx)
+                        ebrx=i;
+                    if (j>ebry)
+                        ebry=j;
+        
+                }
+            }
+
+        }
+    }
+    //pad
+    int pad=2;
+    if (etlx-pad>=0)
+        etlx-=pad;
+    if (etly-pad>=0)
+        etly-=pad;
+    if (ebrx+pad<width)
+        ebrx+=pad;
+    if (ebry+pad<height)
+        ebry+=pad;
+    
+    cv::Mat exe = inpainting(wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)),mask(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)));
+    SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,0,exe);
 #ifdef TEST_MODE
     cv::Mat show;
     cv::cvtColor(wordImg,show,CV_GRAY2RGB);
@@ -778,29 +852,32 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             if (g->what_segment(index) == GraphType::SOURCE)
             {
                 show.at<cv::Vec3b>(j,i)[0] = 0;
-                //show.at<cv::Vec3b>(j,i)[1] = 255;
+                show.at<cv::Vec3b>(j,i)[1] = 255;
             }
             else
             {
                 show.at<cv::Vec3b>(j,i)[1] = 0;
-                //show.at<cv::Vec3b>(j,i)[0] = 255;
+                show.at<cv::Vec3b>(j,i)[0] = 255;
             }
         }
     }
+    cv::imshow("anchors",showA);
     cv::imshow("seg results",show);
-    cv::waitKey();
+    //cv::imshow("exe",ret->ngramImg());
+    //cv::imshow("fromPage",ret->img());
+    //cv::waitKey();
 #endif
-
-    return NULL;//TODO
+    delete g;
+    return ret;
 }
 
-void Knowledge::Word::getBaselines(const cv::Mat& gray, const cv::Mat& bin)
+void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
 {
     
     //top and botBaseline should have page cords.
     int avgWhite=0;
     int countWhite=0;
-    Mat hist = Mat::zeros(gray.rows,1,CV_32F);
+    cv::Mat hist = cv::Mat::zeros(gray.rows,1,CV_32F);
     map<int,int> topPixCounts, botPixCounts;
     for (int c=0; c<gray.cols; c++)
     {
@@ -851,11 +928,11 @@ void Knowledge::Word::getBaselines(const cv::Mat& gray, const cv::Mat& bin)
         }
     }
 
-    //Mat kernel = Mat::ones( 5, 1, CV_32F )/ (float)(5);
-    //filter2D(hist, hist, -1 , kernel );
-    Mat edges;
+    //cv::Mat kernel = cv::Mat::ones( 5, 1, CV_32F )/ (float)(5);
+    //cv::filter2D(hist, hist, -1 , kernel );
+    cv::Mat edges;
     int pad=5;
-    Mat paddedHist = Mat::ones(hist.rows+2*pad,1,hist.type());
+    cv::Mat paddedHist = cv::Mat::ones(hist.rows+2*pad,1,hist.type());
     double avg=0;
     double maxHist=-99999;
     double minHist=99999;
@@ -869,14 +946,14 @@ void Knowledge::Word::getBaselines(const cv::Mat& gray, const cv::Mat& bin)
     }
     avg/=hist.rows;
     paddedHist *= avg;
-    hist.copyTo(paddedHist(Rect(0,pad,1,hist.rows)));
+    hist.copyTo(paddedHist(cv::Rect(0,pad,1,hist.rows)));
     float kernelData[11] = {1,1,1,1,.5,0,-.5,-1,-1,-1,-1};
-    Mat kernel = Mat(11,1,CV_32F,kernelData);
-    filter2D(paddedHist, edges, -1 , kernel );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
+    cv::Mat kernel = cv::Mat(11,1,CV_32F,kernelData);
+    cv::filter2D(paddedHist, edges, -1 , kernel );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
     float kernelData2[11] = {.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1};
-    Mat kernel2 = Mat(11,1,CV_32F,kernelData2);
-    Mat blurred;
-    filter2D(hist, blurred, -1 , kernel2 );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
+    cv::Mat kernel2 = cv::Mat(11,1,CV_32F,kernelData2);
+    cv::Mat blurred;
+    cv::filter2D(hist, blurred, -1 , kernel2 );//, Point(-1,-1), 0 ,BORDER_AVERAGE);
     topBaseline=-1;
     float maxEdge=-9999999;
     botBaseline=-1;
@@ -1029,6 +1106,315 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
 #endif
 
     return retX+lxBound;
+}
+/*void Knowledge::computeInverseDistanceMap(const cv::Mat &src, int* out)
+{
+    int maxDist=0;
+    int g[src.cols*src.rows];
+    for (int x=0; x<src.cols; x++)
+    {
+        if (src.pixel(x,0))
+        {
+            g[x+0*src.cols]=0;
+        }
+        else
+        {
+            g[x+0*src.cols]=INT_POS_INFINITY;//src.cols*src.rows;
+        }
+        
+        for (int y=1; y<src.rows; y++)
+        {
+            if (src.pixel(x,y))
+            {
+                g[x+y*src.cols]=0;
+            }
+            else
+            {
+                if (g[x+(y-1)*src.cols] != INT_POS_INFINITY)
+                    g[x+y*src.cols]=1+g[x+(y-1)*src.cols];
+                else
+                    g[x+y*src.cols] = INT_POS_INFINITY;
+            }
+        }
+        
+        for (int y=src.rows-2; y>=0; y--)
+        {
+            if (g[x+(y+1)*src.cols]<g[x+y*src.cols])
+            {
+                if (g[x+(y+1)*src.cols] != INT_POS_INFINITY)
+                    g[x+y*src.cols]=1+g[x+(y+1)*src.cols];
+                else
+                    g[x+y*src.cols] = INT_POS_INFINITY;
+            }
+        }
+        
+    }
+    
+    int q;
+    int s[src.cols];
+    int t[src.cols];
+    int w;
+    for (int y=0; y<src.rows; y++)
+    {
+        q=0;
+        s[0]=0;
+        t[0]=0;
+        for (int u=1; u<src.cols;u++)
+        {
+            while (q>=0 && f(t[q],s[q],y,src.cols,g) > f(t[q],u,y,src.cols,g))
+            {
+                q--;
+            }
+            
+            if (q<0)
+            {
+                q=0;
+                s[0]=u;
+            }
+            else
+            {
+                w = SepPlusOne(s[q],u,y,src.cols,g);
+                if (w<src.cols)
+                {
+                    q++;
+                    s[q]=u;
+                    t[q]=w;
+                }
+            }
+        }
+        
+        for (int u=src.cols-1; u>=0; u--)
+        {
+            out[u+y*src.cols]= f(u,s[q],y,src.cols,g);
+            if (out[u+y*src.cols] > maxDist)
+                maxDist = out[u+y*src.cols];
+            if (u==t[q])
+                q--;
+        }
+    }
+    
+    
+    //    QImage debug(src.cols,src.rows,src.format());
+    //    debug.setColorTable(src.colorTable());
+    //    for (int i=0; i<debug.width(); i++)
+    //    {
+    //        for (int j=0; j<debug.height(); j++)
+    //            debug.setPixel(i,j,(int)((pow(out[i+j*debug.width()],.2)/((double)pow(maxDist,.2)))*255));
+            
+    //    }
+    //    debug.save("./reg_dist_map.pgm");
+    //    printf("image format:%d\n",debug.format());
+    
+    //invert
+//    printf("maxDist=%d\n",maxDist);
+    maxDist++;
+//    double normalizer = (25.0/maxDist);
+    double e = 10;
+    double b = 25;
+    double m = 2000;
+    double a = INV_A;
+    int max_cc_size=500;
+    
+//    double normalizer = (b/m);
+    BImage mark = src.makeImage();
+    QVector<QPoint> workingStack;
+    QVector<QPoint> growingComponent;
+    
+    
+    int newmax = 0;
+    int newmax2 = 0;
+    int newmin = INT_MAX;
+    for (int q = 0; q < src.cols*src.rows; q++)
+    {   
+        //out[q] = pow(6,24-out[q]*normalizer)/pow(6,20);
+        if (src.pixel(q%src.cols,q/src.cols) && mark.pixel(q%src.cols,q/src.cols))
+        {
+            //fill bias
+            QPoint p(q%src.cols,q/src.cols);
+            workingStack.push_back(p);
+            mark.setPixel(p,false);
+            while (!workingStack.isEmpty())
+            {   
+                QPoint cur = workingStack.back();
+                workingStack.pop_back();
+                growingComponent.append(cur);
+                
+                
+                
+                
+                if (cur.x()>0 && mark.pixel(cur.x()-1,cur.y()))
+                {
+                    QPoint pp(cur.x()-1,cur.y());
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+                
+                
+                if (cur.x()<mark.width()-1 && mark.pixel(cur.x()+1,cur.y()))
+                {
+                    QPoint pp(cur.x()+1,cur.y());
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                    
+                }
+                if (cur.y()<mark.height()-1 && mark.pixel(cur.x(),cur.y()+1))
+                {
+                    QPoint pp(cur.x(),cur.y()+1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+                if (cur.y()>0 && mark.pixel(cur.x(),cur.y()-1))
+                {
+                    QPoint pp(cur.x(),cur.y()-1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+                //diagonals
+                if (cur.x()>0 && cur.y()>0 && mark.pixel(cur.x()-1,cur.y()-1))
+                {
+                    QPoint pp(cur.x()-1,cur.y()-1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+                
+                
+                if (cur.x()<mark.width()-1 && cur.y()>0 && mark.pixel(cur.x()+1,cur.y()-1))
+                {
+                    QPoint pp(cur.x()+1,cur.y()-1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                    
+                }
+                if (cur.x()>0 && cur.y()<mark.height()-1 && mark.pixel(cur.x()-1,cur.y()+1))
+                {
+                    QPoint pp(cur.x()-1,cur.y()+1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+                if (cur.x()<mark.width()-1 && cur.y()>0 && mark.pixel(cur.x()+1,cur.y()-1))
+                {
+                    QPoint pp(cur.x()+1,cur.y()-1);
+                    workingStack.push_back(pp);
+                    mark.setPixel(pp,false);
+                }
+            }
+            int cc_size = growingComponent.size();
+            while (!growingComponent.isEmpty())
+            {
+                QPoint cur = growingComponent.back();
+                growingComponent.pop_back();
+                int index = cur.x()+src.cols*cur.y();
+                out[index] = pow(b-std::min(out[index]*(b/m),b),e)*a/(pow(b,e)) + std::min(cc_size,max_cc_size) + 1;
+                
+                if (out[index]>newmax)
+                    newmax=out[index];
+                
+                if (out[index]>newmax2 && out[index]<newmax)
+                    newmax2=out[index];
+                
+                if (out[index]<newmin)
+                    newmin=out[index];
+            }
+        }
+        else if (!src.pixel(q%src.cols,q/src.cols))
+        {
+            out[q] = pow(b-std::min(out[q]*(b/m),b),e)*a/(pow(b,e)) + 1;
+        }
+
+        if (out[q]>newmax)
+            newmax=out[q];
+        if (out[q]>newmax2 && out[q]<newmax)
+            newmax2=out[q];
+        if (out[q]<newmin)
+            newmin=out[q];
+    }
+    
+}*/
+cv::Mat Knowledge::inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg, double* std, bool show)
+{
+    int x_start[4] = {0,0,mask.cols-1,mask.cols-1};
+    int x_end[4] = {mask.cols,mask.cols,-1,-1};
+    int y_start[4] = {0,mask.rows-1,0,mask.rows-1};
+    int y_end[4] = {mask.rows,-1,mask.rows,-1};
+    cv::Mat dst = src.clone();
+    cv::Mat P[4];
+    cv::Mat I = src.clone();
+    for (int i=0; i<4; i++)
+    {
+        P[i] = (cv::Mat_<unsigned char>(mask.rows,mask.cols));
+        cv::Mat M = mask.clone();
+        int yStep = y_end[i]>y_start[i]?1:-1;
+        int xStep = x_end[i]>x_start[i]?1:-1;
+        for (int y=y_start[i]; y!=y_end[i]; y+=yStep)
+            for (int x=x_start[i]; x!=x_end[i]; x+=xStep)
+            {
+                
+                if (M.at<unsigned char>(y,x) == 0)
+                {
+                    
+                    int denom = (x-1>=0?M.at<unsigned char>(y,x-1):0) + 
+                                (y-1>=0?M.at<unsigned char>(y-1,x):0) +
+                                (x+1<I.cols?M.at<unsigned char>(y,x+1):0) + 
+                                (y+1<I.rows?M.at<unsigned char>(y+1,x):0);
+                    if (denom !=0)
+                    {
+                        P[i].at<unsigned char>(y,x) = (
+                                                        (x-1>=0?I.at<unsigned char>(y,x-1)*M.at<unsigned char>(y,x-1):0) +
+                                                        (y-1>=0?I.at<unsigned char>(y-1,x)*M.at<unsigned char>(y-1,x):0) + 
+                                                        (x+1<I.cols?I.at<unsigned char>(y,x+1)*M.at<unsigned char>(y,x+1):0) +
+                                                        (y+1<I.rows?I.at<unsigned char>(y+1,x)*M.at<unsigned char>(y+1,x):0)
+                                                      )/denom;
+                        //if (P[i].at<unsigned char>(y,x)!=0)
+                        //{
+                            if (avg!=NULL && std!=NULL)
+                            {
+                                if (P[i].at<unsigned char>(y,x)>*avg)
+                                {
+                                    double dif = std::min(P[i].at<unsigned char>(y,x)-(*avg), 3*(*std));
+                                    P[i].at<unsigned char>(y,x) -= 8.5*dif/(*std);
+                                }
+                                else if (P[i].at<unsigned char>(y,x)<*avg)
+                                {
+                                    double dif = std::min((*avg)-P[i].at<unsigned char>(y,x), 3*(*std));
+                                    P[i].at<unsigned char>(y,x) += 8.5*dif/(*std);
+                                }
+                            }
+                            I.at<unsigned char>(y,x) = P[i].at<unsigned char>(y,x);
+                            M.at<unsigned char>(y,x) = 1;
+                        //}
+                        //else
+                        //    P[i].at<unsigned char>(y,x) = 255;
+                    }
+                    else
+                        P[i].at<unsigned char>(y,x) = 255;
+                }
+                else
+                    P[i].at<unsigned char>(y,x) = I.at<unsigned char>(y,x);
+            }
+    }
+    if (show)
+    {
+        imshow("P[0]",P[0]); cv::waitKey();
+        imshow("P[1]",P[1]); cv::waitKey();
+        imshow("P[2]",P[2]); cv::waitKey();
+        imshow("P[3]",P[3]); cv::waitKey();
+    }
+    
+    for (int y=0; y<mask.rows; y++)
+        for (int x=0; x<mask.cols; x++)
+        {
+            if (mask.at<unsigned char>(y,x) == 0)
+            {
+                dst.at<unsigned char>(y,x) = std::min( std::min(P[0].at<unsigned char>(y,x),
+                                                                P[1].at<unsigned char>(y,x))
+                                                       ,
+                                                       std::min(P[2].at<unsigned char>(y,x),
+                                                                P[3].at<unsigned char>(y,x))
+                                                     );
+            }
+                                                 
+        }
+    return dst;
 }
 
 void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry)

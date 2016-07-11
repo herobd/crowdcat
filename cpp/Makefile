@@ -9,7 +9,7 @@ LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 
 PROGRAM_NAME = test
 
-OBJECTS = obj/TranscribeBatchQueue.o obj/NewExemplarsBatchQueue.o obj/Global.o obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o
+OBJECTS = obj/TranscribeBatchQueue.o obj/NewExemplarsBatchQueue.o obj/Global.o obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o obj/maxflow.o obj/graph.o
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME)
@@ -51,3 +51,10 @@ obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h
 obj/Lexicon.o: Lexicon.h Lexicon.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Lexicon.o Lexicon.cpp $(LIBS)
 
+obj/maxflow.o: maxflow/maxflow.cpp maxflow/graph.h maxflow/block.h  maxflow/instances.inc
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/maxflow.o maxflow/maxflow.cpp
+
+obj/graph.o: maxflow/graph.cpp maxflow/graph.h \
+                maxflow/block.h \
+                maxflow/instances.inc
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/graph.o maxflow/graph.cpp

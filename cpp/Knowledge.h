@@ -22,6 +22,8 @@ using namespace std;
 
 typedef Graph<float,float,float> GraphType;
 
+#define NGRAM_GRAPH_BIAS 0.001f
+
 #define OVERLAP_LINE_THRESH 0.45
 #define OVERLAP_WORD_THRESH 0.45
 #define THRESH_UNKNOWN_EST 0.2
@@ -104,6 +106,7 @@ namespace Knowledge
 //int averageCharWidth=40;
 
 //some general functions
+cv::Mat inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg=NULL, double* std=NULL, bool show=false);
 int getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
 void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry);
 
@@ -131,8 +134,16 @@ private:
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
     vector<Spotting*> harvest();
-    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound);
-    void getBaselines(const cv::Mat& gray, const cv::Mat& bin);
+    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram);
+    void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
+    cv::Point wordCord(int r, int c)
+    {
+        return cv::Point(c-tlx,r-tly);
+    }
+    int wordIndex(int r, int c)
+    {
+        return (c-tlx) + (brx-tlx+1)*(r-tly);
+    }
 
     string transcription;
 public:

@@ -509,7 +509,7 @@ void MasterQueue::transcriptionFeedback(unsigned long id, string transcription)
     vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription);
 
     //enqueue these for approval
-    if (newExemplars->size()>0)
+    if (newExemplars.size()>0)
         newExemplarsBatchQueue.enqueue(newExemplars);
     //delete newExemplars;
 }

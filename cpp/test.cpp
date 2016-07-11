@@ -78,13 +78,13 @@ int main() {
         string trans;
         cout << "transcription: ";
         cin >> trans;
-        vector<Spotting>* harvested = b->getBackPointer()->result(trans);
-        for (Spotting s: *harvested)
+        vector<Spotting*> harvested = b->getBackPointer()->result(trans);
+        for (Spotting* s: harvested)
         {
-            imshow("har: "+s.ngram,s.img());
+            imshow("har: "+s->ngram,s->img());
+            delete s;
         }
         cv::waitKey();
-        delete harvested;
     }
     c.show();
     /*TestQueue t;
