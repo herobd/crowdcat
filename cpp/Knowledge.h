@@ -340,8 +340,8 @@ public:
         return newLine->addWord(tlx,tly,brx,bry,gt);
     }
 
-    cv::Mat* getImg() {return &pageImg;}
-    int getId() {return id;}
+    const cv::Mat* getImg() const {return &pageImg;}
+    int getId() const {return id;}
 };
 
 
@@ -376,7 +376,7 @@ public:
     //void removeSpotting(unsigned long sid);
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
-    cv::Mat* imgForPageId(int pageId);
+    const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 
     {
         Page* p = new Page(imagePath);

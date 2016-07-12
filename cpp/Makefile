@@ -9,7 +9,7 @@ LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 
 PROGRAM_NAME = test
 
-OBJECTS = obj/TranscribeBatchQueue.o obj/NewExemplarsBatchQueue.o obj/Global.o obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o obj/maxflow.o obj/graph.o
+OBJECTS = obj/TranscribeBatchQueue.o obj/NewExemplarsBatchQueue.o obj/Global.o obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o obj/maxflow.o obj/graph.o obj/FacadeSpotter.o obj/Spotter.o
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME)
@@ -24,7 +24,7 @@ $(PROGRAM_NAME):  $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o $(PROGRAM_NAME) $(OBJECTS) $(LIBS)
 
 	
-obj/test.o: test.cpp MasterQueue.h
+obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h FacadeSpotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
 
 obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h
@@ -50,6 +50,13 @@ obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h
 	
 obj/Lexicon.o: Lexicon.h Lexicon.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Lexicon.o Lexicon.cpp $(LIBS)
+
+obj/Spotter.o: Spotter.h Spotter.cpp MasterQueue.h Knowledge.h 
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Spotter.o Spotter.cpp $(LIBS)
+
+obj/FacadeSpotter.o: Spotter.h FacadeSpotter.cpp MasterQueue.h Knowledge.h FacadeSpotter.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/FacadeSpotter.o FacadeSpotter.cpp $(LIBS)
+
 
 obj/maxflow.o: maxflow/maxflow.cpp maxflow/graph.h maxflow/block.h  maxflow/instances.inc
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/maxflow.o maxflow/maxflow.cpp

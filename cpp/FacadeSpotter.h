@@ -1,13 +1,16 @@
+#ifndef FACADESPOTTER_H
+#define FACADESPOTTER_H
+
 #include "Spotter.h"
 
-FacadeSpotter class : public Spotter
+class FacadeSpotter : public Spotter
 {
     private:
     map<string, vector< vector<Spotting> > > loaded;
-    void FacadeSpotter::addTestSpottings(string file);
+    void addTestSpottings(string file);
     public:
-    Spotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir, int numThreads) : Spotter(masterQueue, corpus, modelDir, numThreads);
-    vector<Spotting> runQuery(SpottingQuery* query);
+    FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads);
+    vector<Spotting>* runQuery(SpottingQuery* query);
 };
 
 #endif

@@ -10,9 +10,9 @@
 #include "semaphore.h"
 #include <pthread.h>
 #include "SpottingResults.h"
-
+#include "MasterQueue.h"
 #include <fstream>
-
+#include <list>
 #define USERID int
 
 using namespace std;
@@ -52,5 +52,35 @@ public:
         returned.clear();
         numTestBatches.clear();
     }
+};
+
+
+
+class TestMasterQueue : public MasterQueue
+{
+    public:
+    TestMasterQueue() : MasterQueue() 
+    {
+        testOrder = {"an","ar","at","an",
+                     "an","at","an",
+                     "ar","at"};
+    }
+
+    ~TestMasterQueue()
+    {
+        assert(testOrder.size()==0);
+    }
+
+    unsigned long updateSpottingResults(vector<Spotting> spottings, unsigned long id=-1)
+    {
+        cout <<"updateSpottingResults ";
+        assert(testOrder.size()>0);
+        cout<<spottings.front().ngram<<endl;
+        assert(spottings.front().ngram.compare(testOrder.front()));
+        testOrder.pop_front();
+    }
+
+    private:
+    list<string> testOrder;
 };
 #endif

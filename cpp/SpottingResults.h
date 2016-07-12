@@ -35,7 +35,7 @@ public:
     Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
         tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1)
     {
-        id = _id++;
+        id = ++_id;
     }
     
     Spotting(const Spotting& s) : 
@@ -296,7 +296,7 @@ public:
     }
     
     void add(Spotting spotting);
-    void updateSpottings(vector<Spotting> spottings);
+    void updateSpottings(vector<Spotting>* spottings);
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
     vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);

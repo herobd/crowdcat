@@ -1,6 +1,6 @@
 #include "Spotter.h"
-
-Spotter::Spotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir, int numThreads)
+class Spotter;
+Spotter::Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads)
 {
     this->masterQueue=masterQueue;
     this->corpus=corpus;
@@ -9,20 +9,26 @@ Spotter::Spotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir
     //int _setId=0;
     cont.store(1);
     //run(numThreads);
+    sem_init(&semLock, 0, 0);
 }
+Spotter::~Spotter() {sem_destroy(&semLock);}
 
+void Spotter::stop()
+{
+    cont.store(0);
+}
 void Spotter::run(int numThreads)
 {
-    omp_set_num_threads(numThreads);
-#pragma omp parallel
+    //omp_set_num_threads(numThreads);
+#pragma omp parallel num_threads(numThreads)
     {
         while(cont.load())
         {
-            sem_wait(semLock);
+            sem_wait(&semLock);
             mutLock.lock();
             SpottingQuery* query = dequeue();
             mutLock.unlock();
-            vector<Spotting*> results = runQuery(query);
+            vector<Spotting>* results = runQuery(query);
             bool cont=true;
             emLock.lock();
             auto iter = emList.find(query->getId());
@@ -33,23 +39,27 @@ void Spotter::run(int numThreads)
             }
             emLock.unlock();
             if (cont)
-                masterQueue.updateSpottings(results);
-            delete query;
+            {
+#ifdef TEST_MODE
+                cout<<"sending to masterQ, "<<results->size()<<endl;
+#endif
+                masterQueue->updateSpottingResults(results);
+            }
         }
     }
 }
 
-void Spotter::addQueries(vector<Spotting*> exemplars)
+void Spotter::addQueries(vector<Spotting*>& exemplars)
 {
     //int setId = ++_setId;
     mutLock.lock();
     for (Spotting* exemplar : exemplars)
     {
-        if (exemplar.type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
+        if (exemplar->type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
         {
-            SpottingQuery query = new SpottingQuery(exemplar);
+            SpottingQuery* query = new SpottingQuery(exemplar);
             enqueue(query);
-            sem_post(semLock);
+            sem_post(&semLock);
         }
     }
     mutLock.unlock();
@@ -80,8 +90,8 @@ void Spotter::removeQueries(vector<pair<unsigned long,string> >* toRemove)
                     found=true;
                     if (ngramQueues[r.second].size()>0)
                     {
-                        onDeck.push_back(ngramQueues[r.second()].front());
-                        ngramQueues[r.second()].pop_front();
+                        onDeck.push_back(ngramQueues[r.second].front());
+                        ngramQueues[r.second].pop_front();
                     }
                     break;
                 }
@@ -124,7 +134,7 @@ void Spotter::enqueue(SpottingQuery* q)
 SpottingQuery* Spotter::dequeue()
 {
     SpottingQuery* ret = NULL;
-    if (onDeck.size>0) //This shouldn't ever be false due to the semaphore.
+    if (onDeck.size()>0) //This shouldn't ever be false due to the semaphore.
     {
         ret = onDeck.front();
         onDeck.pop_front();
@@ -136,3 +146,4 @@ SpottingQuery* Spotter::dequeue()
         }
     }
     return ret;
+}

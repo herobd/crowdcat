@@ -2,40 +2,45 @@
 #define SPOTTER_H
 
 #include "MasterQueue.h"
-#include "Corpus.h"
-#include <omp>
+#include "Knowledge.h"
 #include <atomic>
 #include <map>
 #include <list>
 #include <semaphore.h>
 
-SpottingQuery class
+using namespace std;
+
+class SpottingQuery 
 {
     public:
     SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram) {}//use e->ngramImg() to get correct exemplar image}
+    string getNgram() {return ngram;}
+    unsigned long getId() {return id;}
 
     private:
     string ngram;
     unsigned long id;
 };
 
-Spotter class
+class Spotter
 {
     public:
-    Spotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir, int numThreads);
-
+    Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads);
+    ~Spotter();
     void run(int numThreads);
+    void stop();
 
     void addQueries(vector<Spotting*>& exemplars);
+    void removeQueries(vector<pair<unsigned long,string> >* toRemove);
 
-    virtual vector<Spotting> runQuery(SpottingQuery* query);
+    virtual vector<Spotting>* runQuery(SpottingQuery* query)=0;
 
-    private:
+    protected:
     MasterQueue* masterQueue;
-    const Corpus* corpus;
+    const Knowledge::Corpus* corpus;
     atomic_char cont;
 
-    semaphor semLock;
+    sem_t semLock;
     mutex mutLock;
     mutex emLock;//"emergency" lock
 

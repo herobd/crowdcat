@@ -10,7 +10,7 @@ unsigned long SpottingResults::_id=0;
 SpottingResults::SpottingResults(string ngram) : 
     ngram(ngram)
 {
-    id = _id++;
+    id = ++_id;
     //sem_init(&mutexSem,false,1);
     //numBatches=0;
     allBatchesSent=false;
@@ -93,7 +93,8 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     //sem_wait(&mutexSem);
     
     unsigned int toRet = (hard||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
-    
+    if (toRet==0)
+        return ret;
     
     if ((*tracer)->score < pullFromScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<=pullFromScore)
@@ -102,7 +103,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         while((*tracer)->score>=pullFromScore && tracer!=instancesByScore.begin())
             tracer--;
     
-    if ((*tracer)->score>=rejectThreshold && tracer!=instancesByScore.begin())
+    if ((tracer!=instancesByScore.end() && (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin())
         tracer--;
     
     //*The commented out regoins seem prinicpled, but empirical results showed that it was better to leave them out
@@ -290,6 +291,8 @@ void SpottingResults::EMThresholds(bool init)
         {
             unsigned long id = p.first;
             int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
+            if (bin<0) bin=0;
+            if (bin>histogram.size()-1) bin=histogram.size()-1;
             histogram[bin]++;
             
         }
@@ -373,7 +376,7 @@ void SpottingResults::EMThresholds(bool init)
                     sumTrue+=2*instancesById.at(id).score;
                     
                     //test
-                    histogramCP.at(bin)++;
+                    if (bin>=0) histogramCP.at(bin)++;
                 }
                 else
                 {
@@ -382,7 +385,7 @@ void SpottingResults::EMThresholds(bool init)
                     sumFalse+=2*instancesById.at(id).score;
                     
                     //test
-                    histogramCN.at(bin)++;
+                    if (bin>=0) histogramCN.at(bin)++;
                 }
             }
             else
@@ -400,7 +403,7 @@ void SpottingResults::EMThresholds(bool init)
                     expectedTrue.push_back(instancesById.at(id).score);
                     
                     //test
-                    histogramGP.at(bin)++;
+                    if (bin>=0) histogramGP.at(bin)++;
                 }
                 else
                 {
@@ -408,7 +411,7 @@ void SpottingResults::EMThresholds(bool init)
                     sumFalse+=instancesById.at(id).score;
                     
                     //test
-                    histogramGN.at(bin)++;
+                    if (bin>=0) histogramGN.at(bin)++;
                 }
             }
         }
@@ -574,9 +577,9 @@ bool SpottingResults::checkIncomplete()
 }
 
 //combMin
-void SpottingResults::updateSpottings(vector<Spotting> spottings)
+void SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
-    for (Spotting& spotting : spottings)
+    for (Spotting& spotting : *spottings)
     {
         bool updated=false;
         int width = spotting.brx-spotting.tlx;
@@ -620,5 +623,6 @@ void SpottingResults::updateSpottings(vector<Spotting> spottings)
             tracer = instancesByScore.begin();
         }
     }
+    delete spottings;
     EMThresholds();
 }

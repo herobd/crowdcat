@@ -1613,10 +1613,10 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
 }
 
 
-cv::Mat* Knowledge::Corpus::imgForPageId(int pageId)
+const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
 {
 
-    Page* page = pages[pageId];
+    const Page* page = pages.at(pageId);
     return page->getImg();
 }
 

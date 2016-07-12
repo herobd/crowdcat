@@ -112,7 +112,7 @@ MasterQueue::MasterQueue() {
     
     testIter=0;	
     test_rotate=0;
-    addTestSpottings();
+    //addTestSpottings();
     accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
     numCFalse=numCTrue=0;
@@ -451,7 +451,7 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 }
 
 
-unsigned long MasterQueue::updateSpottingResults(vector<Spotting> spottings, unsigned long id)
+unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
@@ -481,7 +481,7 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting> spottings, uns
         sem_t* sem=p.second.first;
         SpottingResults* res = p.second.second;
         sem_wait(sem);
-        if (res->ngram.compare(spottings.front().ngram) == 0)
+        if (res->ngram.compare(spottings->front().ngram) == 0)
         {
             pthread_rwlock_unlock(&semResults);
             res->updateSpottings(spottings);
@@ -497,9 +497,10 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting> spottings, uns
     pthread_rwlock_unlock(&semResults);
         
     //if no id, no matching ngram, or if somethign goes wrong
-    SpottingResults *n = new SpottingResults(spottings.front().ngram);
-    for (Spotting& s : spottings)
+    SpottingResults *n = new SpottingResults(spottings->front().ngram);
+    for (Spotting& s : *spottings)
         n->add(s);
+    delete spottings;
     addSpottingResults(n);
     return n->getId();
 }

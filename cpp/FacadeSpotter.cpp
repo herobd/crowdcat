@@ -10,7 +10,7 @@ void FacadeSpotter::addTestSpottings(string file)
     assert(in.is_open());
     string line;
     
-    map<string,vector<Spotting> > toAdd;
+    //map<string,vector<Spotting> > toAdd;
     while(std::getline(in,line))
     {
         vector<string> strV;
@@ -24,19 +24,11 @@ void FacadeSpotter::addTestSpottings(string file)
         
         
         string ngram = strV[0];
-        string spottingId = strV[0]+strV[1]+":"+to_string(testIter);
-        
+        string spottingId = strV[0]+strV[1];
+        int spottingNum = stoi(strV[1]);
+
         string page = strV[2];
         size_t startpos = page.find_first_not_of(" \t");
-        if( string::npos != startpos )
-        {
-            page = page.substr( startpos );
-        }
-        if (pages.find(page)==pages.end())
-        {
-            pages[page] = cv::imread(pageLocation+page);
-            assert(pages[page].cols!=0);
-        }
         
         int tlx=stoi(strV[3]);
         int tly=stoi(strV[4]);
@@ -46,42 +38,44 @@ void FacadeSpotter::addTestSpottings(string file)
         float score=-1*stof(strV[7]);
         bool truth = strV[8].find("true")!= string::npos?true:false;
         
-        Spotting spotting(tlx, tly, brx, bry, stoi(page), &pages[page], ngram, score);
-        toAdd[ngram].push_back(add(spotting));
+        Spotting spotting(tlx, tly, brx, bry, stoi(page), corpus->imgForPageId(stoi(page)), ngram, score);
+        if (loaded[ngram].size() < spottingNum+1)
+            loaded[ngram].resize(spottingNum+1);
+        loaded[ngram][spottingNum].push_back(spotting);
     }
     
-    for (auto p : toAdd)
+    /*for (auto p : toAdd)
     {
         loaded[p.first].push_back(p.second);
         //cout << "added "<<p.first<<endl;
-    }
+    }*/
     
     
 }
 
-vector<Spotting> FacadeSpotter::runQuery(SpottingQuery* query)
+vector<Spotting>* FacadeSpotter::runQuery(SpottingQuery* query)
 {
-    vector<Spotting> ret;
-    if (loaded[query->ngram].size()>0)
+    vector<Spotting>* ret;
+    if (loaded[query->getNgram()].size()>0)
     {
-        cout <<"Spotting ["<<query->ngram<<"]"<<endl;
-        ret = loaded[query->ngram].back();
-        loaded[query->ngram].pop_back();
+        cout <<"Spotting ["<<query->getNgram()<<"]"<<endl;
+        ret = new vector<Spotting>(loaded[query->getNgram()].back());
+        loaded[query->getNgram()].pop_back();
     }
     else
     {
-        cout <<"Facade Spotter ran out of exemplars for ["<<query->ngram<<"]"<<", returning none."<<endl;
+        cout <<"Facade Spotter ran out of exemplars for ["<<query->getNgram()<<"]"<<", returning none."<<endl;
     }
     delete query;
 
-    //TODO sleep
+    this_thread::sleep_for (chrono::milliseconds(500));
+
+    return ret;
 }
 
-FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Corpus* corpus, string modelDir, int numThreads)
+FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads) : Spotter(masterQueue, corpus, modelDir, numThreads)
 {
-    vector<string> files = {"./data/GW_agSpottings_fold1_0.100000.csv"};
-    for (string file : files)
-        addTestSpottings(file);
+    string file= "./data/GW_spottings_fold1_0.100000.csv";
+    addTestSpottings(file);
 }
 
-//TODO Need to test removing query from queue and from live
