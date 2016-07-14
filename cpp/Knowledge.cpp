@@ -135,7 +135,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotti
     
     return ret;
 }
-vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long,string> >* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting*>* newExemplars)
+vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long,string> >* removeSpottings, vector<unsigned long>* toRemoveBatches, vector<Spotting*>* newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
     //cout <<"addSpottings"<<endl;
     vector<TranscribeBatch*> ret;
@@ -191,7 +191,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
             {
                 
                 unsigned long retractId=0;  
-                TranscribeBatch* newBatch = word->removeSpotting(sid.first,&retractId);
+                TranscribeBatch* newBatch = word->removeSpotting(sid.first,&retractId,newExemplars,toRemoveExemplars);
                 if (retractId!=0 && newBatch==NULL)
                 {
                     //retract the batch
@@ -391,11 +391,13 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
         sentBatchId=ret->getId();
     return ret;
 }
-TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long* sentBatchId)
+TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
     pthread_rwlock_wrlock(&lock);
     if (sentBatchId!=NULL)
         *sentBatchId = this->sentBatchId;
+
+    toRemoveExemplars->insert(toRemoveExemplars->.end(),harvested.begin(),harvested.end());
     for (auto iter= spottings.begin(); iter!=spottings.end(); iter++)
     {
         if (iter->second.id == sid)
@@ -406,7 +408,7 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     }
     TranscribeBatch* ret=NULL;
     if (spottings.size()>0)
-        ret=queryForBatch(NULL);
+        ret=queryForBatch(newExemplars);
     pthread_rwlock_unlock(&lock);
     return ret;
 }
@@ -674,6 +676,9 @@ vector<Spotting*> Knowledge::Word::harvest()
             }
         }
     }
+
+    for (Spotting* s : ret)
+        harvested.insert(make_pair(s->id,s->ngram));
     return ret;
 
 }

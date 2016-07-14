@@ -25,7 +25,7 @@ class SpottingQuery
 class Spotter
 {
     public:
-    Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads);
+    Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir);
     ~Spotter();
     void run(int numThreads);
     void stop();
@@ -38,7 +38,8 @@ class Spotter
     protected:
     MasterQueue* masterQueue;
     const Knowledge::Corpus* corpus;
-    atomic_char cont;
+    //atomic_char cont;
+    int numThreads;
 
     sem_t semLock;
     mutex mutLock;

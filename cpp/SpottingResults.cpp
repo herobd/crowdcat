@@ -31,6 +31,8 @@ SpottingResults::SpottingResults(string ngram) :
     acceptThreshold=-1;
     rejectThreshold=-1;
     
+    done=false;
+
     //pullFromScore=splitThreshold;
     delta=0;
     //haveRe
@@ -206,13 +208,13 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
                 numberClassifiedFalse--;
         }
         
+        instancesById.at(id).type=SPOTTING_TYPE_APPROVED;
         // adjust threshs
         if (userClassifications[i]>0)
         {
             numberClassifiedTrue++;
             if (!resent || !classById[id])
             {
-                instancesById.at(id).type=SPOTTING_TYPE_APPROVED;
                 ret->push_back(instancesById.at(id)); //otherwise we've already sent it
             }
             classById[id]=true;
@@ -220,9 +222,8 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         else if (userClassifications[i]==0)
         {
             numberClassifiedFalse++;
-            if (!resent || (retRemove && !classById[id]))
+            if (resent && (retRemove && classById[id]))
             {
-                instancesById.at(id).type=SPOTTING_TYPE_NONE;
                 retRemove->push_back(make_pair(id,instancesById.at(id).ngram));
             }
             classById[id]=false;
@@ -233,15 +234,22 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
             tracer = instancesByScore.begin();
         }
     }
+
+    if (this->done)
+    {
+        *done=true;
+        return ret;
+    }
     EMThresholds();
     
-    ///test
+#ifdef TEST_MODE
     cout<<"["<<id<<"]:"<<ngram<<", all sent: "<<allBatchesSent<<", waiting for "<<starts.size()<<", num left "<<instancesByScore.size()<<endl;
-    ///test
+#endif
 
     if (resent==0 && starts.size()==0 && allBatchesSent)
     {
         *done=true;
+        this->done=true;
         //cout <<"all batches sent, cleaning up"<<endl;
         
         tracer = instancesByScore.begin();
@@ -249,9 +257,18 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         {
             (**tracer).type=SPOTTING_TYPE_THRESHED;
             ret->push_back(**tracer);
+            classById[(**tracer).id]=true;
             tracer++;
             numberAccepted++;
         }
+        while (tracer!=instancesByScore.end())
+        {
+            (**tracer).type=SPOTTING_TYPE_THRESHED;
+            ret->push_back(**tracer);
+            classById[(**tracer).id]=false;
+            tracer++;
+        }
+        instancesByScore.clear();
         //cout << "hit end "<<(tracer==instancesByScore.end())<<endl;
         numberRejected = distance(tracer,instancesByScore.end());
         
@@ -577,7 +594,7 @@ bool SpottingResults::checkIncomplete()
 }
 
 //combMin
-void SpottingResults::updateSpottings(vector<Spotting>* spottings)
+bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
     for (Spotting& spotting : *spottings)
     {
@@ -599,15 +616,24 @@ void SpottingResults::updateSpottings(vector<Spotting>* spottings)
 
                     if (spotting.score < (*itLow)->score)//then replace the spotting
                     {
-                        //Remove from scores
-                        instancesByScore.erase(*itLow); //erase by value (pointer)
-                        //Remove from locations
-                        instancesByLocation.erase(itLow); //erase by interator
-                        //add
                         instancesById[spotting.id]=spotting;
-                        instancesByScore.insert(&instancesById[spotting.id]);
                         instancesByLocation.insert(&instancesById[spotting.id]);
-                        tracer = instancesByScore.begin();
+                        if (classById.find((*itLow)->id)==classById.end())
+                        {
+                            //Remove from scores
+                            instancesByScore.erase(*itLow); //erase by value (pointer)
+                            //Remove from locations
+                            instancesByLocation.erase(itLow); //erase by interator
+                            //add
+                            instancesByScore.insert(&instancesById[spotting.id]);
+                            tracer = instancesByScore.begin();
+                        }
+                        else if (classById[(*itLow)->id]==false && (*itLow)->type==SPOTTING_TYPE_THRESHED)
+                        {//This occurs after being resurrected. We'll give a better score another chance.
+                            instancesByScore.insert(&instancesById[spotting.id]);
+                            tracer = instancesByScore.begin();
+                        }
+
                     }
                     tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
                     break;
@@ -625,4 +651,15 @@ void SpottingResults::updateSpottings(vector<Spotting>* spottings)
     }
     delete spottings;
     EMThresholds();
+    if (done)
+    {
+        //RESURRECT!
+        done=false;
+        return true;
+    }
+        //Go through spottings
+        //If intersection, use previous label and label it instantly, but use the given score, dont put in "queue" (byScores)
+        //Else, add it in normally
+        //All non-intersected old ones need to have their score not count anymore (but save in case of later resurrection)
+    return false;
 }

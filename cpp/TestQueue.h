@@ -62,8 +62,9 @@ class TestMasterQueue : public MasterQueue
     TestMasterQueue() : MasterQueue() 
     {
         testOrder = {"an","ar","at","an",
-                     "an","at","an",
-                     "ar","at"};
+                     "an","ar","an",
+                     "ar","at",
+                     "te","th","re","te"};
     }
 
     ~TestMasterQueue()
@@ -71,12 +72,12 @@ class TestMasterQueue : public MasterQueue
         assert(testOrder.size()==0);
     }
 
-    unsigned long updateSpottingResults(vector<Spotting> spottings, unsigned long id=-1)
+    unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0)
     {
-        cout <<"updateSpottingResults ";
+        cout <<"updateSpottingResults from TestMasterQueue: ";
         assert(testOrder.size()>0);
-        cout<<spottings.front().ngram<<endl;
-        assert(spottings.front().ngram.compare(testOrder.front()));
+        cout<<spottings->front().ngram<<endl;
+        assert(spottings->front().ngram.compare(testOrder.front())==0);
         testOrder.pop_front();
     }
 

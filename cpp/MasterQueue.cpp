@@ -362,7 +362,8 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
             numCFalse++;
     }
     test_numDone[id]+=ids.size();
-    vector<Spotting>* res = feedback(id, ids, userClassifications,0);
+    vector<pair<unsigned long,string> > toRemoveSpottings;
+    vector<Spotting>* res = feedback(id, ids, userClassifications,0,&toRemoveSpottings);
     for (Spotting s : *res)
     {
         
@@ -403,7 +404,7 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
                 ret = res->feedback(&done,ids,userClassifications,resent,remove);
                 //cout <<"END res feedback"<<endl;
                 
-                if (done)
+                /*if (done)
                 {cout <<"done done "<<endl;
                     
                     pthread_rwlock_wrlock(&semResults);
@@ -414,7 +415,7 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
                     sem_destroy(sem);
                     delete sem;
                 }
-                else
+                else*/
                     sem_post(sem);
             }
             else
@@ -453,6 +454,9 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 
 unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
+#ifdef TEST_MODE
+    cout<<"updateSpottingResults called from MasterQueue"<<endl;
+#endif
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
     {
@@ -464,7 +468,13 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             SpottingResults* res = results[id].second;
             pthread_rwlock_unlock(&semResults);
             sem_wait(sem);
-            res->updateSpottings(spottings);
+            bool resurrect = res->updateSpottings(spottings);
+            if (resurrect)
+            {
+                pthread_rwlock_wrlock(&semResultsQueue);
+                resultsQueue[res->getId()] = results[id];
+                pthread_rwlock_unlock(&semResultsQueue);
+            }
             sem_post(sem);
             return id;
         }
@@ -484,7 +494,13 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
         if (res->ngram.compare(spottings->front().ngram) == 0)
         {
             pthread_rwlock_unlock(&semResults);
-            res->updateSpottings(spottings);
+            bool resurrect = res->updateSpottings(spottings);
+            if (resurrect)
+            {
+                pthread_rwlock_wrlock(&semResultsQueue);
+                resultsQueue[res->getId()] = results[id];
+                pthread_rwlock_unlock(&semResultsQueue);
+            }
             sem_post(sem);
             return res->getId();
             

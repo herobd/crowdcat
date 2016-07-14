@@ -9,7 +9,7 @@ class FacadeSpotter : public Spotter
     map<string, vector< vector<Spotting> > > loaded;
     void addTestSpottings(string file);
     public:
-    FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads);
+    FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir);
     vector<Spotting>* runQuery(SpottingQuery* query);
 };
 

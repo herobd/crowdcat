@@ -69,7 +69,7 @@ public:
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
 #endif
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
-    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove=NULL);
+    vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res);
     

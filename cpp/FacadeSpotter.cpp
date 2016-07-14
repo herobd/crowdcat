@@ -73,7 +73,7 @@ vector<Spotting>* FacadeSpotter::runQuery(SpottingQuery* query)
     return ret;
 }
 
-FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir, int numThreads) : Spotter(masterQueue, corpus, modelDir, numThreads)
+FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir) : Spotter(masterQueue, corpus, modelDir)
 {
     string file= "./data/GW_spottings_fold1_0.100000.csv";
     addTestSpottings(file);

@@ -24,16 +24,25 @@ class SpottingBatchUpdateWorker : public AsyncWorker {
             vector<pair<unsigned long,string> > toRemoveSpottings;        
             vector<unsigned long> toRemoveBatches;        
             vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
-            vector<Spotting*> newExemplars;
-            vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars);
-            masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-            masterQueue->enqueueNewExemplars(&newExemplars);
-            //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
-            //if (toRemoveBatches.size()>0)
-            //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
-            spotter->removeQueries(&toRemoveSpottings);
-            spotter->addQueries(toAdd);
-            delete toAdd;
+            if (toAdd!=NULL)
+            {
+                vector<Spotting*> newExemplars;
+                vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars);
+                masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+                masterQueue->enqueueNewExemplars(&newExemplars);
+                //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
+                //if (toRemoveBatches.size()>0)
+                //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
+                spotter->removeQueries(&toRemoveSpottings);
+                spotter->addQueries(toAdd);
+                delete toAdd;
+            }
+            /*else //We presume that this set has been finished
+            {
+                for (int i=0; i<ids.size(); i++)
+                {
+                    if (labels[i]==0)
+            */
         }
 
         // We have the results, and we're back in the event loop.

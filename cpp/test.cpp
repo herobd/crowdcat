@@ -10,12 +10,88 @@
 
 int main() {
     //TEST
+/**/
+    Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
+    
+    
+    Knowledge::Corpus* c0=new Knowledge::Corpus();
+    c0->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
+    MasterQueue* q0=new MasterQueue();
+    int pageId = 2700270;
+    
+    vector<pair<unsigned long,string> > toRemoveSpottings;    
+    Spotting s0(1588,851,1704,902,pageId,c0->imgForPageId(pageId),"th",0.3);
+    vector<Spotting> sr0 = {s0};
+    q0->updateSpottingResults(new vector<Spotting>(sr0));
+    SpottingsBatch* sb0 = q0->getSpottingsBatch(5,false,400,0,"");
+    vector<string> ids0= {to_string(sb0->at(0).id)};
+    vector<int> labels0= {1};
+    vector<Spotting>* toAdd;
+    toAdd = q0->feedback(sb0->spottingResultsId, ids0, labels0, 0,&toRemoveSpottings);
+    assert(toRemoveSpottings.size()==0 && toAdd->size()==1);
+    vector<string> ids0r= {to_string(sb0->at(0).id)};
+    vector<int> labels0r= {0};
+    toAdd= q0->feedback(sb0->spottingResultsId, ids0r, labels0r, 1,&toRemoveSpottings);
+    assert(toAdd && toAdd->size()==0 && toRemoveSpottings.size()==1 && toRemoveSpottings[0].second.compare("th")==0); 
 
+    toRemoveSpottings.clear();
+
+    Spotting s01(1644,851,1779,902,pageId,c0->imgForPageId(pageId),"he",0.3);
+    vector<Spotting> sr01 = {s01};
+    q0->updateSpottingResults(new vector<Spotting>(sr01));
+    SpottingsBatch* sb01 = q0->getSpottingsBatch(5,false,400,0,"");
+    vector<string> ids01= {to_string(sb01->at(0).id)};
+    vector<int> labels01= {0};
+    toAdd= q0->feedback(sb01->spottingResultsId, ids01, labels01, 0,&toRemoveSpottings);
+    assert(toAdd && toAdd->size()==0 && toRemoveSpottings.size()==0);
+    vector<string> ids01r= {to_string(sb01->at(0).id)};
+    vector<int> labels01r= {1};
+    toAdd = q0->feedback(sb01->spottingResultsId, ids01r, labels01r, 1,&toRemoveSpottings);
+    assert(toRemoveSpottings.size()==0 && toAdd->size()==1); 
+    //TODO add more
+    delete c0;
+    delete q0;
+
+    c0=new Knowledge::Corpus();
+    c0->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
+    
+    
+    Spotting s02(1588,851,1704,902,pageId,c0->imgForPageId(pageId),"th",0.3);
+    vector<Spotting> sb02 = {s02};
+    vector<Spotting*> newEx0;
+    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb02,NULL,NULL,&newEx0);
+    assert(newBatches0.size()==0 && newEx0.size()==0);
+
+    Spotting s03(1644,851,1779,902,pageId,c0->imgForPageId(pageId),"he",0.3);
+    vector<Spotting> sb03 = {s03};
+    newBatches0 = c0->updateSpottings(&sb03,NULL,NULL,&newEx0);
+    assert(newBatches0.size()==0 && newEx0.size()==0);
+
+    Spotting s04(1649,948,17070,982,pageId,c0->imgForPageId(pageId),"re",0.3);
+    vector<Spotting> sb04 = {s04};
+    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb04,NULL,NULL,&newEx0);
+    assert(newBatches0.size()==0 && newEx0.size()==0);
+    
+    Spotting s05(1708,943,1756,984,pageId,c0->imgForPageId(pageId),"st",0.3);
+    vector<Spotting> sb05 = {s05};
+    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb05,NULL,NULL,&newEx0);
+    assert(newBatches0.size()==1 && newEx0.size()==1);
+    
+
+
+    vector<Spotting*> newEx0r;
+    vector<Spotting> empty;
+    vector<pair<unsigned long,string> > removeThis0 = {make_pair(s04.id,s04.ngram)};
+    vector<unsigned long> toRemove0;
+    vector<TranscribeBatch*> newBatches0r = c0->updateSpottings(&empty,&removeThis0,&toRemove0,&newEx0r);
+    assert(newBatches0r.size()==0 && toRemove0.size()==1);
+    assert(toRemove0[0] == newBatches0[0]->getId());
+
+            //Test updateSpottingResults()
     Knowledge::Corpus c;
     c.addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
     MasterQueue q;
-    int pageId = 2700270;
-    
+
     Spotting s1(950,786,1014,823,pageId,c.imgForPageId(pageId),"of",0.3);
     Spotting s2(953,767,1020,835,pageId,c.imgForPageId(pageId),"of",0.1);
     Spotting s3(1692,790,1738,815,pageId,c.imgForPageId(pageId),"er",0.3);
@@ -40,8 +116,11 @@ int main() {
     assert(sb4->size()==1);
     assert(fabs(sb4->at(0).score-.1)<0.0001);
 
+
+
+    //Test Spotters functionality
     TestMasterQueue tq;//This has the test results in it
-    FacadeSpotter spotter(&tq,&c,"",1);
+    FacadeSpotter spotter(&tq,&c,"");
 
 #pragma omp parallel sections num_threads(2)
 {
@@ -63,11 +142,11 @@ int main() {
     Spotting* e5= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"an",0);
     Spotting* e6= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"an",0);
     Spotting* e7= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"ar",0);
-    unsigned long e7id = e7->id;
     Spotting* e8= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"at",0);
+    unsigned long e8id = e8->id;
     vector<Spotting*> exemplars2 = {e5,e6,e7,e8};
-    spotter.addQueries(exemplars1);
-    vector<pair<unsigned long,string> > remove1 = {make_pair(e7id,"ar")};
+    spotter.addQueries(exemplars2);
+    vector<pair<unsigned long,string> > remove1 = {make_pair(e8id,"at")};
     spotter.removeQueries(&remove1);
 
     this_thread::sleep_for (::chrono::seconds(4));
@@ -81,10 +160,26 @@ int main() {
     vector<pair<unsigned long,string> > remove2 = {make_pair(e9id,"an")};
     spotter.removeQueries(&remove2);
     
+    this_thread::sleep_for (::chrono::seconds(4));
+    
+    Spotting* e12= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"te",0);
+    Spotting* e13= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"te",0);
+    Spotting* e14= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"te",0);
+    unsigned long e14id = e14->id;
+    Spotting* e15= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"th",0);
+    Spotting* e16= new Spotting(0,0,10,10,pageId,c.imgForPageId(pageId),"re",0);
+    vector<Spotting*> exemplars4 = {e12,e13,e14,e15,e16};
+    spotter.addQueries(exemplars4);
+    vector<pair<unsigned long,string> > remove3 = {make_pair(e14id,"te")};
+    spotter.removeQueries(&remove3);
+    
+    this_thread::sleep_for (::chrono::seconds(4));
     spotter.stop();
     }
 }
-    /*//Manual testbed
+/**/
+/*
+    //Manual testbed
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     Knowledge::Corpus c;
     c.addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
@@ -155,7 +250,7 @@ int main() {
         cv::waitKey();
     }
     c.show();
-*/
+/**/
 
 
 

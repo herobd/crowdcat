@@ -86,7 +86,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //{
                     sid= stoul(transcription.substr(8,transcription.length()-9));
 
-                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid);
+                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid,NULL,newNgramExemplars,toRemoveExemplars);
                     if (newBatch!=NULL)
                         queue.push_back(newBatch);
                 //}

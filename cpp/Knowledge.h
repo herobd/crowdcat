@@ -167,7 +167,7 @@ public:
     }
     
     TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars);
-    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId=NULL);
+    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid) {return removeSpotting(sid,NULL);}
     
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
@@ -372,7 +372,7 @@ public:
     }
     vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
-    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars);
+    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
 
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);

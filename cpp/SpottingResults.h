@@ -52,11 +52,11 @@ public:
     unsigned char type;
     virtual cv::Mat img()
     {
-        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+        return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
     virtual cv::Mat ngramImg() const
     {
-        return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
+        return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
     int ngramRank;
 
@@ -296,7 +296,11 @@ public:
     }
     
     void add(Spotting spotting);
-    void updateSpottings(vector<Spotting>* spottings);
+
+    bool updateSpottings(vector<Spotting>* spottings);
+    //This will either replace the spottings or add new ones if it can't find any close enough. spottings is consumed.
+    //The return value merely indicates whether this needs "resurrected" (Put back into the MasterQueue).
+
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
     
     vector<Spotting>* feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);
@@ -311,7 +315,7 @@ private:
     double rejectThreshold;
     //int numBatches;
     bool allBatchesSent;
-    
+    bool done;
     
     float trueMean;
     float trueVariance;
