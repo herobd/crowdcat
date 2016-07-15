@@ -65,7 +65,7 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     return ret;
 }
 
-vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transcription)
+vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
     vector<Spotting*> newNgramExemplars;
     lock();
@@ -74,8 +74,8 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
         if (transcription[0]=='$' && transcription[transcription.length()-1]=='$')
         {
             if (transcription.compare("$ERROR$")==0)
-            {
-                returnMap[id]->getBackPointer()->error();//change into manual batch or remove spottings?
+            {//This probably will occur with bad segmentation
+                returnMap[id]->getBackPointer()->error(toRemoveExemplars);//change into manual batch or remove spottings?
                 cout<<"ERROR returned for trans "<<id<<endl;
                 delete returnMap[id];
             }
@@ -86,7 +86,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //{
                     sid= stoul(transcription.substr(8,transcription.length()-9));
 
-                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid,NULL,newNgramExemplars,toRemoveExemplars);
+                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid,&newNgramExemplars,toRemoveExemplars);
                     if (newBatch!=NULL)
                         queue.push_back(newBatch);
                 //}
@@ -109,7 +109,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
         }
         else
         {
-            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription);
+            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
             doneMap[id] = returnMap[id]->getBackPointer();
             delete returnMap[id];
         }
@@ -121,7 +121,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
         //This occurs on a resend
         
         if (transcription.compare("$PASS$")!=0)
-            newNgramExemplars=doneMap[id]->result(transcription);
+            newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
     }
     unlock();
     return newNgramExemplars;

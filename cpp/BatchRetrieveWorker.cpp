@@ -15,45 +15,14 @@ using namespace v8;
 
 class BatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, int width, int color, string prevNgram, int num, MasterQueue* masterQueue)
-        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), masterQueue(masterQueue), batch(NULL) {}
+        BatchRetrieveWorker(Callback *callback, CATTSS* cattss, int width, int color, string prevNgram, int num)
+        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), cattss(cattss), batch(NULL) {}
 
         ~BatchRetrieveWorker() {}
 
 
         void Execute () {
-
-            //if (color==-1)
-            //{
-                //cout <<"get trans batch"<<endl;
-                //TranscribeBatch* b = masterQueue->getTranscriptionBatch(width);
-                //if (b!=NULL)
-                //    batch = new BatchWraperTranscription(b);
-                //else
-              //      batch = new BatchWraperBlank();
-
-            //}
-            //else
-            {
-                //cout <<"get spot batch"<<endl;
-                //retrieve the next batch from the priority queue
-                //  This will have merely ids and subimage params
-                //retireve subimages and base64 encode them
-                //then
-                bool hard=true;
-                if (num==-1) {
-                    num=5;
-                    hard=false;
-                
-                }
-                batch = masterQueue->getBatch(num,hard,width,color,prevNgram);
-
-                /*SpottingsBatch* b = masterQueue->getSpottingsBatch(num,hard,width,color,prevNgram);
-                if (b!=NULL)
-                    batch = new BatchWraperSpottings(b);
-                else
-                    batch = new BatchWraperBlank();*/
-            }
+            batch = cattss->getBatch(num,width,color,prevNgram);
         }
 
         // We have the results, and we're back in the event loop.
@@ -69,7 +38,7 @@ class BatchRetrieveWorker : public AsyncWorker {
         int color;
         string prevNgram;
         int num;
-        MasterQueue* masterQueue;
+        CATTSS* cattss;
         
         
 };

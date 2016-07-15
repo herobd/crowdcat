@@ -35,9 +35,9 @@ class TranscribeBatch;
 class WordBackPointer
 {
     public:
-        virtual vector<Spotting*> result(string selected)= 0;
-        virtual void error()= 0;
-        virtual TranscribeBatch* removeSpotting(unsigned long sid)= 0;
+        virtual vector<Spotting*> result(string selected, vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
+        virtual void error(vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
+        virtual TranscribeBatch* removeSpotting(unsigned long sid, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
 };
 
 class SpottingPoint
@@ -129,6 +129,9 @@ private:
     multimap<int,Spotting> spottings;
     bool done;
     unsigned long sentBatchId;
+
+    set<pair<unsigned long,string> > harvested;
+
     multimap<float,string> scoreAndThresh(vector<string> match);
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
@@ -168,7 +171,7 @@ public:
     
     TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
-    TranscribeBatch* removeSpotting(unsigned long sid) {return removeSpotting(sid,NULL);}
+    TranscribeBatch* removeSpotting(unsigned long sid, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,NULL,newExemplars,toRemoveExemplars);}
     
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
@@ -181,31 +184,38 @@ public:
         pthread_rwlock_unlock(&lock);
     }
 
-    vector<Spotting*> result(string selected)
+    vector<Spotting*> result(string selected, vector< pair<unsigned long, string> >* toRemoveExemplars)
     {
         cout <<"recived trans: "<<selected<<endl;
+        vector<Spotting*> ret;
         pthread_rwlock_wrlock(&lock);
         if (!done)
+        {
             done=true;
+            transcription=selected;
+            ret = harvest();
+        }
         else
         {
             //this is a resubmission
             if (transcription.compare(selected)!=0)
             {
-                //TODO Retract harvested ngrams
+                //Retract harvested ngrams
+                toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+                transcription=selected;
+                ret= harvest();
             }
         }
-        transcription=selected;
         pthread_rwlock_unlock(&lock);
-        //TODO, harvest new ngram exemplars
-        return harvest();
+        return ret;
         //Harvested ngrams should be approved before spotting with them
     }
 
-    void error()
+    void error(vector< pair<unsigned long, string> >* toRemoveExemplars)
     {
         spottings.clear();
-        //TODO Retract harvested ngrams
+        toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+        harvested.clear();
     }
 
     const cv::Mat* getPage() {return pagePnt;}

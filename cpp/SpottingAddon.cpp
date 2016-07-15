@@ -5,9 +5,7 @@
 #include <assert.h>
 #define BUFFERSIZE 65536
 
-#include "MasterQueue.h"
-#include "Knowledge.h"
-#include "Lexicon.h"
+#include "CATTSS.h"
 #include "TestQueue.h"
 
 using namespace Nan;
@@ -25,8 +23,7 @@ using namespace v8;
 //test
 #include "SpottingResults.h"
 
-MasterQueue* masterQueue;
-Knowledge::Corpus* corpus;
+CATTSS* cattss;
 TestQueue* testQueue;
 
 
@@ -49,10 +46,10 @@ NAN_METHOD(getNextBatch) {
     
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,color,prevNgram,num,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback,cattss, width,color,prevNgram,num));
 }
 
-NAN_METHOD(spottingBatchDone) {//TODO
+NAN_METHOD(spottingBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
     String::Utf8Value resultsIdNAN(info[0]);
@@ -80,7 +77,7 @@ NAN_METHOD(spottingBatchDone) {//TODO
     int resent = To<int>(info[3]).FromJust();
     Callback *callback = new Callback(info[4].As<Function>());
 
-    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,masterQueue,corpus,resultsId,ids,labels,resent));
+    AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,cattss,resultsId,ids,labels,resent));
 }
 
 NAN_METHOD(getNextTranscriptionBatch) {
@@ -88,7 +85,7 @@ NAN_METHOD(getNextTranscriptionBatch) {
     
     Callback *callback = new Callback(info[1].As<Function>());
 
-    AsyncQueueWorker(new BatchRetrieveWorker(callback, width,-1,"",-1,masterQueue));
+    AsyncQueueWorker(new BatchRetrieveWorker(callback,cattss, width,-1,"",-1));
 }
 
 NAN_METHOD(transcriptionBatchDone) {
@@ -101,13 +98,13 @@ NAN_METHOD(transcriptionBatchDone) {
     
     Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,masterQueue,id,transcription));
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,cattss,id,transcription));
 }
 
 NAN_METHOD(showCorpus) {
     Callback *callback = new Callback(info[0].As<Function>());
 
-    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",masterQueue,corpus));
+    AsyncQueueWorker(new MiscWorker(callback, "showCorpus",cattss));
 }
 
 NAN_METHOD(getNextTestBatch) {
@@ -160,7 +157,7 @@ NAN_METHOD(clearTestUsers) {
 
 NAN_MODULE_INIT(Init) {
     
-    masterQueue = new MasterQueue();
+    cattss = new CATTSS();
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     corpus = new Knowledge::Corpus();
     corpus->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
@@ -179,7 +176,7 @@ NAN_MODULE_INIT(Init) {
         vector<Spotting> toAdd={s1,s2,s3,s4,s5,s6,s7,s8,s9};
         vector<TranscribeBatch*> newBatches = corpus->updateSpottings(&toAdd,NULL,NULL);
         assert(newBatches.size()>0);
-        masterQueue->enqueueTranscriptionBatches(newBatches);
+        cattss->enqueueTranscriptionBatches(newBatches);
         if (toAdd.size()>9)
         {
             cout <<"harvested (init):"<<endl;
@@ -203,7 +200,7 @@ NAN_MODULE_INIT(Init) {
             waitKey();
         }
         //vector<TranscribeBatch*> modBatches = corpus->removeSpottings(toRemoveSpottings,toRemoveBatches);
-        masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+        cattss->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
         cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
         if (toRemoveBatches.size()>0)
             cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;            

@@ -74,7 +74,7 @@ public:
     void addSpottingResults(SpottingResults* res);
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
-    void transcriptionFeedback(unsigned long id, string transcription);
+    void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
     NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
     void enqueueNewExemplars(const vector<Spotting*>& newExemplars) {newExemplarsBatchQueue.enqueue(newExemplars);}

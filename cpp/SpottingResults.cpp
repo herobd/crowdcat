@@ -96,7 +96,12 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     
     unsigned int toRet = (hard||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
     if (toRet==0)
+    {
+#ifdef TEST_MODE
+        cout<<"called SpottingResults::getBatch when none to give."<<endl;
+#endif
         return ret;
+    }
     
     if ((*tracer)->score < pullFromScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<=pullFromScore)
@@ -250,8 +255,9 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
     {
         *done=true;
         this->done=true;
-        //cout <<"all batches sent, cleaning up"<<endl;
-        
+#ifdef TEST_MODE
+        cout <<"all batches sent, cleaning up"<<endl;
+#endif
         tracer = instancesByScore.begin();
         while (tracer!=instancesByScore.end() && (*tracer)->score < acceptThreshold)
         {
@@ -651,10 +657,10 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
     }
     delete spottings;
     EMThresholds();
-    if (done)
+    if (allBatchesSent)
     {
         //RESURRECT!
-        done=false;
+        allBatchesSent=false;
         return true;
     }
         //Go through spottings

@@ -397,7 +397,7 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     if (sentBatchId!=NULL)
         *sentBatchId = this->sentBatchId;
 
-    toRemoveExemplars->insert(toRemoveExemplars->.end(),harvested.begin(),harvested.end());
+    toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
     for (auto iter= spottings.begin(); iter!=spottings.end(); iter++)
     {
         if (iter->second.id == sid)
@@ -676,7 +676,8 @@ vector<Spotting*> Knowledge::Word::harvest()
             }
         }
     }
-
+    
+    harvested.clear();
     for (Spotting* s : ret)
         harvested.insert(make_pair(s->id,s->ngram));
     return ret;

@@ -48,44 +48,145 @@ int main() {
     vector<int> labels01r= {1};
     toAdd = q0->feedback(sb01->spottingResultsId, ids01r, labels01r, 1,&toRemoveSpottings);
     assert(toRemoveSpottings.size()==0 && toAdd->size()==1); 
-    //TODO add more
+    
+    Spotting s001(1750,186,1801,211,pageId,c0->imgForPageId(pageId),"re",0.3);
+    Spotting s002(1760,699,1809,727,pageId,c0->imgForPageId(pageId),"re",0.24);
+    Spotting s003(1689,785,1739,815,pageId,c0->imgForPageId(pageId),"re",0.22);
+    Spotting s004(1575,1045,1628,1071,pageId,c0->imgForPageId(pageId),"re",0.28);
+    Spotting s005(1086,952,1141,985,pageId,c0->imgForPageId(pageId),"re",0.4);
+    Spotting s006(971,957,1042,980,pageId,c0->imgForPageId(pageId),"re",0.5);
+    Spotting s007(821,837,922,860,pageId,c0->imgForPageId(pageId),"re",0.7);
+    Spotting s008(171,157,242,180,pageId,c0->imgForPageId(pageId),"re",0.8);
+    Spotting s009(271,257,342,280,pageId,c0->imgForPageId(pageId),"re",0.55);
+    Spotting s0010(371,357,442,480,pageId,c0->imgForPageId(pageId),"re",0.6);
+    Spotting s0011(571,557,642,580,pageId,c0->imgForPageId(pageId),"re",0.35);
+    Spotting s0012(671,657,742,680,pageId,c0->imgForPageId(pageId),"re",0.25);
+    Spotting s0013(771,757,842,780,pageId,c0->imgForPageId(pageId),"re",0.54);
+    Spotting s0014(1,2,22,22,pageId,c0->imgForPageId(pageId),"re",0.34);
+    Spotting s0015(25,25,35,35,pageId,c0->imgForPageId(pageId),"re",0.55);
+    Spotting s0016(40,25,50,35,pageId,c0->imgForPageId(pageId),"re",0.95);
+    Spotting s0017(60,25,70,35,pageId,c0->imgForPageId(pageId),"re",0.45);
+    vector<Spotting> sr001 = {s001,s002,s003,s004,s005,s006,s007,s008,s009,s0010,s0011,s0012,s0013,s0014,s0015,s0016,s0017};
+    q0->updateSpottingResults(new vector<Spotting>(sr001));
+    SpottingsBatch* sb001 = q0->getSpottingsBatch(5,true,400,0,"");
+    assert(sb001->size()==5);
+    vector<string> ids001;
+    for (int i=0; i<sb001->size(); i++)
+        ids001.push_back(to_string(sb001->at(i).id));
+    vector<int> labels001= {0,1,0,1,0};
+    toAdd= q0->feedback(sb001->spottingResultsId, ids001, labels001, 0,&toRemoveSpottings);
+    assert(toAdd && toAdd->size()==2 && toRemoveSpottings.size()==0);
+    vector<string> ids001r;
+    for (int i=0; i<sb001->size(); i++)
+        ids001r.push_back(to_string(sb001->at(i).id));
+    vector<int> labels001r= {0,1,0,0,1};
+    toAdd = q0->feedback(sb001->spottingResultsId, ids001r, labels001r, 1,&toRemoveSpottings);
+    assert(toRemoveSpottings.size()==1 && toAdd->size()==1); 
+    assert(toRemoveSpottings[0].first==sb001->at(3).id); 
+    assert(toAdd->at(0).id==sb001->at(4).id); 
+  
+    //Test resurrection 
+    //get all batches
+    while (1)
+    {
+        sb001 = q0->getSpottingsBatch(5,false,400,0,"");
+        if (sb001==NULL)
+            break;
+        cout <<"sb001->size() = "<<sb001->size()<<endl;
+        vector<string> ids00n;
+        for (int i=0; i<sb001->size(); i++)
+            ids00n.push_back(to_string(sb001->at(i).id));
+        vector<int> labels00n;
+        for (int i=0; i<sb001->size(); i++)
+            labels00n.push_back(sb001->at(i).score<0.4?1:0);
+        toAdd = q0->feedback(sb001->spottingResultsId, ids00n, labels00n, 0,&toRemoveSpottings);
+        //cout <<"toAdd->size() = "<<toAdd->size()<<endl;
+        delete sb001;
+    }
+    //Add new spotting. cofirm it comes out as batch
+    //Replace old spotting that should have ben false (17) with lower score, confirm it comes out as batch
+    //Nothing else should come out as batch
+    Spotting s0018(40,25,50,35,pageId,c0->imgForPageId(pageId),"re",0.31);//replaces 16
+    Spotting s0019(80,25,90,35,pageId,c0->imgForPageId(pageId),"re",0.29);//totally new
+    Spotting s0020(25,25,35,35,pageId,c0->imgForPageId(pageId),"re",0.69);// 15 should prevent this one from going through
+    vector<Spotting> sr002 = {s0018,s0019,s0020};
+    q0->updateSpottingResults(new vector<Spotting>(sr002));
+    SpottingsBatch* sb002 = q0->getSpottingsBatch(5,false,400,0,"");
+    assert(sb002 && sb002->size()==2);
+    for (int i=0; i<sb002->size(); i++)
+    {
+        assert(sb002->at(i).id!=s0020.id);
+    }
+    
+
     delete c0;
     delete q0;
 
+    
+    
+    
+    
     c0=new Knowledge::Corpus();
     c0->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
     
+    vector< pair<unsigned long, string> > toRemoveExemplars;
     
     Spotting s02(1588,851,1704,902,pageId,c0->imgForPageId(pageId),"th",0.3);
     vector<Spotting> sb02 = {s02};
     vector<Spotting*> newEx0;
-    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb02,NULL,NULL,&newEx0);
-    assert(newBatches0.size()==0 && newEx0.size()==0);
+    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb02,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==0 && newEx0.size()==0 && toRemoveExemplars.size()==0);
 
     Spotting s03(1644,851,1779,902,pageId,c0->imgForPageId(pageId),"he",0.3);
     vector<Spotting> sb03 = {s03};
-    newBatches0 = c0->updateSpottings(&sb03,NULL,NULL,&newEx0);
-    assert(newBatches0.size()==0 && newEx0.size()==0);
+    newBatches0 = c0->updateSpottings(&sb03,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==0 && newEx0.size()==0 && toRemoveExemplars.size()==0);
 
-    Spotting s04(1649,948,17070,982,pageId,c0->imgForPageId(pageId),"re",0.3);
+    Spotting s04(1649,948,1707,982,pageId,c0->imgForPageId(pageId),"re",0.3);
     vector<Spotting> sb04 = {s04};
-    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb04,NULL,NULL,&newEx0);
-    assert(newBatches0.size()==0 && newEx0.size()==0);
+    newBatches0 = c0->updateSpottings(&sb04,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==0 && newEx0.size()==0 && toRemoveExemplars.size()==0);
     
     Spotting s05(1708,943,1756,984,pageId,c0->imgForPageId(pageId),"st",0.3);
     vector<Spotting> sb05 = {s05};
-    vector<TranscribeBatch*> newBatches0 = c0->updateSpottings(&sb05,NULL,NULL,&newEx0);
-    assert(newBatches0.size()==1 && newEx0.size()==1);
+    newBatches0 = c0->updateSpottings(&sb05,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==1 && newEx0.size()==0 && toRemoveExemplars.size()==0);
     
-
+    newEx0 = newBatches0[0]->getBackPointer()->result("rests",&toRemoveExemplars);
+    assert(newEx0.size()==2 && toRemoveExemplars.size()==0);
+    
+    newEx0 = newBatches0[0]->getBackPointer()->result("rest",&toRemoveExemplars);
+    assert(newEx0.size()==1 && toRemoveExemplars.size()==2);
+    toRemoveExemplars.clear();
 
     vector<Spotting*> newEx0r;
     vector<Spotting> empty;
-    vector<pair<unsigned long,string> > removeThis0 = {make_pair(s04.id,s04.ngram)};
+    vector<pair<unsigned long,string> > removeThis0 = {make_pair(s05.id,s05.ngram)};
     vector<unsigned long> toRemove0;
-    vector<TranscribeBatch*> newBatches0r = c0->updateSpottings(&empty,&removeThis0,&toRemove0,&newEx0r);
-    assert(newBatches0r.size()==0 && toRemove0.size()==1);
+    vector<TranscribeBatch*> newBatches0r = c0->updateSpottings(&empty,&removeThis0,&toRemove0,&newEx0r,&toRemoveExemplars);
+    assert(newBatches0r.size()==0 && toRemove0.size()==1 && newEx0r.size()==0 && toRemoveExemplars.size()==1);
     assert(toRemove0[0] == newBatches0[0]->getId());
+    assert(toRemoveExemplars[0].first==newEx0[0]->id);
+   
+    delete c0;
+    c0=new Knowledge::Corpus();
+    c0->addWordSegmentaionAndGT("/home/brian/intel_index/data/gw_20p_wannot", "data/queries.gtp");
+
+    newEx0.clear();
+    toRemoveExemplars.clear();
+    newBatches0 = c0->updateSpottings(&sb04,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==0 && newEx0.size()==0 && toRemoveExemplars.size()==0);
+    
+    newBatches0 = c0->updateSpottings(&sb05,NULL,NULL,&newEx0,&toRemoveExemplars);
+    assert(newBatches0.size()==1 && newEx0.size()==0 && toRemoveExemplars.size()==0);
+    
+    //newEx0 = newBatches0[0]->getBackPointer()->result("rest",&toRemoveExemplars);
+    //assert(newEx0.size()==1 && toRemoveExemplars.size()==0);
+    
+    newEx0r.clear();
+    TranscribeBatch* newb0  = newBatches0[0]->getBackPointer()->removeSpotting(s05.id,&newEx0r,&toRemoveExemplars);
+    assert(newb0==NULL && newEx0r.size()==0 && toRemoveExemplars.size()==0);
+
 
             //Test updateSpottingResults()
     Knowledge::Corpus c;

@@ -304,8 +304,11 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     if (batch==NULL)
     {
         pthread_rwlock_unlock(&semResultsQueue);//just in case
-        //cout<<"null b"<<endl;
+#ifdef TEST_MODE
+        cout<<"null batch from MasterQueue"<<endl;
+#endif
     }
+#ifdef TEST_MODE
     else //test
     {   
         /*cout<<"batch: ";
@@ -318,6 +321,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         }   
         cout<<endl;*/
     }
+#endif
     return batch;
 }
 
@@ -455,7 +459,7 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
 #ifdef TEST_MODE
-    cout<<"updateSpottingResults called from MasterQueue"<<endl;
+    cout<<"updateSpottingResults called from MasterQueue. "<<spottings->front().ngram<<endl;
 #endif
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
@@ -497,8 +501,11 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             bool resurrect = res->updateSpottings(spottings);
             if (resurrect)
             {
+#ifdef TEST_MODE
+                cout<<"Resurrect "<<res->ngram<<endl;
+#endif
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = results[id];
+                resultsQueue[res->getId()] = make_pair(sem,res);
                 pthread_rwlock_unlock(&semResultsQueue);
             }
             sem_post(sem);
@@ -513,6 +520,9 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     pthread_rwlock_unlock(&semResults);
         
     //if no id, no matching ngram, or if somethign goes wrong
+#ifdef TEST_MODE
+    cout <<"Creating SpottingResults for "<<spottings->front().ngram<<endl;
+#endif
     SpottingResults *n = new SpottingResults(spottings->front().ngram);
     for (Spotting& s : *spottings)
         n->add(s);
@@ -521,9 +531,9 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     return n->getId();
 }
 
-void MasterQueue::transcriptionFeedback(unsigned long id, string transcription) 
+void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars) 
 {
-    vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription);
+    vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription, toRemoveExemplars);
 
     //enqueue these for approval
     if (newExemplars.size()>0)
