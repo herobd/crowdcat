@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "MasterQueue.h"
+#include "CATTSS.h"
 #include "Knowledge.h"
 
 using namespace Nan;
@@ -13,17 +13,14 @@ using namespace v8;
 
 class MiscWorker : public AsyncWorker {
     public:
-        MiscWorker(Callback *callback, string task, MasterQueue* masterQueue, Knowledge::Corpus* corpus)
-        : AsyncWorker(callback), task(task), masterQueue(masterQueue), corpus(corpus) {}
+        MiscWorker(Callback *callback, CATTSS* cattss, string task)
+        : AsyncWorker(callback), task(task), cattss(cattss) {}
 
         ~MiscWorker() {}
 
 
         void Execute () {
-            if (task.compare("showCorpus")==0)
-            {
-                corpus->show();
-            }    
+            cattss->misc(task);
         }
 
         // We have the results, and we're back in the event loop.
@@ -37,8 +34,7 @@ class MiscWorker : public AsyncWorker {
 
         }
     private:
-        MasterQueue* masterQueue;
-        Knowledge::Corpus* corpus;
+        CATTSS* cattss;
         string task;
         
 };

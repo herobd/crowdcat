@@ -1,4 +1,5 @@
 
+#include "CATTSS.h"
 #include "MasterQueue.h"
 #include "TestQueue.h"
 #include "Knowledge.h"
@@ -278,6 +279,16 @@ int main() {
     spotter.stop();
     }
 }
+
+    //TEST ON FULL C++ CODE
+    //Using nan's interface, CATTSS
+    //CATTSS cattss("test/lexicon.txt","test/","test/seg.gtp");
+
+    //pageId=0;
+    //vector<BatchWraper*> todo;
+    //BatchWraper* batch = catts.getBatch(2,300,0,"");
+
+
 /**/
 /*
     //Manual testbed

@@ -223,22 +223,34 @@ bool MasterQueue::test_autoBatch()
     return true;
 }
 
-#ifndef TEST_MODE
+#ifndef TEST_MODE_C
 BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
 {
     int ngramQueueCount;
     pthread_rwlock_rdlock(&semResultsQueue);
     ngramQueueCount=resultsQueue.size();
-    pthread_unlock_rdlock(&semResultsQueue);
+    pthread_rwlock_unlock(&semResultsQueue);
 
     BatchWraper* ret=NULL;
 
     if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
-        ret = new BatchWraperNewExemplars(getNewExemplarsBatch(numberOfInstances,maxWidth,color));
+    {
+        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
+        if (batch!=NULL)
+            ret = new BatchWraperNewExemplars(batch);
+    }
     if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
-        ret = new BatchWraperTranscription(getTranscriptionBatch(maxWidth));
+    {
+        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+        if (batch!=NULL)
+            ret = new BatchWraperTranscription(batch);
+    }
     if (ret==NULL)
-        ret = new BatchWraperSpottings(getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram));
+    {
+        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram);
+        if (batch!=NULL)
+            ret = new BatchWraperSpottings(batch);
+    }
 
     return ret;
 } 

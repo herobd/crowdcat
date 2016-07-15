@@ -9,7 +9,7 @@
 #include <mutex>
 #include <iostream>
 
-//#include "Global.h"
+#include "Global.h"
 #include "Knowledge.h"
 #include "SpottingResults.h"
 
@@ -52,9 +52,9 @@ class pcomparison
     bool operator() (Spotting* lhs, Spotting* rhs) const
     {
         if (lhs->ngramRank==-1)
-            lhs->ngramRank = Global::knowledge()->getNgramRank(lhs->ngram);
+            lhs->ngramRank = GlobalK::knowledge()->getNgramRank(lhs->ngram);
         if (rhs->ngramRank==-1)
-            rhs->ngramRank = Global::knowledge()->getNgramRank(rhs->ngram);
+            rhs->ngramRank = GlobalK::knowledge()->getNgramRank(rhs->ngram);
         return (lhs->ngramRank>rhs->ngramRank);
     }
 };

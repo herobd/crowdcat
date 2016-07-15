@@ -1,5 +1,5 @@
-#ifndef GLOBAL_H
-#define GLOABL_H
+#ifndef GLOBAL_HEADER
+#define GLOBAL_HEADER
 
 #include <map>
 #include <vector>
@@ -12,15 +12,15 @@ using namespace std;
 #define MIN_N 2
 #define MAX_N 2
 #define MAX_NGRAM_RANK 300
-class Global
+class GlobalK
 {
     private:
-        Global();
-        static Global* _self;
+        GlobalK();
+        static GlobalK* _self;
 
         map<int, vector<string> > ngramRanks;
     public:
-        static Global* knowledge();
+        static GlobalK* knowledge();
 
         int getNgramRank(string ngram);
 

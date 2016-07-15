@@ -58,6 +58,21 @@ void Spotter::run(int numThreads)
     }
 }
 
+void Spotter::addQueries(vector<SpottingExemplar*>& exemplars)
+{
+    //int setId = ++_setId;
+    mutLock.lock();
+    for (SpottingExemplar* exemplar : exemplars)
+    {
+        if (exemplar->type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
+        {
+            SpottingQuery* query = new SpottingQuery(exemplar);
+            enqueue(query);
+            sem_post(&semLock);
+        }
+    }
+    mutLock.unlock();
+}
 void Spotter::addQueries(vector<Spotting*>& exemplars)
 {
     //int setId = ++_setId;
@@ -65,6 +80,21 @@ void Spotter::addQueries(vector<Spotting*>& exemplars)
     for (Spotting* exemplar : exemplars)
     {
         if (exemplar->type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
+        {
+            SpottingQuery* query = new SpottingQuery(exemplar);
+            enqueue(query);
+            sem_post(&semLock);
+        }
+    }
+    mutLock.unlock();
+}
+void Spotter::addQueries(vector<Spotting>& exemplars)
+{
+    //int setId = ++_setId;
+    mutLock.lock();
+    for (Spotting& exemplar : exemplars)
+    {
+        if (exemplar.type != SPOTTING_TYPE_THRESHED) //It's probably best not to entirely trust the threshed ones
         {
             SpottingQuery* query = new SpottingQuery(exemplar);
             enqueue(query);

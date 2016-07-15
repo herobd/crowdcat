@@ -43,6 +43,7 @@ public:
     {
         id = s.id;
     }
+    virtual ~Spotting() {}
     
     int tlx, tly, brx, bry, pageId;
     const cv::Mat* pagePnt;
@@ -154,6 +155,7 @@ public:
     {
         image=s.image;
     }
+    virtual ~SpottingImage() {}
     
     virtual cv::Mat img()
     {
@@ -185,6 +187,7 @@ public:
     {
         type=SPOTTING_TYPE_EXEMPLAR;
     }
+    virtual ~SpottingExemplar() {}
 
     cv::Mat ngramImg() const
     {

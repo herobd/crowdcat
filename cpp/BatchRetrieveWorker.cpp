@@ -5,10 +5,8 @@
 #include <assert.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "MasterQueue.h"
+#include "CATTSS.h"
 #include "BatchWraper.h"
-//#include "BatchWraperSpottings.h"
-//#include "BatchWraperTranscription.h"
 using namespace Nan;
 using namespace std;
 using namespace v8;

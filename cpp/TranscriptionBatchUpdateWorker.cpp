@@ -6,7 +6,7 @@
 #include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "MasterQueue.h"
+#include "CATTSS.h"
 
 using namespace Nan;
 using namespace std;
@@ -37,7 +37,6 @@ class TranscriptionBatchUpdateWorker : public AsyncWorker {
         }
     private:
         CATTSS* cattss;
-        Spotter* spotter;
         string id;
         string transcription;
         

@@ -14,6 +14,7 @@ class SpottingQuery
 {
     public:
     SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram) {}//use e->ngramImg() to get correct exemplar image}
+    SpottingQuery(const Spotting& e) : SpottingQuery(&e) {}
     string getNgram() {return ngram;}
     unsigned long getId() {return id;}
 
@@ -30,7 +31,9 @@ class Spotter
     void run(int numThreads);
     void stop();
 
+    void addQueries(vector<SpottingExemplar*>& exemplars);
     void addQueries(vector<Spotting*>& exemplars);
+    void addQueries(vector<Spotting>& exemplars);
     void removeQueries(vector<pair<unsigned long,string> >* toRemove);
 
     virtual vector<Spotting>* runQuery(SpottingQuery* query)=0;

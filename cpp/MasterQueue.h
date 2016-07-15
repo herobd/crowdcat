@@ -15,7 +15,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
-#ifndef TEST_MODE
+#ifndef TEST_MODE_C
 #include "BatchWraper.h"
 #include "BatchWraperSpottings.h"
 #include "BatchWraperTranscription.h"
@@ -27,7 +27,8 @@ using namespace std;
 
 #define ROTATE 0 //this is for testing, forcing it to feed up batches from different spotting results.
 
-
+#define NGRAM_Q_COUNT_THRESH_NEW 4
+#define NGRAM_Q_COUNT_THRESH_WORD 6
 
 
 
@@ -65,7 +66,7 @@ private:
     int numCTrue, numCFalse;
 public:
     MasterQueue();
-#ifndef TEST_MODE
+#ifndef TEST_MODE_C
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
 #endif
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);

@@ -67,15 +67,24 @@ vector<Spotting>* FacadeSpotter::runQuery(SpottingQuery* query)
         cout <<"Facade Spotter ran out of exemplars for ["<<query->getNgram()<<"]"<<", returning none."<<endl;
     }
     delete query;
-
+#ifdef TEST_MODE
     this_thread::sleep_for (chrono::milliseconds(500));
+#endif
+#ifdef TEST_MODE_LONG
+
+    this_thread::sleep_for (chrono::seconds(2));
+#endif
 
     return ret;
 }
 
 FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir) : Spotter(masterQueue, corpus, modelDir)
 {
+#ifdef TEST_MODE
+    string file= "./test/spottings.csv";
+#else
     string file= "./data/GW_spottings_fold1_0.100000.csv";
+#endif
     addTestSpottings(file);
 }
 

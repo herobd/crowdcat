@@ -563,7 +563,7 @@ vector<Spotting*> Knowledge::Word::harvest()
 #ifdef TEST_MODE
                     cout<<"New ngram: "<<ngram<<", at "<<i<<endl;
 #endif
-                    int rank = Global::knowledge()->getNgramRank(ngram);
+                    int rank = GlobalK::knowledge()->getNgramRank(ngram);
                     if ( rank<=MAX_NGRAM_RANK )
                     {
                         int etlx, ebrx;

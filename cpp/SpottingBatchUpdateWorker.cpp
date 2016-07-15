@@ -3,8 +3,7 @@
 #include <assert.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "MasterQueue.h"
-#include "Knowledge.h"
+#include "CATTSS.h"
 
 using namespace Nan;
 using namespace std;
