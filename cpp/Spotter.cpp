@@ -106,6 +106,8 @@ void Spotter::addQueries(vector<Spotting>& exemplars)
 
 void Spotter::removeQueries(vector<pair<unsigned long,string> >* toRemove)
 {
+    if (toRemove->size()==0)
+        return;
 #ifdef TEST_MODE
     cout <<"spotter removing query "<<toRemove->front().first<<":"<<toRemove->front().second<<"..."<<endl;
 #endif

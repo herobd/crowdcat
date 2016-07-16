@@ -669,7 +669,11 @@ vector<Spotting*> Knowledge::Word::harvest()
                         cout <<"harvested: "<<ngram<<endl;
                         cv::imshow("harvested",toRet->ngramImg());
                         cv::imshow("boundary image",toRet->img());
+#ifdef TEST_MODE_LONG
+                        cv::waitKey(1);
+#else
                         cv::waitKey();
+#endif
 #endif
                     }
                 }

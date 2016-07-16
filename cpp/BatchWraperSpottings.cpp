@@ -16,6 +16,8 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
         retId[index]=to_string(batch->at(index).id);
         vector<uchar> outBuf;
         //cout <<"encoding..."<<endl;
+        //cv::imshow("batch im",batch->at(index).img());
+        //cv::waitKey();
         cv::imencode(".png",batch->at(index).img(),outBuf,compression_params);
         //cout <<"done"<<endl;
         stringstream ss;

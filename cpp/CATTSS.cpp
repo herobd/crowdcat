@@ -12,12 +12,12 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 #ifdef TEST_MODE
     int pageId=0;
 
-    Spotting er1 (705,15,748,38,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
-    vector<Spotting > init = {er1};
-    masterQueue->updateSpottingResults(new vector<Spotting>(init));
-    //Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
-    //vector<Spotting* > init = {er1};
-    //spotter->addQueries(init);
+    //Spotting er1 (1160,15,1190,36,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
+    //vector<Spotting > init = {er1};
+    //masterQueue->updateSpottingResults(new vector<Spotting>(init));
+    Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
+    vector<Spotting* > init = {er1};
+    spotter->addQueries(init);
 #endif
     //test
     /*
