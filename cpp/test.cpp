@@ -1,5 +1,5 @@
 
-#include "CATTSS.h"
+//#include "CATTSS.h"
 #include "MasterQueue.h"
 #include "TestQueue.h"
 #include "Knowledge.h"
@@ -58,11 +58,11 @@ int main() {
     Spotting s006(971,957,1042,980,pageId,c0->imgForPageId(pageId),"re",0.5);
     Spotting s007(821,837,922,860,pageId,c0->imgForPageId(pageId),"re",0.7);
     Spotting s008(171,157,242,180,pageId,c0->imgForPageId(pageId),"re",0.8);
-    Spotting s009(271,257,342,280,pageId,c0->imgForPageId(pageId),"re",0.55);
+    Spotting s009(271,257,342,280,pageId,c0->imgForPageId(pageId),"re",0.65);
     Spotting s0010(371,357,442,480,pageId,c0->imgForPageId(pageId),"re",0.6);
     Spotting s0011(571,557,642,580,pageId,c0->imgForPageId(pageId),"re",0.35);
     Spotting s0012(671,657,742,680,pageId,c0->imgForPageId(pageId),"re",0.25);
-    Spotting s0013(771,757,842,780,pageId,c0->imgForPageId(pageId),"re",0.54);
+    Spotting s0013(771,757,842,780,pageId,c0->imgForPageId(pageId),"re",0.64);
     Spotting s0014(1,2,22,22,pageId,c0->imgForPageId(pageId),"re",0.34);
     Spotting s0015(25,25,35,35,pageId,c0->imgForPageId(pageId),"re",0.55);
     Spotting s0016(40,25,50,35,pageId,c0->imgForPageId(pageId),"re",0.95);

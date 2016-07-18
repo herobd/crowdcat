@@ -75,7 +75,7 @@ var ControllerApp = function(port) {
      *  @param {string} sig  Signal to terminate on.
      */
     self.terminator = function(sig){
-        
+        spottingaddon.stopSpotting(function(){console.log("told spotter to stop");}); 
         if (typeof sig === "string") {
            console.log('%s: Received %s - terminating control app ...',
                        Date(Date.now()), sig);
@@ -476,6 +476,7 @@ var ControllerApp = function(port) {
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
+        spottingaddon.startSpotting(6,function(){console.log("done spotting");});
         self.app.listen(self.port, /*self.ipaddress,*/ function() {
             console.log('%s: Node server started on :%d ...',
                         Date(Date.now() ), self.port);

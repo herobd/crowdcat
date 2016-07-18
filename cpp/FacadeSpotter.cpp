@@ -80,7 +80,7 @@ vector<Spotting>* FacadeSpotter::runQuery(SpottingQuery* query)
 
 FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir) : Spotter(masterQueue, corpus, modelDir)
 {
-#ifdef TEST_MODE
+#ifdef TEST_MODE_LONG
     string file= "./test/spottings.csv";
 #else
     string file= "./data/GW_spottings_fold1_0.100000.csv";

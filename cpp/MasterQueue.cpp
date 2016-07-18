@@ -415,24 +415,26 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
             pthread_rwlock_unlock(&semResults);
             if (succ)
             {
-                bool done=false;
+                int done=0;
                 //cout <<"res feedback"<<endl;
                 ret = res->feedback(&done,ids,userClassifications,resent,remove);
                 //cout <<"END res feedback"<<endl;
                 
-                /*if (done)
-                {cout <<"done done "<<endl;
+                if (done==-1)
+                {
+                    pthread_rwlock_wrlock(&semResultsQueue);
+                    resultsQueue[res->getId()] = make_pair(sem,res);
+                    pthread_rwlock_unlock(&semResultsQueue);
                     
-                    pthread_rwlock_wrlock(&semResults);
-                    results.erase(res->getId());
-                    
-                    pthread_rwlock_unlock(&semResults);
-                    delete res;
-                    sem_destroy(sem);
-                    delete sem;
                 }
-                else*/
-                    sem_post(sem);
+                else if (done==2)
+                {
+                    pthread_rwlock_wrlock(&semResultsQueue);
+                    resultsQueue.erase(res->getId());
+                    
+                    pthread_rwlock_unlock(&semResultsQueue);
+                }
+                sem_post(sem);
             }
             else
                 cout<<"Failed to get lock for: "<<id<<endl;

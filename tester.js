@@ -7,7 +7,7 @@
 var numInBat=2;
 
 var spottingaddon = require("./cpp/build/Debug/spottingaddon");
-
+spottingaddon.startSpotting(3,function(){console.log("done spotting");});
 var spottingMap = { "iVBORw0KGgoAAAANSUhEUgAAASwAAAAWCAIAAAD1iTZdAAAKOElEQVR4Ae3Bf0zX953A8efr":2,
                     "iVBORw0KGgoAAAANSUhEUgAAASsAAAAZCAIAAADmA5/xAAAPNUlEQVR4Ae3Bf2yU92HH8ff3":4,
                     "iVBORw0KGgoAAAANSUhEUgAAASwAAAAYCAIAAADPg1ctAAAPhElEQVR4Ae3Be3CV9YHH4c/v":5,
@@ -95,7 +95,7 @@ var approvalMap5 = {2:0,
                     16:0,
                     18:0,
                     22:"error"};
-/**/
+/*/
 function approveAllSpottingBatchesX(approvalMap,toDo,callback) {
     spottingaddon.getNextBatch(300,0,"",numInBat,function (err,batchType,batchId,arg3,arg4,arg5) {
         if (batchType=='spottings')
@@ -311,7 +311,10 @@ function do3() {
         console.log("3 ERROR: toDo:");
         console.log(toDo);
     } else {
-        setTimeout( function(){ approveAllSpottingBatches(approvalMap2,toDo,do5);}, 4000 );   
+        setTimeout( function(){ approveAllSpottingBatches(approvalMap2,toDo,do5);}, 2000 );   
     }
 }
-approveAllSpottingBatches(approvalMap1,toDo,do3);
+setTimeout( function() {
+    console.log('[do1]');
+    approveAllSpottingBatches(approvalMap1,toDo,do3);
+}, 500);

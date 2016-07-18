@@ -136,5 +136,18 @@ void CATTSS::misc(string task)
     {
         corpus->show();
     }
+    else if (task.compare("stopSpotting")==0)
+    {
+        spotter->stop();
+    }
+    else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
+    {
+        int num = stoi(task.substr(14));
+        if (num>0)
+            spotter->run(num);
+        else
+            cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
+    }
+
 }    
 

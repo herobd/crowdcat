@@ -129,6 +129,17 @@ NAN_METHOD(showCorpus) {
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "showCorpus"));
 }
+NAN_METHOD(startSpotting) {
+    int num = To<int>(info[0]).FromJust();
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "startSpotting:"+to_string(num)));
+}
+NAN_METHOD(stopSpotting) {
+    Callback *callback = new Callback(info[0].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "stopSpotting"));
+}
 
 NAN_METHOD(getNextTestBatch) {
     //cout<<"request for test batch"<<endl;
@@ -205,6 +216,10 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
+    Nan::Set(target, New<String>("startSpotting").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());
+    Nan::Set(target, New<String>("stopSpotting").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(stopSpotting)).ToLocalChecked());
     
     testQueue = new TestQueue();
     

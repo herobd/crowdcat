@@ -190,7 +190,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     return ret;
 }
 
-vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* retRemove)
+vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* retRemove)
 {
     /*cout << "fed: ";
     for (int i=0; i<ids.size(); i++)
@@ -246,32 +246,71 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         return ret;
     }
     EMThresholds();
-    
+  
+    bool allWereSent = allBatchesSent; 
+    allBatchesSent=true;
+    auto iter = tracer;
+    while (iter!=instancesByScore.end())
+    {
+        if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
+        {
+            allBatchesSent=false;
+            break;
+        }
+        if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
+            break;
+        iter--;
+    } 
+    if (allBatchesSent)
+    {
+        iter = tracer;
+        while (iter!=instancesByScore.end() && (**iter).score > rejectThreshold)
+        {
+            if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
+            {
+                allBatchesSent=false;
+                break;
+            }
+            iter++;
+        } 
+    }
+
+
 #ifdef TEST_MODE
     cout<<"["<<id<<"]:"<<ngram<<", all sent: "<<allBatchesSent<<", waiting for "<<starts.size()<<", num left "<<instancesByScore.size()<<endl;
+    for (auto i=instancesByScore.begin(); i!=instancesByScore.end(); i++)
+        cout <<(**i).id<<"[tlx:"<<(**i).tlx<<" score:"<<(**i).score<<"]"<<endl;
 #endif
 
     if (resent==0 && starts.size()==0 && allBatchesSent)
     {
-        *done=true;
+        if (allWereSent)
+            *done=1;
+        else
+            *done=2;
         this->done=true;
 #ifdef TEST_MODE
         cout <<"all batches sent, cleaning up"<<endl;
 #endif
         tracer = instancesByScore.begin();
-        while (tracer!=instancesByScore.end() && (*tracer)->score < acceptThreshold)
+        while (tracer!=instancesByScore.end() && (*tracer)->score <= acceptThreshold)
         {
             (**tracer).type=SPOTTING_TYPE_THRESHED;
             ret->push_back(**tracer);
             classById[(**tracer).id]=true;
-            tracer++;
             numberAccepted++;
+#ifdef TEST_MODE_LONG
+            cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: true"<<endl;
+#endif
+            tracer++;
         }
         while (tracer!=instancesByScore.end())
         {
             (**tracer).type=SPOTTING_TYPE_THRESHED;
-            ret->push_back(**tracer);
             classById[(**tracer).id]=false;
+#ifdef TEST_MODE_LONG
+            cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: false"<<endl;
+#endif
             tracer++;
         }
         instancesByScore.clear();
@@ -279,9 +318,12 @@ vector<Spotting>* SpottingResults::feedback(bool* done, const vector<string>& id
         numberRejected = distance(tracer,instancesByScore.end());
         
     }
-    else 
+    else if (!allBatchesSent && allWereSent)
     {
-        
+        *done=-1;
+#ifdef TEST_MODE
+        cout<<"SpottingResults ["<<ngram<<"] has more batches and will be re-enqueued"<<endl;
+#endif
     }
     return ret;
 }
@@ -463,7 +505,9 @@ void SpottingResults::EMThresholds(bool init)
         float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
         acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
         rejectThreshold = min( min(rejectThreshold1,rejectThreshold2), maxScore);
-        
+#ifdef TEST_MODE
+        cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
+#endif        
         /*if (!init || !initV)
             break;
         
@@ -626,6 +670,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                         instancesByLocation.insert(&instancesById[spotting.id]);
                         if (classById.find((*itLow)->id)==classById.end())
                         {
+                            //cout<<"{} replaced unclas spotting "<<spotting.score<<endl;
                             //Remove from scores
                             instancesByScore.erase(*itLow); //erase by value (pointer)
                             //Remove from locations
@@ -636,9 +681,12 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                         }
                         else if (classById[(*itLow)->id]==false && (*itLow)->type==SPOTTING_TYPE_THRESHED)
                         {//This occurs after being resurrected. We'll give a better score another chance.
+                            //cout<<"{} replaced false spotting "<<spotting.score<<endl;
                             instancesByScore.insert(&instancesById[spotting.id]);
                             tracer = instancesByScore.begin();
                         }
+                        //else
+                            //cout<<"{} other [class:"<<classById[(*itLow)->id]<<" type:"<<(*itLow)->type<<"] spotting "<<spotting.score<<endl;
 
                     }
                     tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);

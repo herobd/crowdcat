@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include <atomic>
 #include <iomanip>
-#include "maxflow/graph.h"
+#include "graph.h"
 
 #include "SpottingResults.h"
 #include "Lexicon.h"
@@ -30,7 +30,12 @@ typedef Graph<float,float,float> GraphType;
 #define THRESH_LEXICON_LOOKUP_COUNT 20
 //#define THRESH_SCORING 1.0
 #define THRESH_SCORING_COUNT 6
-#define averageCharWidth 40 //GW, totally just making this up
+#ifndef TEST_MODE_LONG
+#define averageCharWidth 40 //TODO GW, totally just making this up
+#else
+#define averageCharWidth 23 //TODO test, totally just making this up
+#endif
+
 class TranscribeBatch;
 class WordBackPointer
 {

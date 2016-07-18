@@ -94,8 +94,12 @@ void TranscribeBatch::setWidth(unsigned int width)
     double scale=1.0;
     if (width>=wordW)
     {
-        if (width>wordW)
-            (*origImg)(cv::Rect(tlx-padLeft,tly,width,wordH)).copyTo(newWordImg(cv::Rect(0, 0, width, wordH)));
+        if (width>wordW) {
+            if (tlx-padLeft>=0)
+                (*origImg)(cv::Rect(tlx-padLeft,tly,width,wordH)).copyTo(newWordImg(cv::Rect(0, 0, width, wordH)));
+            else
+                (*origImg)(cv::Rect(0,tly,width+(tlx-padLeft),wordH)).copyTo(newWordImg(cv::Rect(padLeft-tlx, 0, width+(tlx-padLeft), wordH)));
+        }
         wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, 0, wordW, wordH)));
         //textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
     }
@@ -105,8 +109,11 @@ void TranscribeBatch::setWidth(unsigned int width)
         cv::resize(wordImg(cv::Rect(0,0,wordW,wordH)), newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
         //cv::resize(textImg(cv::Rect(0,0,wordW,textH)), newTextImg, cv::Size(), scale,1, cv::INTER_CUBIC );
     }
-
-
+#ifdef TEST_MODE_LONG
+    //cout <<"transcription word"<<endl;
+    //cv::imshow("trans",newWordImg);
+    //cv::waitKey(1);
+#endif
 }
 
 Knowledge::Corpus::Corpus()
@@ -566,7 +573,6 @@ vector<Spotting*> Knowledge::Word::harvest()
                     int rank = GlobalK::knowledge()->getNgramRank(ngram);
                     if ( rank<=MAX_NGRAM_RANK )
                     {
-                        int etlx, ebrx;
                         //getting left x location
                         int leftLeftBound =0;
                         int rightLeftBound=0;
