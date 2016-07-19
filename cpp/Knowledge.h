@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include <atomic>
 #include <iomanip>
-#include "graph.h"
+#include "maxflow/graph.h"
 
 #include "SpottingResults.h"
 #include "Lexicon.h"

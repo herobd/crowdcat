@@ -7,7 +7,7 @@ Spotter::Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, stri
     //TODO init spotting implementations from modelDir
     
     //int _setId=0;
-    //cont.store(1);
+    cont.store(1);
     numThreads=0;
     sem_init(&semLock, 0, 0);
 }
@@ -15,7 +15,7 @@ Spotter::~Spotter() {sem_destroy(&semLock);}
 
 void Spotter::stop()
 {
-    //cont.store(0);
+    cont.store(0);
     for (int i=0; i<numThreads; i++)
         sem_post(&semLock);
 }
@@ -25,15 +25,17 @@ void Spotter::run(int numThreads)
     //omp_set_num_threads(numThreads);
 #pragma omp parallel num_threads(numThreads)
     {
-        while(1)
+        while(cont.load())
         {
             sem_wait(&semLock);
             mutLock.lock();
             SpottingQuery* query = dequeue();
+            mutLock.unlock();
             if (query==NULL)
                 break;
-            mutLock.unlock();
             vector<Spotting>* results = runQuery(query);
+            if (results==NULL)
+                continue;
             bool cont=true;
             emLock.lock();
             auto iter = emList.find(query->getId());

@@ -55,7 +55,7 @@ void FacadeSpotter::addTestSpottings(string file)
 
 vector<Spotting>* FacadeSpotter::runQuery(SpottingQuery* query)
 {
-    vector<Spotting>* ret;
+    vector<Spotting>* ret=NULL;
     if (loaded[query->getNgram()].size()>0)
     {
         cout <<"Spotting ["<<query->getNgram()<<"]"<<endl;

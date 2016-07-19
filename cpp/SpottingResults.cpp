@@ -94,7 +94,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     
-    unsigned int toRet = (hard||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
+    unsigned int toRet = ((hard&&instancesByScore.size()>=num)||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
     if (toRet==0)
     {
 #ifdef TEST_MODE
@@ -245,35 +245,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         *done=true;
         return ret;
     }
+    bool allWereSent = allBatchesSent; 
     EMThresholds();
   
-    bool allWereSent = allBatchesSent; 
-    allBatchesSent=true;
-    auto iter = tracer;
-    while (iter!=instancesByScore.end())
-    {
-        if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
-        {
-            allBatchesSent=false;
-            break;
-        }
-        if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
-            break;
-        iter--;
-    } 
-    if (allBatchesSent)
-    {
-        iter = tracer;
-        while (iter!=instancesByScore.end() && (**iter).score > rejectThreshold)
-        {
-            if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
-            {
-                allBatchesSent=false;
-                break;
-            }
-            iter++;
-        } 
-    }
 
 
 #ifdef TEST_MODE
@@ -331,7 +305,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
    
     
 
-void SpottingResults::EMThresholds(bool init)
+bool SpottingResults::EMThresholds(bool init)
 {
     float oldMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
     /*This will likely predict very narrow and distinct distributions
@@ -349,7 +323,7 @@ void SpottingResults::EMThresholds(bool init)
     
     if (init)
     {
-        //we initailize our split with Otsu, as we are assuming to distributions.
+        //we initailize our split with Otsu, as we are assuming two distributions.
         //make histogram
         vector<int> histogram(256);
         for (auto p : instancesById)
@@ -611,6 +585,33 @@ void SpottingResults::EMThresholds(bool init)
         //cout << "pullFromScore: "<<pullFromScore<<endl;
     }*/
     
+    allBatchesSent=true;
+    auto iter = tracer;
+    while (iter!=instancesByScore.end())
+    {
+        if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
+        {
+            allBatchesSent=false;
+            break;
+        }
+        if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
+            break;
+        iter--;
+    } 
+    if (allBatchesSent)
+    {
+        iter = tracer;
+        while (iter!=instancesByScore.end() && (**iter).score > rejectThreshold)
+        {
+            if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
+            {
+                allBatchesSent=false;
+                break;
+            }
+            iter++;
+        } 
+    }
+    return allBatchesSent;
 }
 
 
@@ -704,8 +705,9 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
         }
     }
     delete spottings;
+    bool allWereSent = allBatchesSent;
     EMThresholds();
-    if (allBatchesSent)
+    if (allWereSent && !allBatchesSent)
     {
         //RESURRECT!
         allBatchesSent=false;

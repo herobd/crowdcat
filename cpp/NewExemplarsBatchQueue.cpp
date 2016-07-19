@@ -6,12 +6,55 @@ NewExemplarsBatchQueue::NewExemplarsBatchQueue()
 
 }
 
-void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch)
+void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
-    lock();
-    for (Spotting* s : batch)
-        queue.push(s);
-    unlock();
+    if (batch.size()>0 || toRemoveExemplars->size()>0)
+    {
+        lock();
+        if (toRemoveExemplars->size()>0)
+        {
+            priority_queue<Spotting*, vector<Spotting*>, pcomparison> temp;
+            while (queue.size()>0)
+            {
+                Spotting* s = queue.top();
+                queue.pop();
+                bool matched=false;
+                for (auto iter=toRemoveExemplars->begin(); iter!=toRemoveExemplars->end(); iter++)
+                {
+                    if (s->id == iter->first)
+                    {
+                        matched=true;
+                        iter=toRemoveExemplars->erase(iter);
+                        break;
+                    }
+                }
+                if (!matched)
+                    temp.push(s);
+            }
+            queue.swap(temp);
+
+        }
+        for (Spotting* s : batch)
+            queue.push(s);
+        unlock();
+    }
+}
+
+void NewExemplarsBatchQueue::remove(unsigned long id)
+{
+    priority_queue<Spotting*, vector<Spotting*>, pcomparison> temp;
+    while (queue.size()>0)
+    {
+        Spotting* s = queue.top();
+        queue.pop();
+        if (s->id != id)
+            temp.push(s);
+#ifdef TEST_MODE_LONG
+        else
+            cout <<"NewExemplarsQueue removed "<<id<<":"<<s->ngram<<endl;
+#endif
+    }
+    queue.swap(temp);
 }
 
 NewExemplarsBatch* NewExemplarsBatchQueue::dequeue(int batchSize, unsigned int maxWidth, int color)
@@ -72,21 +115,29 @@ vector<SpottingExemplar*> NewExemplarsBatchQueue::feedback(unsigned long id, con
         //This occurs on a resend
         if (doneMap.find(id) != doneMap.end())
         {
-            if (userClassifications.size() == returnMap[id]->size())
+            if (userClassifications.size() == doneMap[id]->size())
             {
                 for (int i=0; i<userClassifications.size(); i++)
                 {
-                    if (doneMap[id]->at(i).classified!=-1 && doneMap[id]->at(i).classified!=userClassifications[i])
+                    if (userClassifications[i]!=-1 && doneMap[id]->at(i).classified!=userClassifications[i])
                     {
+#ifdef TEST_MODE_LONG
+                        cout<<"resend new exs:"<<doneMap[id]->at(i).ngram<<" was:"<<doneMap[id]->at(i).classified<<" now:"<<userClassifications[i]<<endl;
+#endif
+                        if (doneMap[id]->at(i).classified==-1)
+                            remove(doneMap[id]->at(i).id);
                         if (userClassifications[i]>0)
-                            confirmedNgramExemplars.push_back(new SpottingExemplar(returnMap[id]->at(i)));
-                        else if (userClassifications[i]==0)
+                            confirmedNgramExemplars.push_back(new SpottingExemplar(doneMap[id]->at(i)));
+                        else if (userClassifications[i]==0 && doneMap[id]->at(i).classified!=-1)
                             toRemoveExemplars->push_back(make_pair(doneMap[id]->at(i).id,doneMap[id]->at(i).ngram));
+                        doneMap[id]->at(i).classified=userClassifications[i];
                     }
+                        
+
                 }
             }
             else
-                cout <<"ERROR: Resent new ex batch has size mismatch. user data ("<<userClassifications.size()<<") and newExemplars length ("<<returnMap[id]->size()<<")"<<endl;
+                cout <<"ERROR: Resent new ex batch has size mismatch. user data ("<<userClassifications.size()<<") and newExemplars length ("<<doneMap[id]->size()<<")"<<endl;
         }
         else
         {

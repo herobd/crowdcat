@@ -470,6 +470,46 @@ void MasterQueue::addSpottingResults(SpottingResults* res)
 }
 
 
+void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
+{
+    pthread_rwlock_rdlock(&semResults);
+    vector<SpottingExemplar*> spottingsC = *spottings;
+    for (auto p : results)
+    {
+        
+        sem_t* sem=p.second.first;
+        SpottingResults* res = p.second.second;
+        sem_wait(sem);
+        vector<Spotting> toUpdate;
+        for (auto iter=spottingsC.begin(); iter!=spottingsC.end(); iter++)
+        {
+            if (res->ngram.compare((*iter)->ngram) == 0)
+            {
+                toUpdate.push_back(*(Spotting*)*iter);
+                iter=spottingsC.erase(iter);
+            }
+
+        }
+        if (toUpdate.size()>0)
+        {
+            //pthread_rwlock_unlock(&semResults);
+            bool resurrect = res->updateSpottings(&toUpdate);
+            if (resurrect)
+            {
+#ifdef TEST_MODE
+                cout<<"Resurrect "<<res->ngram<<endl;
+#endif
+                pthread_rwlock_wrlock(&semResultsQueue);
+                resultsQueue[res->getId()] = make_pair(sem,res);
+                pthread_rwlock_unlock(&semResultsQueue);
+            }
+        }
+        sem_post(sem);
+        
+    }
+    pthread_rwlock_unlock(&semResults);
+}
+
 unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
 #ifdef TEST_MODE
@@ -550,7 +590,7 @@ void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, 
     vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription, toRemoveExemplars);
 
     //enqueue these for approval
-    if (newExemplars.size()>0)
-        newExemplarsBatchQueue.enqueue(newExemplars);
+    //if (newExemplars.size()>0)
+        newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
     //delete newExemplars;
 }

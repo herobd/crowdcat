@@ -342,9 +342,12 @@ private:
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;
     
-    SpottingImage getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram);
-    
-    void EMThresholds(bool init=false);
+    //SpottingImage getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram);
+   
+    //This uses expectation maximization (one iteration each call) to produce new appect/reject thresholds. It assumes a bimodal gaussian distribution, one for positive spottings and one for negative.
+    //returns (and sets allBatchesSent) whether we are now done (all spottings lie outside the thresholds)
+    //The 'init' para causes an Otsu threshold to be used to estimate some initail parameters.
+    bool EMThresholds(bool init=false);
 };
 
 #endif

@@ -664,6 +664,12 @@ vector<Spotting*> Knowledge::Word::harvest()
                             leftRightBound=brx;
                             rightRightBound=brx;
                         }
+                        if (rightLeftBound >= leftRightBound)
+                        {
+                            int mid=(rightLeftBound+leftRightBound)/2;
+                            rightLeftBound=mid-2;
+                            leftRightBound=mid+2;
+                        }
                         SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound,ngram);
                         //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
                         //toRet.type=SPOTTING_TYPE_EXEMPLAR;
@@ -676,7 +682,7 @@ vector<Spotting*> Knowledge::Word::harvest()
                         cv::imshow("harvested",toRet->ngramImg());
                         cv::imshow("boundary image",toRet->img());
 #ifdef TEST_MODE_LONG
-                        cv::waitKey(1);
+                        cv::waitKey(100);
 #else
                         cv::waitKey();
 #endif
@@ -703,6 +709,7 @@ inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat 
 
 SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram)
 {
+    assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
     cv::Mat b;
     int blockSize = (1+bry-tly)/2;
     if (blockSize%2==0)
@@ -779,6 +786,16 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             if (!b.at<unsigned char>(wordCord(r,c)))
                 g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);*/
     }
+#ifdef TEST_MODE
+    //cv::resize(showA,showA,cv::Size(),2,2,cv::INTER_NEAREST);
+    cv::imshow("anchors",showA);
+#ifdef TEST_MODE_LONG
+    //if (newNgram.compare("ex")==0)
+    //{
+    //    cv::waitKey();
+    //}
+#endif
+#endif
 
     //set up graph
     for (int i=0; i<width; i++)
@@ -877,7 +894,6 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             }
         }
     }
-    cv::imshow("anchors",showA);
     cv::imshow("seg results",show);
     //cv::imshow("exe",ret->ngramImg());
     //cv::imshow("fromPage",ret->img());

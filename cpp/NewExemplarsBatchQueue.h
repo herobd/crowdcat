@@ -59,11 +59,29 @@ class pcomparison
     }
 };
 
+/*template<typename T>
+class removeable_priority_queue : public std::priority_queue<T, std::vector<T>>
+{
+  public:
+
+      bool remove(const T& value) {
+        auto it = std::find(this->c.begin(), this->c.end(), value);
+        if (it != this->c.end()) {
+            this->c.erase(it);
+            std::make_heap(this->c.begin(), this->c.end(), this->comp);
+            return true;
+       }
+       else {
+        return false;
+       }
+ }
+}*/
+
 class NewExemplarsBatchQueue
 {
     public:
         NewExemplarsBatchQueue();
-        void enqueue(const vector<Spotting*>& batch);
+        void enqueue(const vector<Spotting*>& batch, vector<pair<unsigned long, string> >* toRemoveExemplars);
 
         NewExemplarsBatch* dequeue(int batchSize, unsigned int maxWidth, int color);
 
@@ -79,5 +97,7 @@ class NewExemplarsBatchQueue
         map<unsigned long, NewExemplarsBatch*> doneMap;
         map<unsigned long, chrono::system_clock::time_point> timeDoneMap;
         mutex mutLock;
+
+        void remove(unsigned long id);
 };
 #endif

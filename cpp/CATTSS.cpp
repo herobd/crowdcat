@@ -12,7 +12,7 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 #ifdef TEST_MODE
     int pageId=0;
 
-    //Spotting er1 (1160,15,1190,36,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
+    //Spotting er1 (433,14,472,36,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
     //vector<Spotting > init = {er1};
     //masterQueue->updateSpottingResults(new vector<Spotting>(init));
     Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
@@ -96,7 +96,7 @@ void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> l
         vector<pair<unsigned long,string> > toRemoveExemplars;        
         vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
         masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-        masterQueue->enqueueNewExemplars(newExemplars);
+        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
         //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
         //if (toRemoveBatches.size()>0)
         //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     

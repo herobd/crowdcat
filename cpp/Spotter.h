@@ -41,7 +41,7 @@ class Spotter
     protected:
     MasterQueue* masterQueue;
     const Knowledge::Corpus* corpus;
-    //atomic_char cont;
+    atomic_char cont;
     int numThreads;
 
     sem_t semLock;
