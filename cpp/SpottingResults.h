@@ -299,6 +299,7 @@ public:
     }
     
     void add(Spotting spotting);
+    void addTrueNoScore(Spotting* spotting);
 
     bool updateSpottings(vector<Spotting>* spottings);
     //This will either replace the spottings or add new ones if it can't find any close enough. spottings is consumed.
@@ -346,8 +347,8 @@ private:
    
     //This uses expectation maximization (one iteration each call) to produce new appect/reject thresholds. It assumes a bimodal gaussian distribution, one for positive spottings and one for negative.
     //returns (and sets allBatchesSent) whether we are now done (all spottings lie outside the thresholds)
-    //The 'init' para causes an Otsu threshold to be used to estimate some initail parameters.
-    bool EMThresholds(bool init=false);
+    //It uses an Otsu threshold to be used to estimate some initail parameters on the first run.
+    bool EMThresholds();
 };
 
 #endif

@@ -64,6 +64,7 @@ private:
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
     int done;
     int numCTrue, numCFalse;
+    void updateSpottingsMix(vector<SpottingExemplar*>* spottings);
 public:
     MasterQueue();
 #ifndef TEST_MODE_C
@@ -72,14 +73,19 @@ public:
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
-    void addSpottingResults(SpottingResults* res);
+    void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
     NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
     void enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long,string> >* toRemoveExemplars) {newExemplarsBatchQueue.enqueue(newExemplars, toRemoveExemplars);}
-    vector<SpottingExemplar*> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) {return newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars); }
+    vector<SpottingExemplar*> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) 
+    {
+        vector<SpottingExemplar*> ret = newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars);
+        updateSpottingsMix(&ret);
+        return ret;
+    }
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();

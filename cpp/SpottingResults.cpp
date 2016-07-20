@@ -13,7 +13,7 @@ SpottingResults::SpottingResults(string ngram) :
     id = ++_id;
     //sem_init(&mutexSem,false,1);
     //numBatches=0;
-    allBatchesSent=false;
+    allBatchesSent=true;
     
     numberClassifiedTrue=0;
     numberClassifiedFalse=0;
@@ -40,6 +40,7 @@ SpottingResults::SpottingResults(string ngram) :
 
 void SpottingResults::add(Spotting spotting) {
     //sem_wait(&mutexSem);
+    allBatchesSent=false;
     instancesById[spotting.id]=spotting;
     assert(spotting.score==spotting.score);
     instancesByScore.insert(&instancesById[spotting.id]);
@@ -57,6 +58,15 @@ void SpottingResults::add(Spotting spotting) {
             trueMean=spotting.score;
         minScore=spotting.score;
     }
+    //sem_post(&mutexSem);
+}
+void SpottingResults::addTrueNoScore(Spotting* spotting) {
+    //sem_wait(&mutexSem);
+    assert(spotting->score != spotting->score);
+    instancesById[spotting->id]=*spotting;
+    instancesById[spotting->id].type=SPOTTING_TYPE_APPROVED;
+    instancesByLocation.insert(&instancesById[spotting->id]);
+    classById[spotting->id]=true;
     //sem_post(&mutexSem);
 }
 /*SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned int maxWidth) {
@@ -90,7 +100,7 @@ void SpottingResults::add(Spotting spotting) {
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram) {
     //cout <<"getBatch, from:"<<pullFromScore<<endl;
     if (acceptThreshold==-1 && rejectThreshold==-1)
-        EMThresholds(true);
+        EMThresholds();
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     
@@ -305,8 +315,11 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
    
     
 
-bool SpottingResults::EMThresholds(bool init)
+bool SpottingResults::EMThresholds()
 {
+    assert(instancesById.size()>1);
+    assert(maxScore!=-999999);
+    bool init = acceptThreshold==-1 && rejectThreshold==-1;
     float oldMidScore = acceptThreshold + (rejectThreshold-acceptThreshold)/2.0;
     /*This will likely predict very narrow and distinct distributions
      *initailly. This should be fine as we sample from the middle of
@@ -326,18 +339,21 @@ bool SpottingResults::EMThresholds(bool init)
         //we initailize our split with Otsu, as we are assuming two distributions.
         //make histogram
         vector<int> histogram(256);
+        int total = 0;//instancesById.size();
         for (auto p : instancesById)
         {
-            unsigned long id = p.first;
-            int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
-            if (bin<0) bin=0;
-            if (bin>histogram.size()-1) bin=histogram.size()-1;
-            histogram[bin]++;
-            
+            if (p.second.score==p.second.score)
+            {
+                total++;
+                unsigned long id = p.first;
+                int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
+                if (bin<0) bin=0;
+                if (bin>histogram.size()-1) bin=histogram.size()-1;
+                histogram[bin]++;
+            }
         }
         
         //otsu
-        int total = instancesById.size();
         double sum =0;
         for (int i = 1; i < 256; ++i)
                 sum += i * histogram[i];
@@ -375,6 +391,10 @@ bool SpottingResults::EMThresholds(bool init)
         
         double thresh = ( threshold1 + threshold2 ) / 2.0;
         pullFromScore = (thresh/256)*(maxScore-minScore)+minScore;
+#ifdef TEST_MODE_LONG
+        if (ngram.compare("te")==0)
+            cout<<"init pullFromScore = "<<pullFromScore<<endl;
+#endif
     }
     
     //expectation
@@ -401,6 +421,8 @@ bool SpottingResults::EMThresholds(bool init)
         
         for (auto p : instancesById)
         {
+            if (p.second.score!=p.second.score)
+                continue; 
             unsigned long id = p.first;
             
             //test
@@ -471,16 +493,30 @@ bool SpottingResults::EMThresholds(bool init)
         if (expectedFalse.size()!=0)
             falseVariance/=expectedFalse.size();
         
+
         //set new thresholds
         float numStdDevs = 1;// + ((1.0+min((int)instancesById.size(),50))/(1.0+min((int)classById.size(),50)));//Use less as more are classified, we are more confident. Capped to reduce effect of many returned instances bogging us down.
         float acceptThreshold1 = falseMean-numStdDevs*sqrt(falseVariance);
         float rejectThreshold1 = trueMean+numStdDevs*sqrt(trueVariance);
         float acceptThreshold2 = trueMean-numStdDevs*sqrt(trueVariance);
         float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
-        acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
-        rejectThreshold = min( min(rejectThreshold1,rejectThreshold2), maxScore);
+        if (falseVariance!=0 && trueVariance!=0)
+        {
+            acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
+            rejectThreshold = min( min(rejectThreshold1,rejectThreshold2), maxScore);
+        }
+        else if (falseVariance==0)
+        {
+            acceptThreshold = acceptThreshold2;
+            rejectThreshold = trueMean+2*numStdDevs*sqrt(trueVariance);
+        }
+        else
+        {
+            rejectThreshold = rejectThreshold2;
+            acceptThreshold = falseMean-2*numStdDevs*sqrt(falseVariance);
+        }
 #ifdef TEST_MODE
-        cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
+        cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std devs of: f:"<<sqrt(falseVariance)<<", t:"<<sqrt(trueVariance)<<endl;
 #endif        
         /*if (!init || !initV)
             break;
@@ -584,32 +620,36 @@ bool SpottingResults::EMThresholds(bool init)
         pullFromScore = trueMean;//newMidScore;
         //cout << "pullFromScore: "<<pullFromScore<<endl;
     }*/
-    
-    allBatchesSent=true;
-    auto iter = tracer;
-    while (iter!=instancesByScore.end())
+    if (init)
+        allBatchesSent=false;
+    else
     {
-        if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
-        {
-            allBatchesSent=false;
-            break;
-        }
-        if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
-            break;
-        iter--;
-    } 
-    if (allBatchesSent)
-    {
-        iter = tracer;
-        while (iter!=instancesByScore.end() && (**iter).score > rejectThreshold)
+        allBatchesSent=true;
+        auto iter = tracer;
+        while (iter!=instancesByScore.end())
         {
             if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
             {
                 allBatchesSent=false;
                 break;
             }
-            iter++;
+            if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
+                break;
+            iter--;
         } 
+        if (allBatchesSent)
+        {
+            iter = tracer;
+            while (iter!=instancesByScore.end() && (**iter).score < rejectThreshold)
+            {
+                if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
+                {
+                    allBatchesSent=false;
+                    break;
+                }
+                iter++;
+            } 
+        }
     }
     return allBatchesSent;
 }
@@ -649,6 +689,18 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
     for (Spotting& spotting : *spottings)
     {
+        if (spotting.score>maxScore)
+        {
+            if (falseMean==maxScore && falseVariance==1.0)
+                falseMean=spotting.score;
+            maxScore=spotting.score;
+        }
+        if (spotting.score<minScore)
+        {
+            if (trueMean==minScore && trueVariance==1.0)
+                trueMean=spotting.score;
+            minScore=spotting.score;
+        }
         bool updated=false;
         int width = spotting.brx-spotting.tlx;
         int height = spotting.bry-spotting.tly;
@@ -665,7 +717,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                 {
                     updated=true;
 
-                    if (spotting.score < (*itLow)->score)//then replace the spotting
+                    if (spotting.score < (*itLow)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
                     {
                         instancesById[spotting.id]=spotting;
                         instancesByLocation.insert(&instancesById[spotting.id]);
@@ -709,6 +761,9 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
     EMThresholds();
     if (allWereSent && !allBatchesSent)
     {
+#ifdef TEST_MODE_LONG
+        cout <<"Should ressurect spottingresults: "<<ngram<<endl;
+#endif
         //RESURRECT!
         allBatchesSent=false;
         return true;

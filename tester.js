@@ -128,7 +128,7 @@ var approvalMap8 = {2:0,
                     6:0,
                     9:0,
                     11:0,
-                    13:"error",
+                    13:1, //"error",
                     16:0,
                     18:0,
                     22:0};
@@ -169,10 +169,12 @@ function approveAllSpottingBatches(approvalMap,toDo,callback) {
                         else {
                             labels.push(-1);
                             console.log("ERROR: Error given as label for ["+getSpot(s.data)+"]");
+                            exit();
                         }
                     } else {
                         labels.push(0);
                         console.log("ERROR: Undefined given as label for ["+getSpot(s.data)+"]");
+                        exit();
                     }
 
                     console.log('    approve '+getSpot(s.data));
@@ -204,14 +206,41 @@ function finish() {
     spottingaddon.showCorpus(function(){spottingaddon.stopSpotting(function(){console.log('stopped');});});
 }
 
+function do32() {
+    console.log('[do32]');
+
+    if (toDo.length==1){
+        if (toDo[0][3][0].ngram=='at')
+            finish();
+        else {
+            console.log('32 ERROR: '+toDo[0][3][0].ngram);
+        }
+    } else {
+
+        console.log('32 ERROR: toDo:');
+        console.log(toDo);
+        console.log(toDo[0][3][0]);
+    }
+}
+
 function do30() {
     console.log('[do30]');
+    toDo=[];
+    setTimeout(function() {
+        approveAllSpottingBatches(approvalMap8,toDo,do32)
+    }, 4000);
+}
+
+
+function do29() {
+    console.log('[do29]');
     approveAllSpottingBatches(approvalMap8,toDo,function(){ 
-        if (toDo.length==0)
-            setTimeout(finish,3000);
-        else {
-            console.log('30 ERROR: toDo:');
+        if (toDo.length==1 && toDo[0][3][0].ngram=='fa'){
+            spottingaddon.newExemplarsBatchDone(toDo[0][2],[1],0,function() {setTimeout(do30,4000);});
+        }else {
+            console.log('29 ERROR: toDo:');
             console.log(toDo);
+            console.log(toDo[0][3][0]);
         }
     });
 }
@@ -221,7 +250,7 @@ function do27() {
     toDo=[];
     spottingaddon.getNextBatch(300,0,"",numInBat,function (err,batchType,batchId,arg3,arg4,arg5) {
         if (batchType==null) {
-            spottingaddon.transcriptionBatchDone(savedFarrB[1],'farr',function(){setTimeout(do30,2000);});
+            spottingaddon.transcriptionBatchDone(savedFarrB[2],'farr',function(){setTimeout(do29,2000);});
         } else {
             console.log('27 ERROR: Should be empty batch, got: '+batchType);
         }
@@ -234,7 +263,7 @@ function do26() {
     if (toDo.length==1  && toDo[0][1]=='transcription') {
         if (toDo[0][4].length==1 && toDo[0][4][0].ngram=='rr') {
             var ngramId = toDo[0][4][0].id; 
-            spottingaddon.transcriptionBatchDone(toDo[0][1],'$REMOVE:'+ngramId+'$',function(){setTimeout(do27,2000);}); 
+            spottingaddon.transcriptionBatchDone(toDo[0][2],'$REMOVE:'+ngramId+'$',function(){setTimeout(do27,2000);}); 
         } else {
             console.log('26 ERROR: ngrams for trams');
             console.log(toDo[0][4]);
@@ -440,10 +469,12 @@ function do9() {
 
 function do8() {
     console.log('[do8]');
+
+    //approve 'te'
     approveAllSpottingBatches(approvalMap3,toDo,function(){setTimeout(function() {
         if (toDo.length==0) {
             console.log('   run do8 again');
-            approveAllSpottingBatches(approvalMap3,toDo,function() {setTimeout(do9,2000);});
+            approveAllSpottingBatches(approvalMap3,toDo,function() {setTimeout(do9,5000);});
         }
         else
             do9();

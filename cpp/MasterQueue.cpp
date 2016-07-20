@@ -455,57 +455,81 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
     return ret;
 }
 
-void MasterQueue::addSpottingResults(SpottingResults* res)
+void MasterQueue::addSpottingResults(SpottingResults* res, bool hasSemResults, bool toQueue)
 {
     sem_t* sem = new sem_t();
     sem_init(sem,false,1);
     auto p = make_pair(sem,res);
-    pthread_rwlock_wrlock(&semResultsQueue);
-    resultsQueue[res->getId()] = p;
-    pthread_rwlock_unlock(&semResultsQueue);
+    if (toQueue)
+    {
+        pthread_rwlock_wrlock(&semResultsQueue);
+        resultsQueue[res->getId()] = p;
+        pthread_rwlock_unlock(&semResultsQueue);
+    }
     //This may be a race condition, but would require someone to get and finish a batch between here...
-    pthread_rwlock_wrlock(&semResults);
+    if (!hasSemResults)
+        pthread_rwlock_wrlock(&semResults);
     results[res->getId()] = p;
-    pthread_rwlock_unlock(&semResults);
+    if (!hasSemResults)
+        pthread_rwlock_unlock(&semResults);
 }
 
 
 void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
 {
+
+#ifdef TEST_MODE_LONG
+    cout<<"updateSpottingsMix: ";
+    for (auto s : *spottings)
+        cout <<s->ngram<<", ";
+    cout<<endl;
+#endif
     pthread_rwlock_rdlock(&semResults);
-    vector<SpottingExemplar*> spottingsC = *spottings;
-    for (auto p : results)
+    for (SpottingExemplar* spotting : *spottings)
     {
-        
-        sem_t* sem=p.second.first;
-        SpottingResults* res = p.second.second;
-        sem_wait(sem);
-        vector<Spotting> toUpdate;
-        for (auto iter=spottingsC.begin(); iter!=spottingsC.end(); iter++)
+        bool found=false;
+        for (auto p : results)
         {
-            if (res->ngram.compare((*iter)->ngram) == 0)
+            
+            sem_t* sem=p.second.first;
+            SpottingResults* res = p.second.second;
+            sem_wait(sem);
+            if (res->ngram.compare(spotting->ngram) == 0)
             {
-                toUpdate.push_back(*(Spotting*)*iter);
-                iter=spottingsC.erase(iter);
+                found=true;
+#ifdef TEST_MODE_LONG
+                cout<<"update for new ex: "<<spotting->ngram<<endl;
+#endif
+                //pthread_rwlock_unlock(&semResults);
+                vector<Spotting>* toUpdate = new vector<Spotting>(1);
+                toUpdate->at(0)=*(Spotting*)spotting;
+                bool resurrect = res->updateSpottings(toUpdate);
+                if (resurrect)
+                {
+#ifdef TEST_MODE
+                    cout<<"Resurrect "<<res->ngram<<endl;
+#endif
+                    pthread_rwlock_wrlock(&semResultsQueue);
+                    resultsQueue[res->getId()] = make_pair(sem,res);
+                    pthread_rwlock_unlock(&semResultsQueue);
+                }
             }
 
+            
+            sem_post(sem);
+            
         }
-        if (toUpdate.size()>0)
+        if (!found)
         {
-            //pthread_rwlock_unlock(&semResults);
-            bool resurrect = res->updateSpottings(&toUpdate);
-            if (resurrect)
-            {
+            //if no id, no matching ngram, this will frequently be the case
 #ifdef TEST_MODE
-                cout<<"Resurrect "<<res->ngram<<endl;
+            cout <<"Creating SpottingResults for "<<spotting->ngram<<endl;
 #endif
-                pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = make_pair(sem,res);
-                pthread_rwlock_unlock(&semResultsQueue);
-            }
+            SpottingResults *n = new SpottingResults(spotting->ngram);
+            n->addTrueNoScore(spotting);
+            addSpottingResults(n,true,false);
         }
-        sem_post(sem);
-        
+
     }
     pthread_rwlock_unlock(&semResults);
 }
@@ -571,7 +595,6 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             sem_post(sem);
         }
     }
-    pthread_rwlock_unlock(&semResults);
         
     //if no id, no matching ngram, or if somethign goes wrong
 #ifdef TEST_MODE
@@ -581,7 +604,8 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     for (Spotting& s : *spottings)
         n->add(s);
     delete spottings;
-    addSpottingResults(n);
+    addSpottingResults(n,true);
+    pthread_rwlock_unlock(&semResults);
     return n->getId();
 }
 

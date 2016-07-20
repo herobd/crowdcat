@@ -871,7 +871,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
         ebry+=pad;
     
     cv::Mat exe = inpainting(wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)),mask(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)));
-    SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,0,exe);
+    SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,NAN,exe);
 #ifdef TEST_MODE
     cv::Mat show;
     cv::cvtColor(wordImg,show,CV_GRAY2RGB);
