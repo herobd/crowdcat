@@ -83,7 +83,11 @@ FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* 
 #ifdef TEST_MODE_LONG
     string file= "./test/spottings.csv";
 #else
+#ifdef TEST_MODE
+    string file = "./data/onepage_GW_spottings_fold1_0.100000.csv";
+#else
     string file= "./data/GW_spottings_fold1_0.100000.csv";
+#endif
 #endif
     addTestSpottings(file);
 }

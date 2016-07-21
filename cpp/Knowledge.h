@@ -30,11 +30,14 @@ typedef Graph<float,float,float> GraphType;
 #define THRESH_LEXICON_LOOKUP_COUNT 20
 //#define THRESH_SCORING 1.0
 #define THRESH_SCORING_COUNT 6
-#ifndef TEST_MODE_LONG
-#define averageCharWidth 40 //TODO GW, totally just making this up
-#else
-#define averageCharWidth 23 //TODO test, totally just making this up
-#endif
+
+#define CHAR_ASPECT_RATIO 2.45 //TODO
+
+//#ifndef TEST_MODE_LONG
+//#define averageCharWidth 40 //TODO GW, totally just making this up
+//#else
+//#define averageCharWidth 23 //TODO test, totally just making this up
+//#endif
 
 class TranscribeBatch;
 class WordBackPointer
@@ -127,6 +130,8 @@ private:
     string gt;
     Meta meta;
     const cv::Mat* pagePnt;
+    float* averageCharWidth;
+    int* countCharWidth;
     int pageId;
    
     int topBaseline, botBaseline;
@@ -142,8 +147,9 @@ private:
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
     vector<Spotting*> harvest();
-    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram);
+    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
     void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
+    void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);
     cv::Point wordCord(int r, int c)
     {
         return cv::Point(c-tlx,r-tly);
@@ -155,16 +161,16 @@ private:
 
     string transcription;
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -178,6 +184,7 @@ public:
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,NULL,newExemplars,toRemoveExemplars);}
     
+    void getBaselines(int* top, int* bot);
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
         pthread_rwlock_rdlock(&lock);
@@ -234,14 +241,16 @@ private:
     vector<Word*> _words;
     int ty, by; // top y and bottom y
     cv::Mat* pagePnt;
+    float* averageCharWidth;
+    int* countCharWidth;
     int pageId;
 public:
-    Line() : ty(-1), by(-1), pagePnt(NULL), pageId(-1)
+    Line() : ty(-1), by(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
     
-    Line(int ty, int by, cv::Mat* pagePnt, int pageId) : ty(ty), by(by), pagePnt(pagePnt), pageId(pageId)
+    Line(int ty, int by, cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -256,8 +265,10 @@ public:
         pthread_rwlock_rdlock(&lock);
         
         vector<Word*> ret = _words;
-        *line_ty=ty;
-        *line_by=by;
+        if (line_ty!=NULL)
+            *line_ty=ty;
+        if (line_by!=NULL)
+            *line_by=by;
         
         pthread_rwlock_unlock(&lock);
         return ret;
@@ -267,7 +278,7 @@ public:
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,pageId);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -281,7 +292,7 @@ public:
             ty=tly;
         if (by<bry)
             by=bry;
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,pageId,gt);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId,gt);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -296,20 +307,22 @@ private:
     pthread_rwlock_t lock;
     vector<Line*> _lines;
     cv::Mat pageImg; //I am owner of this Mat
+    float* averageCharWidth;
+    int* countCharWidth;
     static int _id;
     int id;
 public:
-    Page()
+    Page() : averageCharWidth(NULL), countCharWidth(NULL)
     {
         pthread_rwlock_init(&lock,NULL);
         id = ++_id;
     }
-    Page(cv::Mat pageImg) : pageImg(pageImg)
+    Page(cv::Mat pageImg, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
     {
         pthread_rwlock_init(&lock,NULL);
         id = ++_id;
     }
-    Page(string imageLoc) 
+    Page(string imageLoc, float* averageCharWidth, int* countCharWidth) : averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         id = ++_id;
@@ -333,7 +346,7 @@ public:
     
     TranscribeBatch* addLine(Spotting s,vector<Spotting*>* newExemplars)
     {
-        Line* newLine = new Line(s.tly, s.bry, &pageImg, id);
+        Line* newLine = new Line(s.tly, s.bry, &pageImg, averageCharWidth, countCharWidth, id);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -345,7 +358,7 @@ public:
 
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
-        Line* newLine = new Line(tly, bry, &pageImg, id);
+        Line* newLine = new Line(tly, bry, &pageImg, averageCharWidth, countCharWidth, id);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -370,7 +383,8 @@ class Corpus
 private:
     pthread_rwlock_t pagesLock;
     pthread_rwlock_t spottingsMapLock;
-    //int averageCharWidth;
+    float averageCharWidth;
+    int countCharWidth;
     float threshScoring;
     
     map<unsigned long, vector<Word*> > spottingsToWords;
@@ -394,7 +408,7 @@ public:
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 
     {
-        Page* p = new Page(imagePath);
+        Page* p = new Page(imagePath,&averageCharWidth,&countCharWidth);
         pages[p->getId()]=p;
         return p->getId();
     }

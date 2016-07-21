@@ -120,7 +120,8 @@ Knowledge::Corpus::Corpus()
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
-    //averageCharWidth=40;
+    averageCharWidth=30;
+    countCharWidth=0;
     threshScoring= 1.0;
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
@@ -447,7 +448,7 @@ string Knowledge::Word::generateQuery()
     while (spot != spottings.end())
     {
         int dif = spot->second.tlx-pos;
-        float numChars = dif/(0.0+averageCharWidth);
+        float numChars = dif/(0.0+*averageCharWidth);
         cout <<"pos: "<<pos<<" str: "<<spot->second.tlx<<endl;
         cout <<"num chars: "<<numChars<<endl;
         
@@ -481,7 +482,7 @@ string Knowledge::Word::generateQuery()
     }
     
     int dif = brx-pos;
-    float numChars = dif/(0.0+averageCharWidth);
+    float numChars = dif/(0.0+*averageCharWidth);
     cout <<"pos: "<<pos<<" end: "<<brx<<endl;
     cout <<"E num chars: "<<numChars<<endl;
     if (numChars>0)
@@ -505,11 +506,24 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
+void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
+{
+    //cv::Mat b;
+    int blockSize = (1+bry-tly)/2;
+    if (blockSize%2==0)
+        blockSize++;
+    wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+    if (wordImg.type()==CV_8UC3)
+        cv::cvtColor(wordImg,wordImg,CV_RGB2GRAY);
+    cv::adaptiveThreshold(wordImg, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
+}
+
 vector<Spotting*> Knowledge::Word::harvest()
 {
 #ifdef TEST_MODE
     cout<<"harvesting: "<<transcription<<endl;
 #endif
+    cv::Mat wordImg, b;
     vector<Spotting*> ret;
     string unspotted = transcription;
     multimap<int,Spotting> spottingsByIndex;
@@ -670,7 +684,9 @@ vector<Spotting*> Knowledge::Word::harvest()
                             rightLeftBound=mid-2;
                             leftRightBound=mid+2;
                         }
-                        SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound,ngram);
+                        if (wordImg.cols==0)
+                            getWordImgAndBin(wordImg,b);
+                        SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound,ngram,wordImg,b);
                         //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
                         //toRet.type=SPOTTING_TYPE_EXEMPLAR;
                         toRet->ngramRank=rank;
@@ -696,6 +712,82 @@ vector<Spotting*> Knowledge::Word::harvest()
     harvested.clear();
     for (Spotting* s : ret)
         harvested.insert(make_pair(s->id,s->ngram));
+    /*
+    //Also harvest char width
+    if (wordImg.cols==0)
+        getWordImgAndBin(wordImg,b);
+    vector<int> vHist(wordImg.cols);
+    map<int,int> hist;
+    int maxV=0;
+    int total=0;
+    for (int c=0; c<wordImg.cols; c++) {
+        for (int r=0; r<wordImg.rows; r++)
+            vHist[c]+=wordImg.at<unsigned char>(r,c);
+        hist[vHist[c]]+=1;
+        total++;
+        if (vHist[c]>maxV)
+            maxV=vHist[c];
+    }
+
+    
+    //sparse otsu
+    double sum =0;
+    for (int i = 1; i <= maxV; ++i) {
+        if (hist.find(i)!=hist.end())
+            sum += i * hist[i];
+    }
+    double sumB = 0;
+    double wB = 0;
+    double wF = 0;
+    double mB;
+    double mF;
+    double max = 0.0;
+    double between = 0.0;
+    double threshold1 = 0.0;
+    double threshold2 = 0.0;
+    for (int i = 0; i < maxV; ++i)
+    {
+        if (hist.find(i)!=hist.end())
+            wB += hist[i];
+        if (wB == 0)
+            continue;
+        wF = total - wB;
+        if (wF == 0)
+            break;
+        if (hist.find(i)!=hist.end())
+            sumB += i * hist[i];
+        mB = sumB / (wB*1.0);
+        mF = (sum - sumB) / (wF*1.0);
+        between = wB * wF * pow(mB - mF, 2);
+        if ( between >= max )
+        {
+            threshold1 = i;
+            if ( between > max )
+            {
+                threshold2 = i;
+            }
+            max = between; 
+        }
+    }
+    
+    double thresh = ( threshold1 + threshold2 ) / 2.0;
+    int newLeft, newRight;
+    for (newLeft=0; newLeft<vHist.size(); newLeft++)
+        if (vHist[newLeft]>thresh)
+            break;
+    newLeft--;
+    for (newRight=vHist.size()-1; newRight>=0; newRight--)
+        if (vHist[newRight]>thresh)
+            break;
+    newRight++;
+    float charWidth = (newRight-newLeft+0.0f)/transcription.length();
+    *countCharWidth++;
+    *averageCharWidth = ((*countCharWidth-1.0)/(*countCharWidth))*(*averageCharWidth) + (1.0/(*countCharWidth))*charWidth;
+#ifdef TEST_MODE
+    cout <<"harvested char width: "<<charWidth<<endl;
+    cout <<"averageCharWidth now: "<<*averageCharWidth<<endl;
+#endif
+    */
     return ret;
 
 }
@@ -707,17 +799,9 @@ inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat 
     //cout << w <<endl;
 }
 
-SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram)
+SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b)
 {
     assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
-    cv::Mat b;
-    int blockSize = (1+bry-tly)/2;
-    if (blockSize%2==0)
-        blockSize++;
-    cv::Mat wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
-    if (wordImg.type()==CV_8UC3)
-        cv::cvtColor(wordImg,wordImg,CV_RGB2GRAY);
-    cv::adaptiveThreshold(wordImg, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
 
     if (topBaseline==-1 || botBaseline==-1)
         findBaselines(wordImg,b);
@@ -901,6 +985,19 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
 #endif
     delete g;
     return ret;
+}
+
+void Knowledge::Word::getBaselines(int* top, int* bot)
+{
+    if (topBaseline<0 || botBaseline<0)
+    {
+        
+        cv::Mat wordImg, b;
+        getWordImgAndBin(wordImg,b);
+        findBaselines(wordImg,b);
+    }
+    *top=topBaseline;
+    *bot=botBaseline;
 }
 
 void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
@@ -1613,13 +1710,21 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
                 pthread_rwlock_wrlock(&pagesLock);
                 writing=true;
             }*/
-            page = new Page(imageLoc+"/"+imageFile);
+            page = new Page(imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth);
             pages[pageId] = page;
         }
         else
         {
             page = pages[pageId];
         }
+        if (tlx<0)
+            tlx=0;
+        if (tly<0)
+            tly=0;
+        if (brx >= page->getImg()->cols)
+            brx=page->getImg()->cols-1;
+        if (bry >= page->getImg()->rows)
+            bry=page->getImg()->rows-1;
         vector<Line*> lines = page->lines();
         bool oneLine=false;
         for (Line* line : lines)
@@ -1640,6 +1745,31 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             page->addWord(tlx,tly,brx,bry,gt);
         }
     }
+    
+    double heightAvg=0;
+    int count=0;
+
+    for (auto pp : pages)
+    {
+        Page* page = pp.second;
+        for (Line* line : page->lines())
+        {
+            for (Word* word : line->wordsAndBounds(NULL,NULL))
+            {
+                int topBaseline, botBaseline;
+                word->getBaselines(&topBaseline,&botBaseline);
+                heightAvg += botBaseline-topBaseline;
+                count++;
+            }
+        }
+    }
+    heightAvg/=count;
+    averageCharWidth=CHAR_ASPECT_RATIO*heightAvg;
+    countCharWidth=10;
+#ifdef TEST_MODE
+    cout<<"avg char height: "<<heightAvg<<endl;
+    cout<<"avg char width : "<<averageCharWidth<<endl;
+#endif
 
     in.close();
 }

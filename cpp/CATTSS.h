@@ -8,6 +8,7 @@
 #include "Lexicon.h"
 #include "BatchWraper.h"
 #include "opencv2/core/core.hpp"
+#include <exception>
 
 class CATTSS
 {

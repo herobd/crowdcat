@@ -9,7 +9,7 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
     spotter = new FacadeSpotter(masterQueue,corpus,"model");
     
-#ifdef TEST_MODE
+#ifdef TEST_MODE_LONG
     int pageId=0;
 
     //Spotting er1 (433,14,472,36,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
@@ -18,6 +18,14 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
     vector<Spotting* > init = {er1};
     spotter->addQueries(init);
+#else
+//#ifdef TEST_MODE
+    int pageId=2700270;
+    Spotting* er1 = new Spotting(593,621,652,645,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
+    vector<Spotting* > init = {er1};
+    spotter->addQueries(init);
+
+//#endif
 #endif
     //test
     /*
@@ -67,87 +75,143 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 }
 BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 {
-    bool hard=true;
-    if (num==-1) {
-        num=5;
-        hard=false;
+    try
+    {
+        bool hard=true;
+        if (num==-1) {
+            num=5;
+            hard=false;
 
-    }
-    BatchWraper* ret= masterQueue->getBatch(num,hard,width,color,prevNgram);
+        }
+        BatchWraper* ret= masterQueue->getBatch(num,hard,width,color,prevNgram);
 #ifdef TEST_MODE_C
-    return ret;
-#endif
-    if (ret!=NULL)
         return ret;
-    else
-        return new BatchWraperBlank();
+#endif
+        if (ret!=NULL)
+            return ret;
+        else
+            return new BatchWraperBlank();
+    }
+    catch (exception& e)
+    {
+        cout <<"Exception in CATTSS::getBatch(), "<<e.what()<<endl;
+    }
+    catch (...)
+    {
+        cout <<"Exception in CATTSS::getBatch(), UNKNOWN"<<endl;
+    }
+    return new BatchWraperBlank();
 }
 
 
 void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent)
 {
-    //cout <<"Recieved batch for "<<resultsId<<endl;
-    vector<pair<unsigned long,string> > toRemoveSpottings;        
-    vector<unsigned long> toRemoveBatches;        
-    vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
-    if (toAdd!=NULL)
+    try
     {
-        vector<Spotting*> newExemplars;
-        vector<pair<unsigned long,string> > toRemoveExemplars;        
-        vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
-        masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
-        //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
-        //if (toRemoveBatches.size()>0)
-        //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
-        toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
-        spotter->removeQueries(&toRemoveExemplars);
-        spotter->addQueries(*toAdd);
-        delete toAdd;
-    }
-    /*else //We presume that this set has been finished
-    {
-        for (int i=0; i<ids.size(); i++)
+        //cout <<"Recieved batch for "<<resultsId<<endl;
+        vector<pair<unsigned long,string> > toRemoveSpottings;        
+        vector<unsigned long> toRemoveBatches;        
+        vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
+        if (toAdd!=NULL)
         {
-            if (labels[i]==0)
-    */
+            vector<Spotting*> newExemplars;
+            vector<pair<unsigned long,string> > toRemoveExemplars;        
+            vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
+            masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+            masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
+            //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
+            //if (toRemoveBatches.size()>0)
+            //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
+            toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
+            spotter->removeQueries(&toRemoveExemplars);
+            spotter->addQueries(*toAdd);
+            delete toAdd;
+        }
+        /*else //We presume that this set has been finished
+        {
+            for (int i=0; i<ids.size(); i++)
+            {
+                if (labels[i]==0)
+        */
+    }
+    catch (exception& e)
+    {
+        cout <<"Exception in CATTSS::updateSpottings(), "<<e.what()<<endl;
+    }
+    catch (...)
+    {
+        cout <<"Exception in CATTSS::updateSpottings(), UNKNOWN"<<endl;
+    }
 }
 
 void CATTSS::updateTranscription(string id, string transcription)
 {
-    vector< pair<unsigned long, string> > toRemoveExemplars;
-    masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
-    spotter->removeQueries(&toRemoveExemplars);
+    try
+    {
+        vector< pair<unsigned long, string> > toRemoveExemplars;
+        masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
+        spotter->removeQueries(&toRemoveExemplars);
+
+    }
+    catch (exception& e)
+    {
+        cout <<"Exception in CATTSS::updateTranscription(), "<<e.what()<<endl;
+    }
+    catch (...)
+    {
+        cout <<"Exception in CATTSS::updateTranscription(), UNKNOWN"<<endl;
+    }
 }
 
 
 void CATTSS::updateNewExemplars(string resultsId,  vector<int> labels, int resent)
 {
-    vector<pair<unsigned long,string> > toRemoveExemplars;        
-    vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(resultsId), labels, &toRemoveExemplars);
+    try
+    {
+        vector<pair<unsigned long,string> > toRemoveExemplars;        
+        vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(resultsId), labels, &toRemoveExemplars);
 
-    spotter->removeQueries(&toRemoveExemplars);
-    spotter->addQueries(toSpot);
+        spotter->removeQueries(&toRemoveExemplars);
+        spotter->addQueries(toSpot);
+    }
+    catch (exception& e)
+    {
+        cout <<"Exception in CATTSS::updateNewExemplars(), "<<e.what()<<endl;
+    }
+    catch (...)
+    {
+        cout <<"Exception in CATTSS::updateNewExemplars(), UNKNOWN"<<endl;
+    }
 }
 
 void CATTSS::misc(string task)
 {
-    if (task.compare("showCorpus")==0)
+    try
     {
-        corpus->show();
+        if (task.compare("showCorpus")==0)
+        {
+            corpus->show();
+        }
+        else if (task.compare("stopSpotting")==0)
+        {
+            spotter->stop();
+        }
+        else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
+        {
+            int num = stoi(task.substr(14));
+            if (num>0)
+                spotter->run(num);
+            else
+                cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
+        }
     }
-    else if (task.compare("stopSpotting")==0)
+    catch (exception& e)
     {
-        spotter->stop();
+        cout <<"Exception in CATTSS::misc(), "<<e.what()<<endl;
     }
-    else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
+    catch (...)
     {
-        int num = stoi(task.substr(14));
-        if (num>0)
-            spotter->run(num);
-        else
-            cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
+        cout <<"Exception in CATTSS::misc(), UNKNOWN"<<endl;
     }
-
 }    
 

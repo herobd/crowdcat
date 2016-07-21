@@ -196,7 +196,14 @@ NAN_MODULE_INIT(Init) {
                         "/home/brian/intel_index/data/gw_20p_wannot",
                         "data/queries.gtp");
 #else
+#ifdef TEST_MODE_LONG
     cattss = new CATTSS("test/lexicon.txt","test/","test/seg.gtp");
+#else
+    cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
+                        "/home/brian/intel_index/data/gw_20p_wannot",
+                        "data/onepage_queries.gtp");
+
+#endif
 #endif
 
     Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),

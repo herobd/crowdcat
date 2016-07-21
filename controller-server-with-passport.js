@@ -21,8 +21,8 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-//var spottingaddon = require("./cpp/build/Debug/spottingaddon")
-var spottingaddon = require("./cpp/build/Release/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon")
+//var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 var debug=true;
 numberOfTests=2;
@@ -300,10 +300,14 @@ var ControllerApp = function(port) {
                 } else {
                     spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,arg3,arg4,arg5) {
                         //setTimeout(function(){
-                        if (batchType=='spottings')
+                        if (batchType==='spottings')
                             res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
-                        else if (batchType=='transcription')
+                        else if (batchType==='transcription')
                             res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
+                        else if (batchType==='newExemplars')
+                            res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
+                        else if (batchType==='manual')
+                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
                         else
                             res.send({batchType:'ERROR',batchId:-1});
                         //},2000);
@@ -363,6 +367,14 @@ var ControllerApp = function(port) {
                         });
                     else if (req.query.type=='transcription')
                         spottingaddon.transcriptionBatchDone(req.body.id,req.body.label,function (err) {
+                            if (err) console.log(err);
+                        });
+                    else if (req.query.type=='newExemplars')
+                        spottingaddon.newExemplarsBatchDone(req.body.id,req.body.labels,resend,function (err) {
+                            if (err) console.log(err);
+                        });
+                    else if (req.query.type=='manual')
+                        spottingaddon.manualBatchDone(req.body.id,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
 

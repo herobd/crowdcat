@@ -221,7 +221,7 @@ function batchShiftAndSend(batchId,callback) {
         spinner.hidden=false;
     }
     lastRemovedBatchInfo.push(info);
-    if (info.ngram!='#') {
+    if (info.type=='s') {
         var ngram = info.ngram;
         var resultsId = info.rid;
         
@@ -252,7 +252,7 @@ function batchShiftAndSend(batchId,callback) {
                 callback();
         });
         batches[batchId].sent=true;
-    } else {
+    } else if (info.type=='t') {
         var query='?type=transcription';
         httpPostAsync('/app/submitBatch'+query,{id:batchId,label:info.transcription,time:new Date().getTime()-startTime},function (res){
             
@@ -266,5 +266,29 @@ function batchShiftAndSend(batchId,callback) {
                 callback();
         });
 
-    } 
+    } else if (info.type=='e') {
+        
+        var query='?type=newExemplars&resend='+batches[batchId].sent;
+        if (testMode)
+            query+='&test='+testNum;
+        var labels = [];
+        for (var id in batches[batchId].spottings){
+            if (batches[batchId].spottings.hasOwnProperty(id)) {
+                var label=batches[batchId].spottings[id];
+                labels.push(label);
+            }
+        }
+        httpPostAsync('/app/submitBatch'+query,{batchId:batchId,labels:labels,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+            
+            var jres=JSON.parse(res);
+            console.log(jres);
+            if (testMode && jres.done) {
+                //console.log(batchQueue.length);
+                if (batchQueue.length==0)
+                    window.location.href = "/app-test-"+(testNum+1);
+            } else (!testMode || !allReceived)
+                callback();
+        });
+        batches[batchId].sent=true;
+    }
 }
