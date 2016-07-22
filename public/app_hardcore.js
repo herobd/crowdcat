@@ -73,7 +73,7 @@ function removeSpotting(OK) {
     ondeck.classList.toggle('batchEl');
     ondeck.classList.toggle('collapser');
     
-    if (batchQueue[0].type=='n') {
+    if (batchQueue[0].type=='e') {
         var header = document.getElementById('h'+ondeck.id);
         header.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
         header.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
@@ -122,17 +122,18 @@ function undo() {
         }
         ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
-        if (ondeck.classList.contains('spottings'))
-            batches[ondeck.batch].spottings[ondeck.id]=null;
         typeSetup(ondeck);
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
-            //console.log(pastInfo +' ?= '+batchQueue[0].id)
+            console.log(pastInfo +' ?= '+batchQueue[0].id)
             if (pastInfo!=batchQueue[0].id) {
                 batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
             }
             
         }   
+        if (ondeck.classList.contains('spotting'))
+            batches[ondeck.batch].spottings[ondeck.id]=null;
+        console.log(batches[ondeck.batch].spottings);
         if (ondeck.batch!=batchQueue[0].id)
                 console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].id)
         theWindow.appendChild(ondeck);
@@ -254,12 +255,12 @@ function handleSpottingsBatch(jres) {
     batchHeader.classList.toggle('batchHeader');
     batchHeader.id='b'+jres.batchId
     batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
-        if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
+    if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
         batchHeader.hidden=true
-        
-        } else {
-            colorIndex = (++colorIndex)%headerColors.length;
-            lastNgram=jres.ngram;
+    
+    } else {
+        colorIndex = (++colorIndex)%headerColors.length;
+        lastNgram=jres.ngram;
     }
         /*if (lastNgram!=jres.ngram) {
             colorIndex = (++colorIndex)%headerColors.length;
@@ -322,8 +323,8 @@ function handleNewExemplarsBatch(jres) {
     if (jres.batchId=='R') {
         location.reload(true);
     } else if (jres.batchId!=='R' && jres.batchId!=='X') {
-        batchQueue.push({type:'n', id:jres.batchId });
-        batches['n'+jres.batchId]={sent:false, spottings:{}};
+        batchQueue.push({type:'e', id:jres.batchId });
+        batches['e'+jres.batchId]={sent:false, spottings:{}, ngrams:{}};
         //colorIndex = (++colorIndex)%headerColors.length;
         //batchHeader.style.background=headerColors[colorIndex];
         
@@ -333,6 +334,7 @@ function handleNewExemplarsBatch(jres) {
             var i=jres.exemplars[index];
             var id = index+'e'+jres.batchId;
             
+            var batchHeader = document.createElement("div");
             batchHeader.classList.toggle('batchHeader');
             batchHeader.id='h'+id
             batchHeader.innerHTML='<div>'+i.ngram+'</div>';
@@ -348,11 +350,11 @@ function handleNewExemplarsBatch(jres) {
             //widget.appendChild(im);
             //widget.id=i.id;
             //widget.batch=jres.batchId;
-            var widget = createSlider(im,id,jres.batchId);
+            var widget = createSlider(im,id,'e'+jres.batchId);
             theWindow.insertBefore(widget,theWindow.childNodes[0]);
             //initSlider(widget);
-            batches[jres.batchId].spottings[id]=null;
-            batches[jres.batchId].ngrams[id]=i.ngram;
+            batches['e'+jres.batchId].spottings[id]=null;
+            batches['e'+jres.batchId].ngrams[id]=i.ngram;
         }
         spinner.hidden=true;
     }
@@ -429,7 +431,7 @@ function typeSetup(ele) {
 
 function isBatchDone(batchId) {
     
-    if (batchQueue[0].type != 't' && batchQueue[0].type != 'm')
+    if (batchQueue[0].type == 's' || batchQueue[0].type == 'e')
         for (spottingId in batches[batchId].spottings)
             if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==null)
                 return;

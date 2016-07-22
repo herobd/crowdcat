@@ -21,8 +21,34 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 #else
 //#ifdef TEST_MODE
     int pageId=2700270;
+    Spotting* th1 = new Spotting(586,319,687,390,pageId,corpus->imgForPageId(pageId),"th",0);//[1]
+    Spotting* he1 = new Spotting(462,588,535,646,pageId,corpus->imgForPageId(pageId),"he",0);//[1]
+    Spotting* in1 = new Spotting(504,857,584,902,pageId,corpus->imgForPageId(pageId),"in",0);//[1]
     Spotting* er1 = new Spotting(593,621,652,645,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
-    vector<Spotting* > init = {er1};
+    Spotting* an1 = new Spotting(358,968,466,988,pageId,corpus->imgForPageId(pageId),"an",0);//[1]
+    Spotting* re1 = new Spotting(1712,787,1766,815,pageId,corpus->imgForPageId(pageId),"re",0);//[1]
+    Spotting* on1 = new Spotting(618,956,703,987,pageId,corpus->imgForPageId(pageId),"on",0);//[1]
+    Spotting* at1 = new Spotting(774,1027,876,1072,pageId,corpus->imgForPageId(pageId),"at",0);//[1]
+    Spotting* en1 = new Spotting(1589,452,1670,480,pageId,corpus->imgForPageId(pageId),"en",0);//[1]
+    Spotting* nd1 = new Spotting(1609,600,1732,640,pageId,corpus->imgForPageId(pageId),"nd",0);//[1]
+    Spotting* ti1 = new Spotting(1709,342,1776,388,pageId,corpus->imgForPageId(pageId),"ti",0);//[1]
+    Spotting* es1 = new Spotting(1678,956,1729,988,pageId,corpus->imgForPageId(pageId),"es",0);//[1]
+    Spotting* or1 = new Spotting(582,1561,632,1590,pageId,corpus->imgForPageId(pageId),"or",0);//[1]
+    Spotting* te1 = new Spotting(1245,1618,1306,1668,pageId,corpus->imgForPageId(pageId),"te",0);//[1]
+    Spotting* of1 = new Spotting(870,507,966,590,pageId,corpus->imgForPageId(pageId),"of",0);//[1]
+    Spotting* ed1 = new Spotting(812,770,914,816,pageId,corpus->imgForPageId(pageId),"ed",0);//[1]
+    Spotting* is1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"is",0);//[1]
+    Spotting* it1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"it",0);//[1]
+    Spotting* al1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"al",0);//[1]
+    Spotting* ar1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ar",0);//[1]
+    Spotting* st1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"st",0);//[1]
+    Spotting* to1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"to",0);//[1]
+    Spotting* nt1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"nt",0);//[1]
+    Spotting* ng1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ng",0);//[1]
+    Spotting* se1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"se",0);//[1]
+    Spotting* ha1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ha",0);//[1]
+    Spotting* as1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"as",0);//[1]*/
+    vector<Spotting* > init = {th1,he1,in1,er1,an1,re1,on1,at1,en1,nd1,ti1,es1,or1,te1,of1,ed1,is1,it1,al1,ar1,st1,to1,nt1,ng1,se1,ha1,as1};
     spotter->addQueries(init);
 
 //#endif
@@ -106,8 +132,10 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 
 void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent)
 {
+#ifndef TEST_MODE
     try
     {
+#endif
         //cout <<"Recieved batch for "<<resultsId<<endl;
         vector<pair<unsigned long,string> > toRemoveSpottings;        
         vector<unsigned long> toRemoveBatches;        
@@ -133,6 +161,7 @@ void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> l
             {
                 if (labels[i]==0)
         */
+#ifndef TEST_MODE
     }
     catch (exception& e)
     {
@@ -142,16 +171,20 @@ void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> l
     {
         cout <<"Exception in CATTSS::updateSpottings(), UNKNOWN"<<endl;
     }
+#endif
 }
 
 void CATTSS::updateTranscription(string id, string transcription)
 {
+#ifndef TEST_MODE
     try
     {
+#endif
         vector< pair<unsigned long, string> > toRemoveExemplars;
         masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
         spotter->removeQueries(&toRemoveExemplars);
 
+#ifndef TEST_MODE
     }
     catch (exception& e)
     {
@@ -161,18 +194,22 @@ void CATTSS::updateTranscription(string id, string transcription)
     {
         cout <<"Exception in CATTSS::updateTranscription(), UNKNOWN"<<endl;
     }
+#endif
 }
 
 
 void CATTSS::updateNewExemplars(string resultsId,  vector<int> labels, int resent)
 {
+#ifndef TEST_MODE
     try
     {
+#endif
         vector<pair<unsigned long,string> > toRemoveExemplars;        
         vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(resultsId), labels, &toRemoveExemplars);
 
         spotter->removeQueries(&toRemoveExemplars);
         spotter->addQueries(toSpot);
+#ifndef TEST_MODE
     }
     catch (exception& e)
     {
@@ -182,12 +219,15 @@ void CATTSS::updateNewExemplars(string resultsId,  vector<int> labels, int resen
     {
         cout <<"Exception in CATTSS::updateNewExemplars(), UNKNOWN"<<endl;
     }
+#endif
 }
 
 void CATTSS::misc(string task)
 {
+#ifndef TEST_MODE
     try
     {
+#endif
         if (task.compare("showCorpus")==0)
         {
             corpus->show();
@@ -204,6 +244,7 @@ void CATTSS::misc(string task)
             else
                 cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
         }
+#ifndef TEST_MODE
     }
     catch (exception& e)
     {
@@ -213,5 +254,6 @@ void CATTSS::misc(string task)
     {
         cout <<"Exception in CATTSS::misc(), UNKNOWN"<<endl;
     }
+#endif
 }    
 

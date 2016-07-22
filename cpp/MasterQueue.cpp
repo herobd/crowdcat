@@ -247,7 +247,26 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     }
     if (ret==NULL)
     {
-        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram);
+        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,false);
+        if (batch!=NULL)
+            ret = new BatchWraperSpottings(batch);
+    }
+    //a second pass without conditions
+    if (ret==NULL)
+    {
+        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+        if (batch!=NULL)
+            ret = new BatchWraperTranscription(batch);
+    }
+    if (ret == NULL)
+    {
+        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
+        if (batch!=NULL)
+            ret = new BatchWraperNewExemplars(batch);
+    }
+    if (ret==NULL)
+    {
+        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
         if (batch!=NULL)
             ret = new BatchWraperSpottings(batch);
     }
@@ -256,7 +275,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
 } 
 #endif
 
-SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram) 
+SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) 
 {
     SpottingsBatch* batch=NULL;
     //cout<<"getting rw lock"<<endl;
@@ -291,7 +310,8 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             
             bool done=false;
             //cout << "getBatch   prev:"<<prevNgram<<endl;
-            batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram);
+            batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram,need);
+            
             if (done)
             {   //cout <<"done in queue "<<endl;
                 
@@ -305,7 +325,10 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
                 ///test
             }
             sem_post(sem);
-            break;
+            if (batch!=NULL)
+                break;
+            else
+                pthread_rwlock_rdlock(&semResultsQueue);
             
         }
         //else
@@ -317,7 +340,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     {
         pthread_rwlock_unlock(&semResultsQueue);//just in case
 #ifdef TEST_MODE
-        cout<<"null batch from MasterQueue"<<endl;
+        cout<<"nno spotting batch from MasterQueue, need:"<<need<<endl;
 #endif
     }
 #ifdef TEST_MODE
@@ -402,55 +425,38 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
 {
     //cout <<"got feedback for: "<<id<<endl;
     vector<Spotting>* ret=NULL;
-    bool succ=false;
-    int test=0;
-    while (!succ)
+    pthread_rwlock_rdlock(&semResults);
+    if (results.find(id)!=results.end())
     {
-        pthread_rwlock_rdlock(&semResults);
-        if (results.find(id)!=results.end())
+        sem_t* sem=results[id].first;
+        SpottingResults* res = results[id].second;
+        pthread_rwlock_unlock(&semResults);
+        sem_wait(sem);
+        int done=0;
+        //cout <<"res feedback"<<endl;
+        ret = res->feedback(&done,ids,userClassifications,resent,remove);
+        //cout <<"END res feedback"<<endl;
+        
+        if (done==-1)
         {
-            sem_t* sem=results[id].first;
-            SpottingResults* res = results[id].second;
-            succ = 0==sem_trywait(sem);
-            pthread_rwlock_unlock(&semResults);
-            if (succ)
-            {
-                int done=0;
-                //cout <<"res feedback"<<endl;
-                ret = res->feedback(&done,ids,userClassifications,resent,remove);
-                //cout <<"END res feedback"<<endl;
-                
-                if (done==-1)
-                {
-                    pthread_rwlock_wrlock(&semResultsQueue);
-                    resultsQueue[res->getId()] = make_pair(sem,res);
-                    pthread_rwlock_unlock(&semResultsQueue);
-                    
-                }
-                else if (done==2)
-                {
-                    pthread_rwlock_wrlock(&semResultsQueue);
-                    resultsQueue.erase(res->getId());
-                    
-                    pthread_rwlock_unlock(&semResultsQueue);
-                }
-                sem_post(sem);
-            }
-            else
-                cout<<"Failed to get lock for: "<<id<<endl;
+            pthread_rwlock_wrlock(&semResultsQueue);
+            resultsQueue[res->getId()] = make_pair(sem,res);
+            pthread_rwlock_unlock(&semResultsQueue);
+            
         }
-        else
+        else if (done==2)
         {
-            cout <<"Results not found for: "<<id<<endl;
-            pthread_rwlock_unlock(&semResults);
-            break;
+            pthread_rwlock_wrlock(&semResultsQueue);
+            resultsQueue.erase(res->getId());
+            
+            pthread_rwlock_unlock(&semResultsQueue);
         }
-        if (test++>2000)
-        {
-            cout<<"ERROR, unable to find match"<<endl;
-            assert(false);
-            break;
-        }
+        sem_post(sem);
+    }
+    else
+    {
+        cout <<"Results not found for: "<<id<<endl;
+        pthread_rwlock_unlock(&semResults);
     }
     return ret;
 }
@@ -542,8 +548,6 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
     {
-        bool succ=false;
-        int test=0;
         if (results.find(id)!=results.end())
         {
             sem_t* sem=results[id].first;

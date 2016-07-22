@@ -13,6 +13,8 @@ void FacadeSpotter::addTestSpottings(string file)
     //map<string,vector<Spotting> > toAdd;
     while(std::getline(in,line))
     {
+        if (line.length()==0)
+            continue;
         vector<string> strV;
         //split(line,',',strV);
         std::stringstream ss(line);
@@ -84,7 +86,7 @@ FacadeSpotter::FacadeSpotter(MasterQueue* masterQueue, const Knowledge::Corpus* 
     string file= "./test/spottings.csv";
 #else
 #ifdef TEST_MODE
-    string file = "./data/onepage_GW_spottings_fold1_0.100000.csv";
+    string file = "./data/twopage_GW_spottings_fold1_0.100000.csv";
 #else
     string file= "./data/GW_spottings_fold1_0.100000.csv";
 #endif

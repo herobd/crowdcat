@@ -201,7 +201,7 @@ NAN_MODULE_INIT(Init) {
 #else
     cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
                         "/home/brian/intel_index/data/gw_20p_wannot",
-                        "data/onepage_queries.gtp");
+                        "data/twopage_queries.gtp");
 
 #endif
 #endif

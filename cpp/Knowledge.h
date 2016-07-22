@@ -33,6 +33,8 @@ typedef Graph<float,float,float> GraphType;
 
 #define CHAR_ASPECT_RATIO 2.45 //TODO
 
+#define ANCHOR_CONST 500
+
 //#ifndef TEST_MODE_LONG
 //#define averageCharWidth 40 //TODO GW, totally just making this up
 //#else
@@ -147,6 +149,11 @@ private:
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
     vector<Spotting*> harvest();
+#ifdef TEST_MODE
+    void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word, cv::Mat& showA);
+#else
+    void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word);
+#endif
     SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
     void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
     void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);

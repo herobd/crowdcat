@@ -27,8 +27,8 @@ using namespace std;
 
 #define ROTATE 0 //this is for testing, forcing it to feed up batches from different spotting results.
 
-#define NGRAM_Q_COUNT_THRESH_NEW 4
-#define NGRAM_Q_COUNT_THRESH_WORD 6
+#define NGRAM_Q_COUNT_THRESH_NEW 100//4
+#define NGRAM_Q_COUNT_THRESH_WORD 100//6
 
 
 
@@ -70,7 +70,7 @@ public:
 #ifndef TEST_MODE_C
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
 #endif
-    SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
+    SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need=true);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);

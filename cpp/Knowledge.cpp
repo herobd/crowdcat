@@ -245,7 +245,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
                 {
                     int overlap = (max(0,min(s.bry,word_bry) - max(s.tly,word_tly))) * (max(0,min(s.brx,word_brx) - max(s.tlx,word_tlx)));
                     float overlapPortion = overlap/(0.0+(s.bry-s.tly)*(s.brx-s.tlx));
-                    cout <<"Overlap for word "<<word<<": overlapPortion="<<overlapPortion<<" ="<<overlap<<"/"<<(0.0+(s.bry-s.tly)*(s.brx-s.tlx))<<endl;
+                    //cout <<"Overlap for word "<<word<<": overlapPortion="<<overlapPortion<<" ="<<overlap<<"/"<<(0.0+(s.bry-s.tly)*(s.brx-s.tlx))<<endl;
                     TranscribeBatch* newBatch=NULL;
                     if (overlapPortion > OVERLAP_WORD_THRESH)
                     {
@@ -347,7 +347,7 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
                 otherS.second.tlx = (otherS.second.tlx+s.tlx)/2;
                 otherS.second.brx = (otherS.second.brx+s.brx)/2;
                 merged=true;
-                cout <<"merge"<<endl;
+                //cout <<"merge"<<endl;
                 break;
             }
         }
@@ -449,8 +449,8 @@ string Knowledge::Word::generateQuery()
     {
         int dif = spot->second.tlx-pos;
         float numChars = dif/(0.0+*averageCharWidth);
-        cout <<"pos: "<<pos<<" str: "<<spot->second.tlx<<endl;
-        cout <<"num chars: "<<numChars<<endl;
+        //cout <<"pos: "<<pos<<" str: "<<spot->second.tlx<<endl;
+        //cout <<"num chars: "<<numChars<<endl;
         
         
         if (numChars>0)
@@ -483,8 +483,8 @@ string Knowledge::Word::generateQuery()
     
     int dif = brx-pos;
     float numChars = dif/(0.0+*averageCharWidth);
-    cout <<"pos: "<<pos<<" end: "<<brx<<endl;
-    cout <<"E num chars: "<<numChars<<endl;
+    //cout <<"pos: "<<pos<<" end: "<<brx<<endl;
+    //cout <<"E num chars: "<<numChars<<endl;
     if (numChars>0)
     {
         int least = floor(numChars);
@@ -694,7 +694,7 @@ vector<Spotting*> Knowledge::Word::harvest()
                         ret.push_back(toRet);
                         //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
 #ifdef TEST_MODE
-                        cout <<"harvested: "<<ngram<<endl;
+                        cout <<"EXAMINE harvested: "<<ngram<<endl;
                         cv::imshow("harvested",toRet->ngramImg());
                         cv::imshow("boundary image",toRet->img());
 #ifdef TEST_MODE_LONG
@@ -799,6 +799,60 @@ inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat 
     //cout << w <<endl;
 }
 
+#ifdef TEST_MODE
+void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word, cv::Mat& showA)
+#else
+void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word)
+#endif
+{
+    float baselineH = (botBaseline-topBaseline)/2.0;
+    int c=startX;
+    int addStr=1;
+    float init = sum_anchor;
+    while (sum_anchor < goal_sum)
+    {
+
+        for (int r=topBaseline+1; r<botBaseline; r++)
+        {
+            float str= (baselineH-fabs((r-topBaseline)-baselineH))/baselineH;
+            if (b.at<unsigned char>(wordCord(r,c)))
+            {
+                g -> add_tweights(wordIndex(r,c), ANCHOR_CONST*addStr*(word?1:0),ANCHOR_CONST*addStr*(word?0:1));
+                sum_anchor+=1-str;
+#ifdef TEST_MODE
+                showA.at<cv::Vec3b>(wordCord(r,c))[0]=(word?1:0)*max(.40*ANCHOR_CONST*addStr,255.0);
+                showA.at<cv::Vec3b>(wordCord(r,c))[1]=(word?0:1)*max(.40*ANCHOR_CONST*addStr,255.0);
+                showA.at<cv::Vec3b>(wordCord(r,c))[2]=0;
+#endif
+            }
+            //else
+            //    g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);
+        }
+        if (endX>startX)
+        {
+            if (++c > endX) {
+                c=startX;
+                if (sum_anchor==init) {
+                    c=endX;
+                    endX+=2;
+                }
+                init = sum_anchor;
+            }
+        }
+        else
+        {
+            if (--c < endX) {
+                c=startX;
+                if (sum_anchor==init) {
+                    c=endX;
+                    endX-=2;
+                }
+                init = sum_anchor;
+            }
+        }
+    }
+}
+
 SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b)
 {
     assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
@@ -822,13 +876,16 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
 
     //Add anchors
     float baselineH = (botBaseline-topBaseline)/2.0;
+    float sum_anchor_wordFront=0;
+    float sum_anchor_wordBack=0;
+    float sum_anchor_ngram=0;
     for (int c=tlx; c<=brx; c++)
     {
         float anchor_word=0;
         float anchor_ngram=0;
         if (c<leftLeftBound || c>rightRightBound)
         {
-            anchor_word=500;
+            anchor_word=ANCHOR_CONST;
             /*for (int r=tly; r<topBaseline; r++)
                 if (b.at<unsigned char>(wordCord(r,c)))
                     g -> add_tweights(wordIndex(r,c), NGRAM_GRAPH_BIAS,0);
@@ -838,7 +895,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
         }
         else if (c> rightLeftBound && c<leftRightBound)
         {
-            anchor_ngram=500;
+            anchor_ngram=ANCHOR_CONST;
         }
         /*else if (c>=leftLeftBound && c<leftLeftBound+0.3*(rightLeftBound-leftLeftBound))
         {
@@ -854,6 +911,12 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             if (b.at<unsigned char>(wordCord(r,c)))
             {
                 g -> add_tweights(wordIndex(r,c), anchor_word*str,anchor_ngram*str);
+                if (c<leftLeftBound)
+                    sum_anchor_wordFront+=str;
+                else if (c>rightRightBound)
+                    sum_anchor_wordBack+=str;
+                else if (c> rightLeftBound && c<leftRightBound)
+                    sum_anchor_ngram+=str;
 #ifdef TEST_MODE
                 showA.at<cv::Vec3b>(wordCord(r,c))[0]=.40*anchor_word*str;
                 showA.at<cv::Vec3b>(wordCord(r,c))[1]=.40*anchor_ngram*str;
@@ -870,6 +933,35 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             if (!b.at<unsigned char>(wordCord(r,c)))
                 g -> add_tweights(wordIndex(r,c), 0,NGRAM_GRAPH_BIAS);*/
     }
+
+    //Ensure some anchor gets placed
+    if (leftLeftBound!=rightLeftBound &&sum_anchor_wordFront < min(sum_anchor_wordBack,sum_anchor_ngram)/2)
+    {
+        emergencyAnchor(b,g,tlx, leftLeftBound, sum_anchor_wordFront, min(sum_anchor_wordBack,sum_anchor_ngram)/2, true
+#if TEST_MODE
+               , showA
+#endif
+               );
+    }
+    if (leftRightBound!=rightRightBound && sum_anchor_wordBack < min(sum_anchor_wordFront,sum_anchor_ngram)/2)
+    {
+        emergencyAnchor(b,g,brx, rightRightBound, sum_anchor_wordBack, min(sum_anchor_wordFront,sum_anchor_ngram)/2, true
+#if TEST_MODE
+               , showA
+#endif
+               );
+    }
+    if (sum_anchor_ngram < min(sum_anchor_wordBack,sum_anchor_wordFront)/2)
+    {
+        emergencyAnchor(b,g,rightLeftBound, leftRightBound, sum_anchor_ngram, min(sum_anchor_wordBack,sum_anchor_wordFront)/2, false
+#if TEST_MODE
+               , showA
+#endif
+               );
+    }
+
+
+
 #ifdef TEST_MODE
     //cv::resize(showA,showA,cv::Size(),2,2,cv::INTER_NEAREST);
     cv::imshow("anchors",showA);
@@ -1666,6 +1758,7 @@ void Knowledge::Corpus::show()
         cv::imshow("a page",p.second);
         cv::waitKey();
     }
+    cv::waitKey();
 
     pthread_rwlock_unlock(&pagesLock);
 }
@@ -1682,6 +1775,8 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     
     while(std::getline(in,line))
     {
+        if (line.length()==0)
+            continue;
         vector<string> strV;
         //split(line,',',strV);
         std::stringstream ss(line);

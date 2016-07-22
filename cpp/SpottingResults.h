@@ -12,7 +12,8 @@
 #include <iostream>
 
 #define FUZZY 12
-#define UPDATE_OVERLAP_THRESH 0.3
+#define UPDATE_OVERLAP_THRESH 0.4
+#define UPDATE_OVERLAP_THRESH_TIGHT 0.7
 
 using namespace std;
 
@@ -305,7 +306,7 @@ public:
     //This will either replace the spottings or add new ones if it can't find any close enough. spottings is consumed.
     //The return value merely indicates whether this needs "resurrected" (Put back into the MasterQueue).
 
-    SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram);
+    SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram, bool need=true);
     
     vector<Spotting>* feedback(int* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);
     
@@ -331,7 +332,9 @@ private:
     
     float maxScore;
     float minScore;
-    
+
+    int numLeftInRange; //This actually has the count from the round previous, for efficency
+
     //This multiset orders the spotting results to ease the extraction of batches
     multiset<Spotting*,scoreComp> instancesByScore;
     multiset<Spotting*,tlComp> instancesByLocation;
@@ -339,7 +342,10 @@ private:
     map<unsigned long,bool> classById;
     
     map<unsigned long, chrono::system_clock::time_point > starts;
-    
+   
+    //This provides a mapping of ids to allow a feedback of a spotting to be properly mapped if it was updated
+    map<unsigned long, unsigned long> updateMap;
+
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;
     

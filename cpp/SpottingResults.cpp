@@ -97,7 +97,11 @@ void SpottingResults::addTrueNoScore(Spotting* spotting) {
     return ret;
 }*/
 
-SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram) {
+SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) {
+
+    if (!need && numLeftInRange<12 && starts.size()>1)
+        return NULL;
+
     //cout <<"getBatch, from:"<<pullFromScore<<endl;
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
@@ -215,6 +219,15 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     {
         unsigned long id = stoul(ids[i]);
         starts.erase(id);
+
+        //In the event this spotting has been updated
+        while (updateMap.find(id)!=updateMap.end())
+        {
+            //unsigned long oldId=id;
+            id=updateMap[id];
+            //instancesById.erase(oldId);
+        }
+
         if (resent)
         {
             if (classById[id])
@@ -417,10 +430,22 @@ bool SpottingResults::EMThresholds()
         
         
         
+#ifdef TEST_MODE
+        bool noTest=true;
+        unsigned long ttt;
+#endif        
         
-        
+        numLeftInRange=0;
         for (auto p : instancesById)
         {
+#ifdef TEST_MODE
+            bool isTest = ngram.compare("he")==0 && p.second.tlx<527 && p.second.brx>527 && p.second.tly<2419 && p.second.bry>2419;
+            assert((isTest && noTest) || !isTest);
+            if (isTest) {
+                noTest=false;
+                ttt=p.first;
+            }
+#endif
             if (p.second.score!=p.second.score)
                 continue; 
             unsigned long id = p.first;
@@ -451,6 +476,8 @@ bool SpottingResults::EMThresholds()
             }
             else
             {
+                if (instancesById.at(id).score >acceptThreshold && instancesById.at(id).score<rejectThreshold)
+                    numLeftInRange++;
                 double trueProb = exp(-1*pow(instancesById.at(id).score - trueMean,2)/(2*trueVariance));
                 double falseProb = exp(-1*pow(instancesById.at(id).score - falseMean,2)/(2*falseVariance));
                 if (init)
@@ -620,8 +647,10 @@ bool SpottingResults::EMThresholds()
         pullFromScore = trueMean;//newMidScore;
         //cout << "pullFromScore: "<<pullFromScore<<endl;
     }*/
-    if (init)
+    if (init) {
         allBatchesSent=false;
+        numLeftInRange=instancesByScore.size();
+    }
     else
     {
         allBatchesSent=true;
@@ -687,8 +716,21 @@ bool SpottingResults::checkIncomplete()
 //combMin
 bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
+#ifdef TEST_MODE
+    bool noTest=true;
+    unsigned long ttt;
+#endif
     for (Spotting& spotting : *spottings)
     {
+#ifdef TEST_MODE
+        bool isTest = ngram.compare("he")==0 && spotting.tlx<527 && spotting.brx>527 && spotting.tly<2419 && spotting.bry>2419;
+        assert((isTest && noTest) || !isTest);
+        if (isTest) {
+            noTest=false;
+            ttt=spotting.id;
+            cout <<"###!!! updateSpottings hit ngram of interest"<<endl;
+        }
+#endif
         if (spotting.score>maxScore)
         {
             if (falseMean==maxScore && falseVariance==1.0)
@@ -704,6 +746,9 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
         bool updated=false;
         int width = spotting.brx-spotting.tlx;
         int height = spotting.bry-spotting.tly;
+        Spotting* bestSoFar=NULL;
+        auto bestSoFarIter = instancesByLocation.end();
+        int bestOverlap=0;
         for (int tlx=spotting.tlx-width*(1-UPDATE_OVERLAP_THRESH); tlx<spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH); tlx++)
         {
             Spotting lb(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH));
@@ -713,43 +758,82 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
             for (;itLow!=itHigh; itLow++)
             {
                 int overlapArea = ( min(spotting.brx,(*itLow)->brx) - max(spotting.tlx,(*itLow)->tlx) ) * ( min(spotting.bry,(*itLow)->bry) - max(spotting.tly,(*itLow)->tly) );
-                if (overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>UPDATE_OVERLAP_THRESH)
+#ifdef TEST_MODE
+                bool isTest2 = (*itLow)->tlx<527 && (*itLow)->brx>527 && (*itLow)->tly<2419 && (*itLow)->bry>2419;
+                if (isTest && isTest2)
+                    cout<<"###!!! ngram of interest, overlap: "<<overlapArea<<", did update: "<<(overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>UPDATE_OVERLAP_THRESH)<<endl;
+#endif
+                double thresh = UPDATE_OVERLAP_THRESH;
+                bool updateWhenInBatch = (*itLow)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(*itLow)==instancesByScore.end();
+                if (updateWhenInBatch)
+                    thresh=UPDATE_OVERLAP_THRESH_TIGHT;
+                if (overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>thresh)
                 {
-                    updated=true;
-
-                    if (spotting.score < (*itLow)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
+                    if (overlapArea > bestOverlap)
                     {
-                        instancesById[spotting.id]=spotting;
-                        instancesByLocation.insert(&instancesById[spotting.id]);
-                        if (classById.find((*itLow)->id)==classById.end())
-                        {
-                            //cout<<"{} replaced unclas spotting "<<spotting.score<<endl;
-                            //Remove from scores
-                            instancesByScore.erase(*itLow); //erase by value (pointer)
-                            //Remove from locations
-                            instancesByLocation.erase(itLow); //erase by interator
-                            //add
-                            instancesByScore.insert(&instancesById[spotting.id]);
-                            tracer = instancesByScore.begin();
-                        }
-                        else if (classById[(*itLow)->id]==false && (*itLow)->type==SPOTTING_TYPE_THRESHED)
-                        {//This occurs after being resurrected. We'll give a better score another chance.
-                            //cout<<"{} replaced false spotting "<<spotting.score<<endl;
-                            instancesByScore.insert(&instancesById[spotting.id]);
-                            tracer = instancesByScore.begin();
-                        }
-                        //else
-                            //cout<<"{} other [class:"<<classById[(*itLow)->id]<<" type:"<<(*itLow)->type<<"] spotting "<<spotting.score<<endl;
-
+                        bestOverlap=overlapArea;
+                        bestSoFar=*itLow;
+                        bestSoFarIter=itLow;
                     }
-                    tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
-                    break;
+                    else
+                    {
+                        tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
+                        break;
+                    }
+
+
+                    
                 }
+            }
+        }
+        if (bestSoFar!=NULL)
+        {
+            updated=true;
+
+            if (spotting.score < (bestSoFar)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
+            {
+                bool updateWhenInBatch = (bestSoFar)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(bestSoFar)==instancesByScore.end();
+                if (updateWhenInBatch)
+                    updateMap[bestSoFar->id]=spotting.id;
+                instancesById[spotting.id]=spotting;
+                instancesById.erase(bestSoFar->id);
+                instancesByLocation.insert(&instancesById[spotting.id]);
+                instancesByLocation.erase(bestSoFarIter); //erase by iterator
+                int removed = instancesByScore.erase(bestSoFar); //erase by value (pointer)
+                if (removed)
+                {
+#ifdef TEST_MODE
+                    if (isTest) {
+                        cout<<"###!!! replacing ngram of interest1"<<endl;
+                    }
+#endif
+                    //add
+                    instancesByScore.insert(&instancesById[spotting.id]);
+                    tracer = instancesByScore.begin();
+                }
+                else if ((bestSoFar)->type==SPOTTING_TYPE_THRESHED && classById[(bestSoFar)->id]==false)
+                {//This occurs after being resurrected. We'll give a better score another chance.
+#ifdef TEST_MODE
+                    if (isTest)
+                        cout<<"###!!! replacing ngram of interest2"<<endl;
+#endif
+                    //cout<<"{} replaced false spotting "<<spotting.score<<endl;
+                    (bestSoFar)->type=SPOTTING_TYPE_NONE;
+                    classById.erase((bestSoFar)->id);
+                    instancesByScore.insert(&instancesById[spotting.id]);
+                    tracer = instancesByScore.begin();
+                }
+                //else
+                    //cout<<"{} other [class:"<<classById[(bestSoFar)->id]<<" type:"<<(bestSoFar)->type<<"] spotting "<<spotting.score<<endl;
             }
         }
 
         if (!updated)
         {
+#ifdef TEST_MODE
+            if (isTest)
+                cout<<"###!!! ngram of interest, no intersections found"<<endl;
+#endif
             instancesById[spotting.id]=spotting;
             instancesByScore.insert(&instancesById[spotting.id]);
             instancesByLocation.insert(&instancesById[spotting.id]);

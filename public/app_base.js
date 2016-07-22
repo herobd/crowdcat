@@ -207,8 +207,10 @@ var lastRemovedBatchInfo=[];
 function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
-    if (info.id != batchId)
-        console.log("ERROR, not matching ids: "+info.id+" "+batchId)
+    if (info.id != batchId || info.id != batchId.substr(1)) {
+        console.log("ERROR, not matching ids: "+info.id+" "+batchId);
+        console.log(batchQueue);
+    }
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
         
@@ -240,7 +242,7 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:batchId,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
             
             var jres=JSON.parse(res);
             console.log(jres);
