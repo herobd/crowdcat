@@ -101,8 +101,10 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 }
 BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 {
+#ifndef TEST_MODE
     try
     {
+#endif
         bool hard=true;
         if (num==-1) {
             num=5;
@@ -117,6 +119,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
             return ret;
         else
             return new BatchWraperBlank();
+#ifndef TEST_MODE
     }
     catch (exception& e)
     {
@@ -126,6 +129,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
     {
         cout <<"Exception in CATTSS::getBatch(), UNKNOWN"<<endl;
     }
+#endif
     return new BatchWraperBlank();
 }
 
@@ -198,14 +202,14 @@ void CATTSS::updateTranscription(string id, string transcription)
 }
 
 
-void CATTSS::updateNewExemplars(string resultsId,  vector<int> labels, int resent)
+void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
 {
 #ifndef TEST_MODE
     try
     {
 #endif
         vector<pair<unsigned long,string> > toRemoveExemplars;        
-        vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(resultsId), labels, &toRemoveExemplars);
+        vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(batchId), labels, &toRemoveExemplars);
 
         spotter->removeQueries(&toRemoveExemplars);
         spotter->addQueries(toSpot);

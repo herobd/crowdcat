@@ -366,15 +366,15 @@ var ControllerApp = function(port) {
                            if (err) console.log(err); 
                         });
                     else if (req.query.type=='transcription')
-                        spottingaddon.transcriptionBatchDone(req.body.id,req.body.label,function (err) {
+                        spottingaddon.transcriptionBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
                     else if (req.query.type=='newExemplars')
-                        spottingaddon.newExemplarsBatchDone(req.body.id,req.body.labels,resend,function (err) {
+                        spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
                             if (err) console.log(err);
                         });
                     else if (req.query.type=='manual')
-                        spottingaddon.manualBatchDone(req.body.id,req.body.label,function (err) {
+                        spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
 

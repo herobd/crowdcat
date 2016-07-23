@@ -95,10 +95,14 @@ void TranscribeBatch::setWidth(unsigned int width)
     if (width>=wordW)
     {
         if (width>wordW) {
-            if (tlx-padLeft>=0)
-                (*origImg)(cv::Rect(tlx-padLeft,tly,width,wordH)).copyTo(newWordImg(cv::Rect(0, 0, width, wordH)));
-            else
-                (*origImg)(cv::Rect(0,tly,width+(tlx-padLeft),wordH)).copyTo(newWordImg(cv::Rect(padLeft-tlx, 0, width+(tlx-padLeft), wordH)));
+            int cropX = (tlx-padLeft>=0)?tlx-padLeft:0;
+            int pasteX = (tlx-padLeft>=0)?0:padLeft-tlx;
+            int cropWidth = (tlx-padLeft>=0)?width:width+(tlx-padLeft);
+            if (cropWidth+cropX>=(*origImg).cols) {
+                cropWidth=(*origImg).cols-cropX;
+            }
+            (*origImg)(cv::Rect(cropX,tly,cropWidth,wordH)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordH)));
+
         }
         wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, 0, wordW, wordH)));
         //textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
@@ -807,8 +811,10 @@ void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int e
 {
     float baselineH = (botBaseline-topBaseline)/2.0;
     int c=startX;
-    int addStr=1;
-    float init = sum_anchor;
+    float inc=.5;
+    float addStr=1;
+    //float init = sum_anchor;
+    //float sum_anchor=0;
     while (sum_anchor < goal_sum)
     {
 
@@ -818,7 +824,7 @@ void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int e
             if (b.at<unsigned char>(wordCord(r,c)))
             {
                 g -> add_tweights(wordIndex(r,c), ANCHOR_CONST*addStr*(word?1:0),ANCHOR_CONST*addStr*(word?0:1));
-                sum_anchor+=1-str;
+                sum_anchor+=addStr;
 #ifdef TEST_MODE
                 showA.at<cv::Vec3b>(wordCord(r,c))[0]=(word?1:0)*max(.40*ANCHOR_CONST*addStr,255.0);
                 showA.at<cv::Vec3b>(wordCord(r,c))[1]=(word?0:1)*max(.40*ANCHOR_CONST*addStr,255.0);
@@ -830,24 +836,20 @@ void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int e
         }
         if (endX>startX)
         {
-            if (++c > endX) {
+            if (++c > endX) 
+            {
                 c=startX;
-                if (sum_anchor==init) {
-                    c=endX;
-                    endX+=2;
-                }
-                init = sum_anchor;
+                endX+=2;
+                //addStr+=inc;
             }
         }
         else
         {
-            if (--c < endX) {
+            if (--c < endX) 
+            {
                 c=startX;
-                if (sum_anchor==init) {
-                    c=endX;
-                    endX-=2;
-                }
-                init = sum_anchor;
+                endX-=2;
+                //addStr+=inc;
             }
         }
     }

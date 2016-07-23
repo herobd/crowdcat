@@ -108,6 +108,15 @@ function undo() {
             if (ondeckHeader)
                 ondeckHeader.classList.toggle('ondeck');
         }
+
+        if (lastRemovedBatchInfo.length>0){
+            var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
+            console.log(pastInfo +' ?= '+batchQueue[0].id)
+            if (pastInfo!=batchQueue[0].id) {
+                batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
+            }
+            
+        }   
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         ondeck=lastRemovedEle.pop();
@@ -123,14 +132,6 @@ function undo() {
         ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
         typeSetup(ondeck);
-        if (lastRemovedBatchInfo.length>0){
-            var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
-            console.log(pastInfo +' ?= '+batchQueue[0].id)
-            if (pastInfo!=batchQueue[0].id) {
-                batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
-            }
-            
-        }   
         if (ondeck.classList.contains('spotting'))
             batches[ondeck.batch].spottings[ondeck.id]=null;
         console.log(batches[ondeck.batch].spottings);
@@ -194,9 +195,9 @@ function setup() {
     };
     getNextBatch(toBeInQueue,function() { 
         highlightLast();
-        var headers = theWindow.getElementsByClassName('batchHeader');
-        if (headers.length>0)
-            headers[headers.length-1].classList.toggle('ondeck');
+        //var headers = theWindow.getElementsByClassName('batchHeader');
+        //if (headers.length>0)
+        //    headers[headers.length-1].classList.toggle('ondeck');
     });
     
     
@@ -410,8 +411,14 @@ function highlightLast() {
         ondeck.classList.toggle('ondeck');
         typeSetup(ondeck);
         if (batchQueue[0].type=='e') {
-            var header = window.getElementById('h'+ondeck.id);
-            header.classList.toggle('ondeck');
+            var header = document.getElementById('h'+ondeck.id);
+            if (!header.classList.contains('ondeck'))
+                header.classList.toggle('ondeck');
+        }
+        if (batchQueue[0].type=='s') {
+            var header = document.getElementById('b'+ondeck.batch);
+            if (!header.classList.contains('ondeck'))
+                header.classList.toggle('ondeck');
         }
     }
 }
@@ -441,15 +448,17 @@ function isBatchDone(batchId) {
     //base
     var nextElement=null;
     if (batchQueue.length>0) {
-        nextElement=document.getElementById('b'+batchQueue[0].id);
+        if (batchQueue[0].type='s')
+            nextElement=document.getElementById('b'+batchQueue[0].id);
     }
+    /*
     if (nextElement) {
         nextElement.classList.toggle('ondeck');
         //if (batchQueue[0].ngram=='#') {
             //TODO hide gradient
             //gradient.hidden=true;
         //}
-    }
+    }*/
     //highlightLast();
     var oldElement = document.getElementById('b'+batchId);
     if (oldElement) {

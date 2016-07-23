@@ -256,7 +256,7 @@ function batchShiftAndSend(batchId,callback) {
         batches[batchId].sent=true;
     } else if (info.type=='t') {
         var query='?type=transcription';
-        httpPostAsync('/app/submitBatch'+query,{id:batchId,label:info.transcription,time:new Date().getTime()-startTime},function (res){
+        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,label:info.transcription,time:new Date().getTime()-startTime},function (res){
             
             var jres=JSON.parse(res);
             console.log(jres);
@@ -280,7 +280,7 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:batchId,labels:labels,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,labels:labels,undos:countUndos,time:new Date().getTime()-startTime},function (res){
             
             var jres=JSON.parse(res);
             console.log(jres);
