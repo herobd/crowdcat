@@ -111,10 +111,8 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     unsigned int toRet = ((hard&&instancesByScore.size()>=num)||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
     if (toRet==0)
     {
-#ifdef TEST_MODE
-        cout<<"called SpottingResults::getBatch when none to give."<<endl;
-#endif
-        return ret;
+        //This occurs in a race condition when the spotting results is queried before it can be removed from the MasterQueue
+        return NULL;
     }
     
     if ((*tracer)->score < pullFromScore)
@@ -276,8 +274,8 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
 
 #ifdef TEST_MODE
     cout<<"["<<id<<"]:"<<ngram<<", all sent: "<<allBatchesSent<<", waiting for "<<starts.size()<<", num left "<<instancesByScore.size()<<endl;
-    for (auto i=instancesByScore.begin(); i!=instancesByScore.end(); i++)
-        cout <<(**i).id<<"[tlx:"<<(**i).tlx<<" score:"<<(**i).score<<"]"<<endl;
+    //for (auto i=instancesByScore.begin(); i!=instancesByScore.end(); i++)
+    //    cout <<(**i).id<<"[tlx:"<<(**i).tlx<<" score:"<<(**i).score<<"]"<<endl;
 #endif
 
     if (resent==0 && starts.size()==0 && allBatchesSent)
@@ -288,7 +286,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             *done=2;
         this->done=true;
 #ifdef TEST_MODE
-        cout <<"all batches sent, cleaning up"<<endl;
+        cout <<"["<<id<<"]:"<<ngram<<", all batches sent, cleaning up"<<endl;
 #endif
         tracer = instancesByScore.begin();
         while (tracer!=instancesByScore.end() && (*tracer)->score <= acceptThreshold)
@@ -320,7 +318,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     {
         *done=-1;
 #ifdef TEST_MODE
-        cout<<"SpottingResults ["<<ngram<<"] has more batches and will be re-enqueued"<<endl;
+        cout<<"SpottingResults ["<<id<<"]:"<<ngram<<" has more batches and will be re-enqueued"<<endl;
 #endif
     }
     return ret;

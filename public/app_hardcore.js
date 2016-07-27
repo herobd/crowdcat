@@ -16,6 +16,7 @@ var toBeInQueue=3;
 var swipeOn=true;
 var screenHeight;
 
+var lastUndo=false;
 
 function handleTouchStart(evt) {
     if (evt.touches)                                     
@@ -82,8 +83,12 @@ function removeSpotting(OK) {
     }
 
     if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
+        lastUndo = ondeck.classList.contains('redo');
         sparks(OK);
+
     }
+    else
+        lastUndo=false;
     
     batches[ondeck.batch].spottings[ondeck.id]=OK;
 
@@ -104,16 +109,20 @@ function removeSpotting(OK) {
         setTimeout(remove,getRandomTime());
         icons.appendChild(spark);
 }*/
+function remover(rek) {return function() {icons.removeChild(rek);};}
 
 function sparks(right) {
 
-    for (var i=0; i<15; i++) {
+    for (var i=0; i<29; i++) {
         var spark = document.createElement("DIV");
         spark.classList.toggle('spark');
         if (right)
             spark.classList.toggle('green');
         else
             spark.classList.toggle('red');
+
+        if  (lastUndo)
+            spark.style.bottom='90px';
         /*spark.addEventListener("load", function(event) {
         if (right) {
             spark.style.bottom='100px';
@@ -126,8 +135,8 @@ function sparks(right) {
         //TODO webkit
         //spark.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
         //spark.addEventListener("transitionend", function(e){if(e.propertyName=='bottom') icons.removeChild(this);}, false);
-        var remove = function(){console.log(spark); icons.removeChild(spark);}
-        setTimeout(remove,getRandomTime());
+        
+        setTimeout(remover(spark),getRandomTime());
         icons.appendChild(spark);
     }
 
@@ -212,10 +221,10 @@ function handleTouchEnd(evt) {
 }
 
 function getRandomX() {
-    return 10 + Math.floor(Math.random()*100);
+    return 10 + Math.floor(Math.random()*180);
 }
-function getRandomY() {
-    return 10 + Math.floor(Math.random()*120);
+function getRandomY(off) {
+    return off + Math.floor(Math.random()*180);
 }
 function getRandomTime() {
     return 100 + Math.floor(Math.random()*320);
@@ -264,13 +273,16 @@ function setup() {
       mutations.forEach(function(mutation) {
         //console.log(mutation.type);
         for (var n of mutation.addedNodes) {
+            var off=80;
+            if (lastUndo)
+                off=0;
             setTimeout( function() {
             if (n.classList.contains('red')) {
                 n.style.left=getRandomX()+'px';
-                n.style.bottom=getRandomY()+'px';
+                n.style.bottom=getRandomY(off)+'px';
             } else {
                 n.style.right=getRandomX()+'px';
-                n.style.bottom=getRandomY()+'px';
+                n.style.bottom=getRandomY(off)+'px';
             }
             },10);
          }

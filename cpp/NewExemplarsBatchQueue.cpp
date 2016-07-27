@@ -34,8 +34,11 @@ void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch, vector<pair
             queue.swap(temp);
 
         }
-        for (Spotting* s : batch)
+        for (Spotting* s : batch) 
+        {
+            assert(s->ngramImg().cols>0);
             queue.push(s);
+        }
         unlock();
     }
 }
@@ -71,6 +74,7 @@ NewExemplarsBatch* NewExemplarsBatchQueue::dequeue(int batchSize, unsigned int m
         
         }
         ret = new NewExemplarsBatch(batch, maxWidth, color);
+        assert(ret->at(0).ngramImg().cols>0);
         returnMap[ret->getId()]=ret;
         timeMap[ret->getId()]=chrono::system_clock::now();
     }

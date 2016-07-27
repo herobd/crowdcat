@@ -799,7 +799,9 @@ vector<Spotting*> Knowledge::Word::harvest()
 inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat &img)
 {
     float w = ((255-img.at<unsigned char>(y1,x1))+(255-img.at<unsigned char>(y2,x2)))/(255.0+255.0);
-    g -> add_edge(x1+y1*img.cols, x2+y2*img.cols,w*w,w*w);
+    //w = 1/(1+exp(-2*w));
+    w = w*w*w;
+    g -> add_edge(x1+y1*img.cols, x2+y2*img.cols,w,w);
     //cout << w <<endl;
 }
 

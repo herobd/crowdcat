@@ -70,8 +70,12 @@ class SpottingImage : public Spotting
 {
 public:
     SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram="") : 
-        Spotting(s), ngramImage(s.ngramImg())
+        Spotting(s) 
     {
+        ngramImage = s.ngramImg();
+        assert(ngramImage.cols>0);
+        if (maxWidth<0)
+            return;
         int oneSide = maxWidth/2;
         int sideFromR = (oneSide- (brx-tlx)/2);
         int left = tlx-sideFromR;
@@ -155,6 +159,7 @@ public:
     SpottingImage(const SpottingImage& s) : Spotting(s)
     {
         image=s.image;
+        ngramImage=s.ngramImage;
     }
     virtual ~SpottingImage() {}
     
@@ -164,6 +169,7 @@ public:
     }
     cv::Mat ngramImg() const
     {
+        assert(ngramImage.cols>0);
         return ngramImage; //(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
     }
     int classified;
@@ -192,6 +198,9 @@ public:
 
     cv::Mat ngramImg() const
     {
+#ifdef TEST_MODE
+        cout <<"### SpottingExemplar ngramImg called"<<endl;
+#endif
         return ngramImage; 
     }
 private:

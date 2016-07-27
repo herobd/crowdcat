@@ -534,8 +534,8 @@ div.selection.error {
 }
 
 .spark {
-    width: 5px;
-    height: 5px;
+    width: 3px;
+    height: 3px;
     z-index:10;
 }
 
@@ -543,14 +543,14 @@ div.selection.error {
 .spark.red {
     background: red;
     left: 0px;
-    bottom: 0px;
+    bottom: 150px;
     position: absolute;
     transition: left .5s ease-out, bottom .5s ease-out;
 }
 .spark.green {
     background: green;
     right: 0px;
-    bottom: 0px;
+    bottom: 150px;
     position: absolute;
     transition: right .5s ease-out, bottom .5s ease-out;
 }

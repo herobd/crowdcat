@@ -15,7 +15,7 @@ BatchWraperNewExemplars::BatchWraperNewExemplars(NewExemplarsBatch* newExemplars
     {
         retNgram[index]=newExemplars->at(index).ngram;
         vector<uchar> outBuf;
-        cv::imencode(".png",newExemplars->at(index).img(),outBuf,compression_params);//or should we have them look at the ngram image?
+        cv::imencode(".png",newExemplars->at(index).ngramImg(),outBuf,compression_params);//or should we have them look at the ngram image?
         stringstream ss;
         ss.write((char*)outBuf.data(),outBuf.size());
         stringstream encoded;
