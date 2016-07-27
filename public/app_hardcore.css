@@ -178,11 +178,6 @@ button {
     opacity: 0.7;
     /*margin: -5px, 5px;*/
 }
-#icons div {
-   width:100px;
-   float: left;
-   clear:both;
-}
 
 #rightIcon {
     float: left;
@@ -307,7 +302,7 @@ div.transcription {
     padding-bottom: 1px;
     z-index: 3;
     text-align: center;
-    border-width: 20px 0px;
+    border-width: 40px 0px;
     border-style: solid;
     border-color: #380B61;
     /*overflow-y: auto; 
@@ -537,3 +532,26 @@ div.selection.error {
     transform: rotate(360deg);
   }
 }
+
+.spark {
+    width: 5px;
+    height: 5px;
+    z-index:10;
+}
+
+
+.spark.red {
+    background: red;
+    left: 0px;
+    bottom: 0px;
+    position: absolute;
+    transition: left .5s ease-out, bottom .5s ease-out;
+}
+.spark.green {
+    background: green;
+    right: 0px;
+    bottom: 0px;
+    position: absolute;
+    transition: right .5s ease-out, bottom .5s ease-out;
+}
+

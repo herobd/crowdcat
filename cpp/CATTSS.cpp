@@ -21,6 +21,7 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 #else
 //#ifdef TEST_MODE
     int pageId=2700270;
+    
     Spotting* th1 = new Spotting(586,319,687,390,pageId,corpus->imgForPageId(pageId),"th",0);//[1]
     Spotting* he1 = new Spotting(462,588,535,646,pageId,corpus->imgForPageId(pageId),"he",0);//[1]
     Spotting* in1 = new Spotting(504,857,584,902,pageId,corpus->imgForPageId(pageId),"in",0);//[1]
@@ -48,7 +49,9 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     Spotting* se1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"se",0);//[1]
     Spotting* ha1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ha",0);//[1]
     Spotting* as1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"as",0);//[1]*/
-    vector<Spotting* > init = {th1,he1,in1,er1,an1,re1,on1,at1,en1,nd1,ti1,es1,or1,te1,of1,ed1,is1,it1,al1,ar1,st1,to1,nt1,ng1,se1,ha1,as1};
+    vector<Spotting* > init_first = {on1};
+    spotter->addQueries(init_first);
+    vector<Spotting* > init = {th1,he1,in1,er1,an1,re1,at1,en1,nd1,ti1,es1,or1,te1,of1,ed1,is1,it1,al1,ar1,st1,to1,nt1,ng1,se1,ha1,as1};
     spotter->addQueries(init);
 
 //#endif
@@ -104,6 +107,8 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 #ifndef TEST_MODE
     try
     {
+#else
+        cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
         bool hard=true;
         if (num==-1) {

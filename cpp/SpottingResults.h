@@ -108,7 +108,7 @@ public:
         //}
         if (prevNgram.compare(ngram)!=0)
         {
-            color++;//=(color+1)%5;
+            color=(color+1)%5;
         }
         for (int r=0; r<bry-tly; r++)
             for (int c=sideFromR-FUZZY; c<sideFromR+brx-tlx+FUZZY; c++)
@@ -345,6 +345,9 @@ private:
    
     //This provides a mapping of ids to allow a feedback of a spotting to be properly mapped if it was updated
     map<unsigned long, unsigned long> updateMap;
+#ifdef TEST_MODE
+    map<unsigned long, unsigned long> testUpdateMap;
+#endif
 
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;

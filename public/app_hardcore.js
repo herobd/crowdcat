@@ -80,6 +80,10 @@ function removeSpotting(OK) {
         header.classList.toggle('batchHeader');
         header.classList.toggle('collapserH');
     }
+
+    if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
+        sparks(OK);
+    }
     
     batches[ondeck.batch].spottings[ondeck.id]=OK;
 
@@ -87,6 +91,48 @@ function removeSpotting(OK) {
     
     highlightLast();
 }
+
+/*function Spark(right) {
+
+        this.spark = document.createElement("DIV");
+        spark.classList.toggle('spark');
+        if (right)
+            spark.classList.toggle('green');
+        else
+            spark.classList.toggle('red');
+        var remove = function(){icons.removeChild(this.spark);}
+        setTimeout(remove,getRandomTime());
+        icons.appendChild(spark);
+}*/
+
+function sparks(right) {
+
+    for (var i=0; i<15; i++) {
+        var spark = document.createElement("DIV");
+        spark.classList.toggle('spark');
+        if (right)
+            spark.classList.toggle('green');
+        else
+            spark.classList.toggle('red');
+        /*spark.addEventListener("load", function(event) {
+        if (right) {
+            spark.style.bottom='100px';
+            spark.style.right='100px';
+        } else {
+            spark.style.bottom='100px';
+            spark.style.left='100px';
+        }
+        });*/
+        //TODO webkit
+        //spark.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+        //spark.addEventListener("transitionend", function(e){if(e.propertyName=='bottom') icons.removeChild(this);}, false);
+        var remove = function(){console.log(spark); icons.removeChild(spark);}
+        setTimeout(remove,getRandomTime());
+        icons.appendChild(spark);
+    }
+
+}
+
 
 function createInlineLabel(label) {
     var ret = document.createElement("LABEL");
@@ -109,6 +155,9 @@ function undo() {
                 ondeckHeader.classList.toggle('ondeck');
         }
 
+
+        ondeck=lastRemovedEle.pop();
+
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
             console.log(pastInfo +' ?= '+batchQueue[0].id)
@@ -119,7 +168,6 @@ function undo() {
         }   
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
-        ondeck=lastRemovedEle.pop();
         if (ondeck.childNodes.length<2) {
             if (batchQueue[0].type=='s')
                 ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngram),ondeck.childNodes[0]);
@@ -134,7 +182,7 @@ function undo() {
         typeSetup(ondeck);
         if (ondeck.classList.contains('spotting'))
             batches[ondeck.batch].spottings[ondeck.id]=null;
-        console.log(batches[ondeck.batch].spottings);
+        //console.log(batches[ondeck.batch].spottings);
         if (ondeck.batch!=batchQueue[0].id)
                 console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].id)
         theWindow.appendChild(ondeck);
@@ -161,6 +209,16 @@ function handleTouchEnd(evt) {
         
     }
     this.xDiff=0;
+}
+
+function getRandomX() {
+    return 10 + Math.floor(Math.random()*100);
+}
+function getRandomY() {
+    return 10 + Math.floor(Math.random()*120);
+}
+function getRandomTime() {
+    return 100 + Math.floor(Math.random()*320);
 }
 
 function setup() {
@@ -199,6 +257,32 @@ function setup() {
         //if (headers.length>0)
         //    headers[headers.length-1].classList.toggle('ondeck');
     });
+
+
+    // create an observer instance
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        //console.log(mutation.type);
+        for (var n of mutation.addedNodes) {
+            setTimeout( function() {
+            if (n.classList.contains('red')) {
+                n.style.left=getRandomX()+'px';
+                n.style.bottom=getRandomY()+'px';
+            } else {
+                n.style.right=getRandomX()+'px';
+                n.style.bottom=getRandomY()+'px';
+            }
+            },10);
+         }
+       
+      });    
+    });
+
+    // configuration of the observer:
+    var config = { attributes: false, childList: true, characterData: true }
+
+    // pass in the target node, as well as the observer options
+    observer.observe(icons, config);
     
     
     if (testMode) {
@@ -412,12 +496,12 @@ function highlightLast() {
         typeSetup(ondeck);
         if (batchQueue[0].type=='e') {
             var header = document.getElementById('h'+ondeck.id);
-            if (!header.classList.contains('ondeck'))
+            if (header && !header.classList.contains('ondeck'))
                 header.classList.toggle('ondeck');
         }
         if (batchQueue[0].type=='s') {
             var header = document.getElementById('b'+ondeck.batch);
-            if (!header.classList.contains('ondeck'))
+            if (header &&!header.classList.contains('ondeck'))
                 header.classList.toggle('ondeck');
         }
     }
@@ -448,7 +532,7 @@ function isBatchDone(batchId) {
     //base
     var nextElement=null;
     if (batchQueue.length>0) {
-        if (batchQueue[0].type='s')
+        if (batchQueue[0].type=='s')
             nextElement=document.getElementById('b'+batchQueue[0].id);
     }
     /*
@@ -464,7 +548,7 @@ function isBatchDone(batchId) {
     if (oldElement) {
         var typeLastRemoved = lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type;
         if (typeLastRemoved!='t' && typeLastRemoved!='m') {
-            if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
+            if (batchQueue.length > 0 && typeLastRemoved.ngram == batchQueue[0].ngram) {
                 theWindow.removeChild(oldElement);
                 
                 //we shift the header past the collapsing element to provide the illusion of a smooth transition

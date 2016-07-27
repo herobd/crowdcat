@@ -218,7 +218,8 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     for (unsigned int i=0; i< ids.size(); i++)
     {
         unsigned long id = stoul(ids[i]);
-        starts.erase(id);
+        int check = starts.erase(id);
+        assert(check==1 || resent);
 
         //In the event this spotting has been updated
         while (updateMap.find(id)!=updateMap.end())
@@ -795,8 +796,11 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                 bool updateWhenInBatch = (bestSoFar)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(bestSoFar)==instancesByScore.end();
                 if (updateWhenInBatch)
                     updateMap[bestSoFar->id]=spotting.id;
+#ifdef TEST_MODE
+                else
+                    testUpdateMap[bestSoFar->id]=spotting.id;
+#endif
                 instancesById[spotting.id]=spotting;
-                instancesById.erase(bestSoFar->id);
                 instancesByLocation.insert(&instancesById[spotting.id]);
                 instancesByLocation.erase(bestSoFarIter); //erase by iterator
                 int removed = instancesByScore.erase(bestSoFar); //erase by value (pointer)
@@ -818,13 +822,12 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                         cout<<"###!!! replacing ngram of interest2"<<endl;
 #endif
                     //cout<<"{} replaced false spotting "<<spotting.score<<endl;
-                    (bestSoFar)->type=SPOTTING_TYPE_NONE;
+                    //(bestSoFar)->type=SPOTTING_TYPE_NONE;
                     classById.erase((bestSoFar)->id);
                     instancesByScore.insert(&instancesById[spotting.id]);
                     tracer = instancesByScore.begin();
                 }
-                //else
-                    //cout<<"{} other [class:"<<classById[(bestSoFar)->id]<<" type:"<<(bestSoFar)->type<<"] spotting "<<spotting.score<<endl;
+                instancesById.erase(bestSoFar->id);
             }
         }
 

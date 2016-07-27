@@ -207,7 +207,7 @@ var lastRemovedBatchInfo=[];
 function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
-    if (info.id != batchId || info.id != batchId.substr(1)) {
+    if (info.id != batchId && info.id != batchId.substr(1)) {
         console.log("ERROR, not matching ids: "+info.id+" "+batchId);
         console.log(batchQueue);
     }
