@@ -269,8 +269,9 @@ button {
     border-width:0px;
     
     
-    pointer-events: none;
+    /*pointer-events: none;
     touch-action: none;
+    */
 }
 
 .spotting img {
@@ -534,24 +535,135 @@ div.selection.error {
 }
 
 .spark {
+    position: absolute;
     width: 3px;
     height: 3px;
     z-index:10;
+    -webkit-animation-duration: 0.5s;
+    -webkit-animation-direction: reverse;
+    -webkit-animation-timing-function: ease-in;
+    animation-duration: 0.5s;
+    animation-direction: reverse;
+    animation-timing-function: ease-in;
+    opacity:0;
 }
 
 
 .spark.red {
     background: red;
-    left: 0px;
-    bottom: 150px;
-    position: absolute;
-    transition: left .5s ease-out, bottom .5s ease-out;
+    -webkit-animation-name: flyRed;
+    animation-name: flyRed;
 }
 .spark.green {
     background: green;
-    right: 0px;
-    bottom: 150px;
-    position: absolute;
-    transition: right .5s ease-out, bottom .5s ease-out;
+    -webkit-animation-name: flyGreen;
+    animation-name: flyGreen;
+}
+.spark.redLow {
+    background: red;
+    -webkit-animation-name: flyRedLow;
+    animation-name: flyRedLow;
+}
+.spark.greenLow {
+    background: green;
+    -webkit-animation-name: flyGreenLow;
+    animation-name: flyGreenLow;
 }
 
+@-webkit-keyframes flyRed {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    left: 0px;
+    bottom: 150px;
+  }
+}
+@-webkit-keyframes flyGreen {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    right: 0px;
+    bottom: 150px;
+  }
+}
+@-webkit-keyframes flyRedLow {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    left: 0px;
+    bottom: 90px;
+  }
+}
+@-webkit-keyframes flyGreenLow {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    right: 0px;
+    bottom: 90px;
+  }
+}
+
+@keyframes flyRed {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    left: 0px;
+    bottom: 150px;
+  }
+}
+@keyframes flyGreen {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    right: 0px;
+    bottom: 150px;
+  }
+}
+@keyframes flyRedLow {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    left: 0px;
+    bottom: 90px;
+  }
+}
+@keyframes flyGreenLow {
+  0% {
+  }
+  50% {
+    opacity:0.7;
+  }
+  100% {
+    opacity:1;
+    right: 0px;
+    bottom: 90px;
+  }
+}

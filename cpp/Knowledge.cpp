@@ -704,7 +704,7 @@ vector<Spotting*> Knowledge::Word::harvest()
 #ifdef TEST_MODE_LONG
                         cv::waitKey(100);
 #else
-                        cv::waitKey();
+                        cv::waitKey(500);
 #endif
 #endif
                     }
@@ -1327,7 +1327,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
     for (int r=0; r<orig.rows; r++)
         orig.at<unsigned char>(r,retX)=0;
     cv::imshow("break point",orig);
-    cv::waitKey();
+    cv::waitKey(500);
 #endif
 
     return retX+lxBound;
@@ -1757,10 +1757,12 @@ void Knowledge::Corpus::show()
             }
         }
     }
+    int count=0;
     for (auto p : draw)
     {
-        cv::imshow("a page",p.second);
+        cv::imshow("page "+to_string(count),p.second);
         cv::waitKey();
+        count++;
     }
     cv::waitKey();
 

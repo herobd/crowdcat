@@ -194,7 +194,7 @@ NAN_MODULE_INIT(Init) {
 #ifndef TEST_MODE
     cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
                         "/home/brian/intel_index/data/gw_20p_wannot",
-                        "data/queries.gtp");
+                        "data/twopage_queries.gtp");
 #else
 #ifdef TEST_MODE_LONG
     cattss = new CATTSS("test/lexicon.txt","test/","test/seg.gtp");

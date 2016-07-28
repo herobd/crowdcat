@@ -19,6 +19,7 @@ var screenHeight;
 var lastUndo=false;
 
 function handleTouchStart(evt) {
+    //evt.preventDefault(); This prevents the tapping of selections :(
     if (evt.touches)                                     
         this.xDown = evt.touches[0].clientX;  
     else
@@ -84,7 +85,8 @@ function removeSpotting(OK) {
 
     if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
         lastUndo = ondeck.classList.contains('redo');
-        sparks(OK);
+        if (OK>=0)
+            sparks(OK);
 
     }
     else
@@ -113,16 +115,27 @@ function remover(rek) {return function() {icons.removeChild(rek);};}
 
 function sparks(right) {
 
+    var off=80;
+    var appender="";
+    if (lastUndo) {
+        off=0;
+        appender="Low";
+    }
     for (var i=0; i<29; i++) {
         var spark = document.createElement("DIV");
         spark.classList.toggle('spark');
-        if (right)
-            spark.classList.toggle('green');
-        else
-            spark.classList.toggle('red');
-
-        if  (lastUndo)
-            spark.style.bottom='90px';
+        spark.style.bottom=getRandomY(off)+'px';
+        if (right) {
+            spark.style.right=getRandomX()+'px';
+            spark.classList.toggle('green'+appender);
+        } else{
+            spark.style.left=getRandomX()+'px';
+            spark.classList.toggle('red'+appender);
+        }
+        //console.log("X:"+spark.style.left+"  Y:"+spark.style.bottom);
+        //if  (lastUndo)
+        //    spark.style.bottom='90px';
+        
         /*spark.addEventListener("load", function(event) {
         if (right) {
             spark.style.bottom='100px';
@@ -132,11 +145,12 @@ function sparks(right) {
             spark.style.left='100px';
         }
         });*/
-        //TODO webkit
-        //spark.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
+        
+        spark.addEventListener("animationend", function(e){icons.removeChild(this);}, false);
+        spark.addEventListener("webkitAnimationend", function(e){icons.removeChild(this);}, false);
         //spark.addEventListener("transitionend", function(e){if(e.propertyName=='bottom') icons.removeChild(this);}, false);
         
-        setTimeout(remover(spark),getRandomTime());
+        //setTimeout(remover(spark),getRandomTime());
         icons.appendChild(spark);
     }
 
@@ -240,9 +254,9 @@ function setup() {
     
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
-    /*containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
-    containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
-    */
+    //containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
+    //containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
+    
     var w = window,
     d = document,
     e = d.documentElement,
@@ -269,6 +283,7 @@ function setup() {
 
 
     // create an observer instance
+    /*
     var observer = new MutationObserver(function(mutations) {
       mutations.forEach(function(mutation) {
         //console.log(mutation.type);
@@ -289,13 +304,14 @@ function setup() {
        
       });    
     });
+    
 
     // configuration of the observer:
     var config = { attributes: false, childList: true, characterData: true }
 
     // pass in the target node, as well as the observer options
     observer.observe(icons, config);
-    
+    */
     
     if (testMode) {
         document.getElementById('instructions').addEventListener('mouseup', function(e){
@@ -318,7 +334,19 @@ function createSlider(im,id,batchId) {
     genDiv.colorIndex=colorIndex;
     genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
     genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+    genDiv.addEventListener('touchstart', function(e){ e.preventDefault(); });
     return genDiv;
+}
+
+function createHeader(id,ngram) {
+
+    var batchHeader = document.createElement("div");
+    batchHeader.classList.toggle('batchHeader');
+    batchHeader.id=id
+    batchHeader.innerHTML='<div>'+ngram+'</div>';
+    batchHeader.addEventListener('touchstart', function(e){ e.preventDefault(); });
+    batchHeader.style.background=headerColors[colorIndex];
+    return batchHeader
 }
 
 function initSlider(ele) {
@@ -347,14 +375,9 @@ function handleSpottingsBatch(jres) {
     //console.log("got batch "+jres.batchId);
     batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
     
-    var batchHeader = document.createElement("div");
-    //batchHeader.classList.toggle('spotting');
-    batchHeader.classList.toggle('batchHeader');
-    batchHeader.id='b'+jres.batchId
-    batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
+    var hide=false
     if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-        batchHeader.hidden=true
-    
+        hide=true; 
     } else {
         colorIndex = (++colorIndex)%headerColors.length;
         lastNgram=jres.ngram;
@@ -363,11 +386,12 @@ function handleSpottingsBatch(jres) {
             colorIndex = (++colorIndex)%headerColors.length;
             lastNgram=jres.ngram;
     }*/
-        batchHeader.style.background=headerColors[colorIndex];
-        
-        if (jres.resultsId!=='X') {
-            batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
-            //console.log("got "+jres.resultsId)
+    var batchHeader = createHeader('b'+jres.batchId,jres.ngram);
+    if (hide)
+        batchHeader.hidden=true;
+    if (jres.resultsId!=='X') {
+        batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+        //console.log("got "+jres.resultsId)
     } else if (jres.batchId=='R') {
         location.reload(true);
     } else {
@@ -431,13 +455,9 @@ function handleNewExemplarsBatch(jres) {
             var i=jres.exemplars[index];
             var id = index+'e'+jres.batchId;
             
-            var batchHeader = document.createElement("div");
-            batchHeader.classList.toggle('batchHeader');
-            batchHeader.id='h'+id
-            batchHeader.innerHTML='<div>'+i.ngram+'</div>';
             colorIndex = (++colorIndex)%headerColors.length;
             lastNgram=i.ngram;
-            batchHeader.style.background=headerColors[colorIndex];
+            var batchHeader = createHeader('h'+id,i.ngram);
             theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
             
             var im = new Image();
@@ -560,7 +580,7 @@ function isBatchDone(batchId) {
     if (oldElement) {
         var typeLastRemoved = lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type;
         if (typeLastRemoved!='t' && typeLastRemoved!='m') {
-            if (batchQueue.length > 0 && typeLastRemoved.ngram == batchQueue[0].ngram) {
+            if (batchQueue.length > 0 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].ngram == batchQueue[0].ngram) {
                 theWindow.removeChild(oldElement);
                 
                 //we shift the header past the collapsing element to provide the illusion of a smooth transition
@@ -621,18 +641,21 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities)
     var ngramDiv = document.createElement("div");
     ngramDiv.classList.toggle('meat');
     ngramDiv.classList.toggle('spotteds');
-    for (var ngramP of ngrams) {
-        var d = document.createElement("div");
-        d.classList.toggle('spotted');
-        d.innerHTML=ngramP.ngram+'<br>';
-        d.style.color='#'+ngramP.color;
-        d.style.left=ngramP.x+'px';
-        var closeImg = new Image();
-        closeImg.src='/removeNgram.png';
-        d.appendChild(closeImg);
-        d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
-        d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
-        ngramDiv.appendChild(d);
+    for (var i in ngrams) {
+        if (ngrams.hasOwnProperty(i)) {
+            var ngramP=ngrams[i];
+            var d = document.createElement("div");
+            d.classList.toggle('spotted');
+            d.innerHTML=ngramP.ngram+'<br>';
+            d.style.color='#'+ngramP.color;
+            d.style.left=ngramP.x+'px';
+            var closeImg = new Image();
+            closeImg.src='/removeNgram.png';
+            d.appendChild(closeImg);
+            d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+            d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+            ngramDiv.appendChild(d);
+        }
     }
     genDiv.appendChild(ngramDiv);
     var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
@@ -643,13 +666,16 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities)
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
     selectionDiv.style.height = (screenHeight - totalHeight - padding)+'px';
-    for (var word of possibilities) {
-        var wordDiv = document.createElement("div");
-        wordDiv.classList.toggle('selection');
-        wordDiv.innerHTML='<div>'+word+'</div>';
-        wordDiv.addEventListener('mouseup', classify(id,word), false);
-        wordDiv.addEventListener('touchup', classify(id,word), false);
-        selectionDiv.appendChild(wordDiv);
+    for (var i in possibilities) {
+        if (possibilities.hasOwnProperty(i)) {
+            var word = possibilities[i];
+            var wordDiv = document.createElement("div");
+            wordDiv.classList.toggle('selection');
+            wordDiv.innerHTML='<div>'+word+'</div>';
+            wordDiv.addEventListener('mouseup', classify(id,word), false);
+            wordDiv.addEventListener('touchup', classify(id,word), false);
+            selectionDiv.appendChild(wordDiv);
+        }
     }
 
     var errDiv = document.createElement("div");
