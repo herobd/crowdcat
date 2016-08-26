@@ -37,7 +37,10 @@ var ControllerApp = function(port) {
         self.port=13723;
     else
         self.port=port;
-
+    
+    self.showing=true;
+    self.showW=2500;
+    self.showH=1000;
     /*  ================================================================  */
     /*  Helper functions.                                                 */
     /*  ================================================================  */
@@ -272,6 +275,18 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
+        self.app.get('/xxx/show_toggle', function(req, res) {
+            if (req.user || debug) {
+                if (self.showing)
+                    self.showing=false;
+                else {
+                    self.showing=true;
+                    self.showProgress();
+                }
+            } else {
+                res.redirect('/login');
+            }
+        });
         
         self.app.get('/app/nextBatch', function(req, res) {
             res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1.
@@ -497,6 +512,7 @@ var ControllerApp = function(port) {
             
         });
         self.resetTestUsers();
+        self.showProgress();
     };
     
     
@@ -515,6 +531,12 @@ var ControllerApp = function(port) {
              millisTillTime += 86400000; // it's after 2am, try 2am tomorrow.
         }
         setTimeout(self.resetTestUsers, millisTillTime);
+    }
+    self.showProgress = function() {
+        if (self.showing) { 
+            spottingaddon.showProgress(self.showH,self.showW,function(){});
+            setTimeout(self.showProgress, 2500);
+        }
     }
     
     

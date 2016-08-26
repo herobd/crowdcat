@@ -241,6 +241,14 @@ void CATTSS::misc(string task)
         {
             corpus->show();
         }
+        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
+        {
+            string dims = task.substr(14);
+            int split = dims.indexOf(',');
+            int height = stoi(dims.substr(0,split);
+            int width = stoi(dims.substr(1+split);
+            corpus->showProgress(height,width);
+        }
         else if (task.compare("stopSpotting")==0)
         {
             spotter->stop();

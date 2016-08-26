@@ -63,6 +63,7 @@ private:
     map<unsigned long, int> test_numFalsePos;
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
     int done;
+    bool finish;
     int numCTrue, numCFalse;
     void updateSpottingsMix(vector<SpottingExemplar*>* spottings);
 public:
@@ -74,6 +75,8 @@ public:
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
+    
+    ManualTranscribeBatch* getManualTranscriptionBatch(unsigned int maxWidth) {return corpus->getManualBatch(maxWidth);}
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);

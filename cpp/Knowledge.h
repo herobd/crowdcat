@@ -76,39 +76,6 @@ class SpottingPoint
         string ngram, color, id;
 };
 
-class TranscribeBatch
-{
-private:
-    WordBackPointer* origin;
-    vector<string> possibilities;
-    cv::Mat wordImg;
-    cv::Mat newWordImg;
-    //cv::Mat textImg;
-    //cv::Mat newTextImg;
-    const cv::Mat* origImg;
-    const multimap<int,Spotting>* spottings;
-    unsigned int imgWidth;
-    unsigned long id;
-    int tlx, tly, brx, bry;
-    vector<SpottingPoint> spottingPoints;
-    static vector< cv::Vec3f > colors;
-    static cv::Vec3f wordHighlight;
-    static std::atomic_ulong _id;
-    static void highlightPix(cv::Vec3b &p, cv::Vec3f color);
-public:
-    //TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
-    //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
-    
-    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
-    
-    const vector<string>& getPossibilities() {return possibilities;}
-    cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}
-    //cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}
-    unsigned long getId() {return id;}
-    WordBackPointer* getBackPointer() {return origin;}
-    void setWidth(unsigned int width);
-    vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
-};
 
 namespace Knowledge
 {
@@ -235,6 +202,14 @@ public:
         spottings.clear();
         toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
         harvested.clear();
+    }
+
+    vector<Spotting> getSpottings() 
+    {
+        vector<Spotting> ret;
+        for (auto p : spottings)
+            ret.push_back(p.second);
+        return ret;
     }
 
     const cv::Mat* getPage() {return pagePnt;}
@@ -420,6 +395,7 @@ public:
         return p->getId();
     }
     void show();
+    void showProgress(int height, int width);
 };
 
 }

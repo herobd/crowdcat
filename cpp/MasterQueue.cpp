@@ -38,6 +38,7 @@ void MasterQueue::checkIncomplete()
 }
 
 MasterQueue::MasterQueue() {
+    finish=false;
     //sem_init(&semResultsQueue,false,1);
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
@@ -232,43 +233,52 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     pthread_rwlock_unlock(&semResultsQueue);
 
     BatchWraper* ret=NULL;
+    if (finish)
+    {
+        ManualTranscribeBatch* batch = getManualTranscriptionBatch(maxWidth);
+        if (batch!=NULL)
+            ret = new BatchWraperManualTranscription(batch);
+    }
+    else
+    {
 
-    if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
-    {
-        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
-        if (batch!=NULL)
-            ret = new BatchWraperNewExemplars(batch);
-    }
-    if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
-    {
-        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
-        if (batch!=NULL)
-            ret = new BatchWraperTranscription(batch);
-    }
-    if (ret==NULL)
-    {
-        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,false);
-        if (batch!=NULL)
-            ret = new BatchWraperSpottings(batch);
-    }
-    //a second pass without conditions
-    if (ret==NULL)
-    {
-        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
-        if (batch!=NULL)
-            ret = new BatchWraperTranscription(batch);
-    }
-    if (ret == NULL)
-    {
-        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
-        if (batch!=NULL)
-            ret = new BatchWraperNewExemplars(batch);
-    }
-    if (ret==NULL)
-    {
-        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
-        if (batch!=NULL)
-            ret = new BatchWraperSpottings(batch);
+        if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
+        {
+            NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
+            if (batch!=NULL)
+                ret = new BatchWraperNewExemplars(batch);
+        }
+        if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
+        {
+            TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+            if (batch!=NULL)
+                ret = new BatchWraperTranscription(batch);
+        }
+        if (ret==NULL)
+        {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,false);
+            if (batch!=NULL)
+                ret = new BatchWraperSpottings(batch);
+        }
+        //a second pass without conditions
+        if (ret==NULL)
+        {
+            TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+            if (batch!=NULL)
+                ret = new BatchWraperTranscription(batch);
+        }
+        if (ret == NULL)
+        {
+            NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
+            if (batch!=NULL)
+                ret = new BatchWraperNewExemplars(batch);
+        }
+        if (ret==NULL)
+        {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
+            if (batch!=NULL)
+                ret = new BatchWraperSpottings(batch);
+        }
     }
 
     return ret;

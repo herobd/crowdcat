@@ -210,34 +210,6 @@ private:
 
 
 
-class SpottingsBatch {
-public:
-    
-    SpottingsBatch(string ngram, unsigned long spottingResultsId) : 
-        ngram(ngram), spottingResultsId(spottingResultsId)
-    {
-        batchId = _batchId++;
-    }
-    string ngram;
-    unsigned long batchId;
-    unsigned long spottingResultsId;
-    
-    
-    void push_back(SpottingImage im) {
-        if (im.img().cols>0)
-		instances.push_back(im);
-    }
-    SpottingImage operator [](int i) const    {return instances[i];}
-    SpottingImage & operator [](int i) {return instances[i];}
-    SpottingImage at(int i) const    {return instances.at(i);}
-    SpottingImage & at(int i) {return instances.at(i);}
-    unsigned int size() const { return instances.size();}
-    
-    
-private:
-    static unsigned long _batchId;
-    vector<SpottingImage> instances;
-};
 
 
 class scoreComp
