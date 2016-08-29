@@ -117,6 +117,8 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 
         }
         BatchWraper* ret= masterQueue->getBatch(num,hard,width,color,prevNgram);
+        if (ret==NULL)
+            ret = corpus->getManualBatch(width);
 #ifdef TEST_MODE_C
         return ret;
 #endif

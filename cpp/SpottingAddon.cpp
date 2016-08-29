@@ -22,7 +22,7 @@ using namespace v8;
 #include "MiscWorker.cpp"
 
 //test
-#include "SpottingResults.h"
+#include "spotting.h"
 
 CATTSS* cattss;
 TestQueue* testQueue;

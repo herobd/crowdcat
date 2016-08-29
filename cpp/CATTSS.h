@@ -3,6 +3,7 @@
 
 #include "MasterQueue.h"
 #include "Spotter.h"
+#include "spotting.h"
 #include "FacadeSpotter.h"
 #include "Knowledge.h"
 #include "Lexicon.h"

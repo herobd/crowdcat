@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <iostream>
 #include "FacadeSpotter.h"
+#include "spotting.h"
 
 int main() {
     //TEST

@@ -3,9 +3,8 @@
 #include <ctime>
 
 
-unsigned long Spotting::_id=0;
-unsigned long SpottingsBatch::_batchId=0;
-unsigned long SpottingResults::_id=0;
+atomic_ulong Spotting::_id=0;
+atomic_ulong SpottingResults::_id=0;
 
 SpottingResults::SpottingResults(string ngram) : 
     ngram(ngram)

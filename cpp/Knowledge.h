@@ -14,9 +14,11 @@
 #include <iomanip>
 #include "maxflow/graph.h"
 
-#include "SpottingResults.h"
+#include "spotting.h"
 #include "Lexicon.h"
 #include "Global.h"
+#include "batches.h"
+#include "WordBackPointer.h"
 
 using namespace std;
 
@@ -41,14 +43,6 @@ typedef Graph<float,float,float> GraphType;
 //#define averageCharWidth 23 //TODO test, totally just making this up
 //#endif
 
-class TranscribeBatch;
-class WordBackPointer
-{
-    public:
-        virtual vector<Spotting*> result(string selected, vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
-        virtual void error(vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
-        virtual TranscribeBatch* removeSpotting(unsigned long sid, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)= 0;
-};
 
 class SpottingPoint
 {
@@ -385,7 +379,7 @@ public:
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
-
+    TranscribeBatch* getManualBatch(int maxWidth){assert(false);}//TODO
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 

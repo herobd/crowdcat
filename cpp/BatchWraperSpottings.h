@@ -6,7 +6,8 @@
 #define BUFFERSIZE 65536
 #include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
-#include "SpottingResults.h"
+#include "spotting.h"
+#include "batches.h"
 #include "BatchWraper.h"
 
 using namespace Nan;

@@ -9,6 +9,7 @@
 #include <iostream>
 #include "semaphore.h"
 #include <pthread.h>
+#include "spotting.h"
 #include "SpottingResults.h"
 #include "TranscribeBatchQueue.h"
 #include "NewExemplarsBatchQueue.h"
@@ -76,7 +77,7 @@ public:
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
-    ManualTranscribeBatch* getManualTranscriptionBatch(unsigned int maxWidth) {return corpus->getManualBatch(maxWidth);}
+    TranscribeBatch* getManualTranscriptionBatch(unsigned int maxWidth) {return corpus->getManualBatch(maxWidth);}
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);

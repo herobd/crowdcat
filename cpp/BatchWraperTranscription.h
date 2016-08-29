@@ -7,7 +7,8 @@
 #define BUFFERSIZE 65536
 #include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
-#include "SpottingResults.h"
+#include "batches.h"
+#include "spotting.h"
 #include "BatchWraper.h"
 #include "Knowledge.h"
 

@@ -11,37 +11,11 @@
 
 #include "Global.h"
 #include "Knowledge.h"
-#include "SpottingResults.h"
+#include "spotting.h"
+#include "batches.h"
 
 using namespace std;
 
-class NewExemplarsBatch {
-public:
-    
-    NewExemplarsBatch(const vector<Spotting*>& exes, unsigned int maxWidth, int color)
-    {
-        batchId = _batchId++;
-        for (Spotting* s : exes)
-        {
-            instances.push_back(SpottingImage(*s,maxWidth,color));
-            delete s;
-        }
-
-    }
-    
-    
-    SpottingImage operator [](int i) const    {return instances[i];}
-    SpottingImage & operator [](int i) {return instances[i];}
-    SpottingImage at(int i) const    {return instances.at(i);}
-    SpottingImage & at(int i) {return instances.at(i);}
-    unsigned int size() const { return instances.size();}
-    unsigned long getId() {return batchId;}
-    
-private:
-    static unsigned long _batchId;
-    unsigned long batchId;
-    vector<SpottingImage> instances;
-};
 
 class pcomparison
 {
