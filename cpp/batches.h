@@ -8,13 +8,41 @@
 #include <map>
 #include <chrono>
 #include <atomic>
+#include <iomanip>
 
 #include <mutex>
 #include <iostream>
 
 #include "spotting.h"
+#include "WordBackPointer.h"
 
 using namespace std;
+
+class SpottingPoint
+{
+    public:
+        SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r) : x(x), ngram(ngram)
+    {
+        stringstream stream;
+        if (b>255)
+            b=255;
+        if (g>255)
+            g=255;
+        if (r>255)
+            r=255;
+        stream << setfill('0') << setw(sizeof(unsigned char)*2) << hex << r<<g<<b;
+        color = stream.str();
+        this->id = to_string(id);
+    }
+        void setPad(int pad) {this->pad=pad;}
+        string getX() {return to_string(pad+x);}
+        string getNgram() {return ngram;}
+        string getColor() {return color;}
+        string getId() {return id;}
+    private:
+        int x, pad;
+        string ngram, color, id;
+};
 
 class SpottingsBatch {
 public:
@@ -45,6 +73,7 @@ private:
     vector<SpottingImage> instances;
 };
 
+class WordBackPointer;
 
 class TranscribeBatch
 {
@@ -75,6 +104,8 @@ public:
     //A manual transcription batch
     TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
     
+    void init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id);
+
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}
     //cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}

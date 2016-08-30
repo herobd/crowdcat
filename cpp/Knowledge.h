@@ -11,7 +11,6 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <atomic>
-#include <iomanip>
 #include "maxflow/graph.h"
 
 #include "spotting.h"
@@ -44,31 +43,6 @@ typedef Graph<float,float,float> GraphType;
 //#endif
 
 
-class SpottingPoint
-{
-    public:
-        SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r) : x(x), ngram(ngram)
-    {
-        stringstream stream;
-        if (b>255)
-            b=255;
-        if (g>255)
-            g=255;
-        if (r>255)
-            r=255;
-        stream << setfill('0') << setw(sizeof(unsigned char)*2) << hex << r<<g<<b;
-        color = stream.str();
-        this->id = to_string(id);
-    }
-        void setPad(int pad) {this->pad=pad;}
-        string getX() {return to_string(pad+x);}
-        string getNgram() {return ngram;}
-        string getColor() {return color;}
-        string getId() {return id;}
-    private:
-        int x, pad;
-        string ngram, color, id;
-};
 
 
 namespace Knowledge
@@ -379,7 +353,7 @@ public:
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
-    TranscribeBatch* getManualBatch(int maxWidth){assert(false);}//TODO
+    TranscribeBatch* getManualBatch(int maxWidth){assert(false);}//TODO, should keep reference to batch for timeout, etc
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 

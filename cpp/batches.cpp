@@ -22,7 +22,7 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
     }
     init(origin, origImg, spottings, tlx, tly, brx, bry, id);
 }
-TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDicutionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id) : manual(true)
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id) : manual(true)
 {
     possibilities=prunedDictionary;
     init(origin, origImg, spottings, tlx, tly, brx, bry, id);

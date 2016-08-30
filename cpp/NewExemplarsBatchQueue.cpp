@@ -1,6 +1,5 @@
 
 #include "NewExemplarsBatchQueue.h"
-unsigned long NewExemplarsBatch::_batchId=0;
 NewExemplarsBatchQueue::NewExemplarsBatchQueue()
 {
 

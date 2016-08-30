@@ -77,7 +77,6 @@ public:
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
     void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
-    TranscribeBatch* getManualTranscriptionBatch(unsigned int maxWidth) {return corpus->getManualBatch(maxWidth);}
     
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);

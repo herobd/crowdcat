@@ -134,7 +134,7 @@ NAN_METHOD(showProgress) {
     int width = To<int>(info[1]).FromJust();
     Callback *callback = new Callback(info[2].As<Function>());
 
-    AsyncQueueWorker(new MiscWorker(callback,cattss, "showCorpus"+to_string(height)+","+to_string(width)));
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "showProgress:"+to_string(height)+","+to_string(width)));
 }
 NAN_METHOD(startSpotting) {
     int num = To<int>(info[0]).FromJust();
@@ -231,7 +231,7 @@ NAN_MODULE_INIT(Init) {
     Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     Nan::Set(target, New<String>("showProgress").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
+        GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 
     Nan::Set(target, New<String>("startSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());

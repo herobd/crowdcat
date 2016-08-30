@@ -7,6 +7,8 @@
 
 using namespace std;
 
+class TranscribeBatch;
+
 class WordBackPointer
 {
     public:

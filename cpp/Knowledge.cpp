@@ -1654,7 +1654,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
     int pageH=pages.begin()->second->getImg()->rows;
     int pageW=pages.begin()->second->getImg()->cols;
     float resizeScale=.001;
-    for (int scale=0.5; scale>.001; scale-=.001)
+    int nAcross, nDown;
+    for (float scale=0.5; scale>.001; scale-=.001)
     {
         nAcross=floor(width/(pageW*scale));
         nDown=floor(height/(pageH*scale));
@@ -1664,7 +1665,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
             break;
         }
     }
-    Mat draw = Mat::zeros(height,width,CV_8UC3);
+    cv::Mat draw = cv::Mat::zeros(height,width,CV_8UC3);
+    draw = cv::Scalar(100,100,100);
     pthread_rwlock_rdlock(&pagesLock);
     int xPos=0;
     int yPos=0;
@@ -1672,8 +1674,13 @@ void Knowledge::Corpus::showProgress(int height, int width)
     for (auto p : pages)
     {
         Page* page = p.second;
-        Mat workingIm;
-        cvtColor(*(page->getImg()), workingIm, CV_GRAY2RGB);
+        cv::Mat workingIm;
+        if (page->getImg()->channels()==1)
+            cv::cvtColor(*(page->getImg()), workingIm, CV_GRAY2RGB);
+        else if (page->getImg()->channels()==3)
+            workingIm = page->getImg()->clone();
+        else
+            assert(false);
         vector<Line*> lines = page->lines();
         for (Line* line : lines)
         {
@@ -1689,9 +1696,9 @@ void Knowledge::Corpus::showProgress(int height, int width)
                     for (int x=tlx; x<=brx; x++)
                         for (int y=tly; y<=bry; y++)
                         {
-                            workingIm.at<Vec3b>(y,x)[0] = 0.5*workingIm.at<Vec3b>(y,x)[0];
-                            workingIm.at<Vec3b>(y,x)[1] = min(255,workingIm.at<Vec3b>(y,x)[1]+120);
-                            workingIm.at<Vec3b>(y,x)[2] = 0.5*workingIm.at<Vec3b>(y,x)[2];
+                            workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
+                            workingIm.at<cv::Vec3b>(y,x)[1] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
+                            workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
                         }
                 }
                 else
@@ -1700,15 +1707,18 @@ void Knowledge::Corpus::showProgress(int height, int width)
                         for (int x=s.tlx; x<=s.brx; x++)
                             for (int y=s.tly; y<=s.bry; y++)
                             {
-                                workingIm.at<Vec3b>(y,x)[0] = 0.5*workingIm.at<Vec3b>(y,x)[0];
-                                workingIm.at<Vec3b>(y,x)[2] = min(255,workingIm.at<Vec3b>(y,x)[2]+120);
-                                workingIm.at<Vec3b>(y,x)[1] = 0.5*workingIm.at<Vec3b>(y,x)[1];
+                                workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
+                                workingIm.at<cv::Vec3b>(y,x)[2] = min(255,workingIm.at<cv::Vec3b>(y,x)[2]+120);
+                                workingIm.at<cv::Vec3b>(y,x)[1] = 0.5*workingIm.at<cv::Vec3b>(y,x)[1];
                             }
                 }
             }
         }
-        resize(workingIm,workingIm,Size(),resizeScle,resizeScale);
-        draw(Rect(xPos,yPos,workingIm.cols,workingIm.rows)) = workingIm;
+        cv::resize(workingIm,workingIm,cv::Size(),resizeScale,resizeScale);
+        //cout <<"page dims: "<<workingIm.rows<<", "<<workingIm.cols<<"  at: "<<xPos<<", "<<yPos<<endl;
+        //cv::imshow("test",workingIm);
+        //cv::waitKey();
+        workingIm.copyTo(draw(cv::Rect(xPos,yPos,workingIm.cols,workingIm.rows)));
         xPos+=workingIm.cols;
         if (++across >= nAcross)
         {
@@ -1718,7 +1728,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
         }
     }
     cv::imshow("progress",draw);
-    cv::waitKey(100);
+    cv::waitKey(1000);
 
     pthread_rwlock_unlock(&pagesLock);
 }

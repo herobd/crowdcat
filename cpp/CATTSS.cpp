@@ -118,7 +118,11 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
         }
         BatchWraper* ret= masterQueue->getBatch(num,hard,width,color,prevNgram);
         if (ret==NULL)
-            ret = corpus->getManualBatch(width);
+        {
+            TranscribeBatch* bat = corpus->getManualBatch(width);
+            if (bat!=NULL)
+                ret = new BatchWraperTranscription(bat);
+        }
 #ifdef TEST_MODE_C
         return ret;
 #endif
@@ -245,10 +249,10 @@ void CATTSS::misc(string task)
         }
         else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {
-            string dims = task.substr(14);
-            int split = dims.indexOf(',');
-            int height = stoi(dims.substr(0,split);
-            int width = stoi(dims.substr(1+split);
+            string dims = task.substr(13);
+            int split = dims.find_first_of(',');
+            int height = stoi(dims.substr(0,split));
+            int width = stoi(dims.substr(1+split));
             corpus->showProgress(height,width);
         }
         else if (task.compare("stopSpotting")==0)

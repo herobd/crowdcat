@@ -235,9 +235,10 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     BatchWraper* ret=NULL;
     if (finish)
     {
-        ManualTranscribeBatch* batch = getManualTranscriptionBatch(maxWidth);
-        if (batch!=NULL)
-            ret = new BatchWraperManualTranscription(batch);
+        return NULL;
+        //ManualTranscribeBatch* batch = getManualTranscriptionBatch(maxWidth);
+        //if (batch!=NULL)
+        //    ret = new BatchWraperManualTranscription(batch);
     }
     else
     {

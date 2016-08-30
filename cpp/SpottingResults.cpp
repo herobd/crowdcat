@@ -3,8 +3,8 @@
 #include <ctime>
 
 
-atomic_ulong Spotting::_id=0;
-atomic_ulong SpottingResults::_id=0;
+atomic_ulong Spotting::_id;
+atomic_ulong SpottingResults::_id;
 
 SpottingResults::SpottingResults(string ngram) : 
     ngram(ngram)
