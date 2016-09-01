@@ -10,6 +10,7 @@
 #include "BatchWraper.h"
 #include "opencv2/core/core.hpp"
 #include <exception>
+#include <pthread.h>
 
 class CATTSS
 {
@@ -17,13 +18,14 @@ class CATTSS
     MasterQueue* masterQueue;
     Spotter* spotter;
     Knowledge::Corpus* corpus;
+    thread* incompleteChecker;
 
     public:
     CATTSS(string lexiconFile, string pageImageDir, string segmentationFile);
 
     BatchWraper* getBatch(int num, int width, int color, string prevNgram);
     void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);
-    void updateTranscription(string id, string transcription);
+    void updateTranscription(string id, string transcription, bool manual);
     void updateNewExemplars(string resultsId,  vector<int> labels, int resent);
     void misc(string task);
 

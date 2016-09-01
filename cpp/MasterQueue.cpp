@@ -1,20 +1,10 @@
 #include "MasterQueue.h"
 
-void checkIncompleteSleeper(MasterQueue* q)
-{
-    //this_thread::sleep_for(chrono::hours(1));
-    //cout <<"kill is "<<q->kill.load()<<endl;
-    while(!q->kill.load()) {
-        //cout <<"begin sleep"<<endl;
-        this_thread::sleep_for(chrono::hours(1));
-        q->checkIncomplete();
-    }
-}
 
 void MasterQueue::checkIncomplete()
 {
     transcribeBatchQueue.checkIncomplete();    
-    
+    newExemplarsBatchQueue.checkIncomplete();    
     pthread_rwlock_rdlock(&semResults);
     for (auto ele : results)
     {
@@ -44,8 +34,6 @@ MasterQueue::MasterQueue() {
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
     kill.store(false);
-    incompleteChecker = new thread(checkIncompleteSleeper,this);//This could be done by a thread for each sr
-    incompleteChecker->detach();
     //atID=0;
     
     ///testing

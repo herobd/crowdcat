@@ -42,7 +42,6 @@ private:
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
     TranscribeBatchQueue transcribeBatchQueue;
     NewExemplarsBatchQueue newExemplarsBatchQueue;
-    thread* incompleteChecker;
     
     //int atID;
     //map<unsigned long,unsigned long> batchToResults;

@@ -6,6 +6,7 @@ Knowledge::Corpus::Corpus()
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
+    pthread_rwlock_init(&batchLock,NULL);
     averageCharWidth=30;
     countCharWidth=0;
     threshScoring= 1.0;
@@ -1847,3 +1848,91 @@ const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
     return page->getImg();
 }
 
+TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should keep reference to batch for timeout, etc
+{
+    TranscribeBatch* ret=NULL;
+    pthread_rwlock_rdlock(&batchLock);
+    if (leftoverQueue.size()==0)
+    {
+        pthread_rwlock_rdlock(&pagesLock);
+        for (auto p : pages)
+        {
+            Page* page = p.second;
+            vector<Line*> lines = page->lines();
+            for (Line* line : lines)
+            {
+                int line_ty, line_by;
+                vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
+                for (Word* word : words)
+                {
+                    int tlx,tly,brx,bry;
+                    bool done;
+                    word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+                    if (!done)
+                    {
+                        vector<string> prunedDictionary;//TODO
+                        ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottings(),tlx,tly,brx,bry);
+                    }
+                }
+            }
+        }
+        pthread_rwlock_unlock(&pagesLock);
+    }
+    else
+    {
+        ret = leftoverQueue.back();
+        leftoverQueue.pop_back();
+    }
+    if (ret!=NULL)
+    {
+        returnMap[ret->getId()]=ret;
+        timeMap[ret->getId()]=chrono::system_clock::now();
+        ret->setWidth(maxWidth);
+    }
+    pthread_rwlock_unlock(&batchLock);
+    return ret;
+}
+
+void Knowledge::Corpus::checkIncomplete()
+{
+    pthread_rwlock_rdlock(&batchLock);
+    for (auto start : timeMap)
+    {
+        unsigned long id = start.first;
+        chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
+        chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
+        if (pass.count() > 20) //if 20 mins has passed
+        {
+            leftoverQueue.push_front(returnMap[id]);
+
+            returnMap.erase(id);
+            timeMap.erase(id);
+        }
+    }
+    pthread_rwlock_unlock(&batchLock);
+}
+void Knowledge::Corpus::transcriptionFeedback(unsigned id, string transcription)
+{
+    pthread_rwlock_rdlock(&batchLock);
+    if (returnMap.find(id) != returnMap.end())
+    {
+        if (transcription.compare("$PASS$")!=0)
+        {
+        }
+        else
+        {
+            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
+            doneMap[id] = returnMap[id]->getBackPointer();
+            delete returnMap[id];
+            
+            returnMap.erase(id);
+            timeMap.erase(id);
+        }
+    }
+    else //resend?
+    {
+        if (transcription.compare("$PASS$")!=0)
+                        newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+    }
+    return newNgram?
+}

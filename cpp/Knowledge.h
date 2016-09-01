@@ -7,6 +7,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <vector>
 #include <queue>
+#include <deque>
+#include <chrono>
 #include <iostream>
 #include <semaphore.h>
 #include <pthread.h>
@@ -333,13 +335,19 @@ class Corpus
 private:
     pthread_rwlock_t pagesLock;
     pthread_rwlock_t spottingsMapLock;
+    pthread_rwlock_t batchLock;
     float averageCharWidth;
     int countCharWidth;
     float threshScoring;
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
+    deque<TranscribeBatch*> leftoverQueue;
+    map<unsigned long, TranscribeBatch*> returnMap;
+    map<unsigned long, chrono::system_clock::time_point> timeMap;
+
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
+    void checkIncomplete();
 
 public:
     Corpus();
@@ -353,7 +361,8 @@ public:
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
-    TranscribeBatch* getManualBatch(int maxWidth){assert(false);}//TODO, should keep reference to batch for timeout, etc
+    TranscribeBatch* getManualBatch(int maxWidth);
+    void transcriptionFeedback(unsigned id, string transcription);
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 

@@ -1,5 +1,18 @@
 #include "CATTSS.h"
 
+
+void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
+{
+    //this_thread::sleep_for(chrono::hours(1));
+    //cout <<"kill is "<<q->kill.load()<<endl;
+    while(!q->kill.load()) {
+        //cout <<"begin sleep"<<endl;
+        this_thread::sleep_for(chrono::hours(1));
+        q->checkIncomplete();
+        c->checkIncomplete();
+    }
+}
+
 CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
 {
     
@@ -9,6 +22,8 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
     spotter = new FacadeSpotter(masterQueue,corpus,"model");
     
+    incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
+    incompleteChecker->detach();
 #ifdef TEST_MODE_LONG
     int pageId=0;
 
@@ -189,15 +204,22 @@ void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> l
 #endif
 }
 
-void CATTSS::updateTranscription(string id, string transcription)
+void CATTSS::updateTranscription(string id, string transcription, bool manual)
 {
 #ifndef TEST_MODE
     try
     {
 #endif
-        vector< pair<unsigned long, string> > toRemoveExemplars;
-        masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
-        spotter->removeQueries(&toRemoveExemplars);
+        if (manual)
+        {
+            corpus->transcriptionFeedback(stoul(id),transcription);
+        }
+        else
+        {
+            vector< pair<unsigned long, string> > toRemoveExemplars;
+            masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
+            spotter->removeQueries(&toRemoveExemplars);
+        }
 
 #ifndef TEST_MODE
     }
@@ -211,6 +233,7 @@ void CATTSS::updateTranscription(string id, string transcription)
     }
 #endif
 }
+
 
 
 void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)

@@ -123,6 +123,18 @@ NAN_METHOD(transcriptionBatchDone) {
 
     AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,cattss,id,transcription));
 }
+NAN_METHOD(manualTranscriptionBatchDone) {
+    //string batchId = To<string>(info[0]).FromJust();
+    //string resultsId = To<string>(info[0]).FromJust();
+    String::Utf8Value resultsIdNAN(info[0]);
+    string id = string(*resultsIdNAN);
+    String::Utf8Value resultNAN(info[1]);
+    string transcription = string(*resultNAN);
+    
+    Callback *callback = new Callback(info[2].As<Function>());
+
+    AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,cattss,id,transcription,true));
+}
 
 NAN_METHOD(showCorpus) {
     Callback *callback = new Callback(info[0].As<Function>());
