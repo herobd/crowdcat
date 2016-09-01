@@ -555,3 +555,16 @@ div.selection.error {
     transition: right .5s ease-out, bottom .5s ease-out;
 }
 
+.transInput {
+    float: left;
+    width: 80%;
+    font-size: 25px;
+    margin-left: 2%;
+    background: #cefdce;
+}
+.transSubmit {
+    float: left;
+    width: 15%;
+    background: darkgreen;
+    height: 40px;
+}

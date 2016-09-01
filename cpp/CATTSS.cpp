@@ -210,16 +210,17 @@ void CATTSS::updateTranscription(string id, string transcription, bool manual)
     try
     {
 #endif
+        vector<pair<unsigned long, string> > toRemoveExemplars;
         if (manual)
         {
-            corpus->transcriptionFeedback(stoul(id),transcription);
+            vector<Spotting*> newExemplars = corpus->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
+            masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
         }
         else
         {
-            vector< pair<unsigned long, string> > toRemoveExemplars;
             masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
-            spotter->removeQueries(&toRemoveExemplars);
         }
+        spotter->removeQueries(&toRemoveExemplars);
 
 #ifndef TEST_MODE
     }

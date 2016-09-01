@@ -22,6 +22,10 @@ class CATTSS
 
     public:
     CATTSS(string lexiconFile, string pageImageDir, string segmentationFile);
+    ~CATTSS()
+    {
+        delete incompleteChecker;
+    } 
 
     BatchWraper* getBatch(int num, int width, int color, string prevNgram);
     void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);

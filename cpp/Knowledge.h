@@ -38,6 +38,8 @@ typedef Graph<float,float,float> GraphType;
 
 #define ANCHOR_CONST 500
 
+#define SHOW 0
+
 //#ifndef TEST_MODE_LONG
 //#define averageCharWidth 40 //TODO GW, totally just making this up
 //#else
@@ -53,7 +55,7 @@ namespace Knowledge
 //int averageCharWidth=40;
 
 //some general functions
-cv::Mat inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg=NULL, double* std=NULL, bool show=false);
+cv::Mat inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg=NULL, double* std=NULL, bool show=SHOW);
 int getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
 void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry);
 
@@ -139,6 +141,19 @@ public:
 	*isDone=done;
         pthread_rwlock_unlock(&lock);
     }
+    void getBoundsAndDoneAndSent(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent)
+    {
+        pthread_rwlock_rdlock(&lock);
+        *word_tlx=tlx;
+        *word_tly=tly;
+        *word_brx=brx;
+        *word_bry=bry;
+	*isDone=done;
+        *isSent=sentBatchId!=0;
+        if (*isSent)
+            cout<<"I've ["<<gt<<"] been sent: "<<sentBatchId<<endl;
+        pthread_rwlock_unlock(&lock);
+    }
 
     vector<Spotting*> result(string selected, vector< pair<unsigned long, string> >* toRemoveExemplars)
     {
@@ -169,18 +184,29 @@ public:
 
     void error(vector< pair<unsigned long, string> >* toRemoveExemplars)
     {
+        pthread_rwlock_rdlock(&lock);
         spottings.clear();
         toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
         harvested.clear();
+        pthread_rwlock_unlock(&lock);
     }
 
     vector<Spotting> getSpottings() 
     {
+        pthread_rwlock_rdlock(&lock);
         vector<Spotting> ret;
         for (auto p : spottings)
             ret.push_back(p.second);
+        pthread_rwlock_unlock(&lock);
         return ret;
     }
+    void sent(unsigned long id)
+    {
+        pthread_rwlock_rdlock(&lock);
+        sentBatchId=id;
+        pthread_rwlock_unlock(&lock);
+    }
+    const multimap<int,Spotting>* getSpottingsPointer() {return & spottings;}
 
     const cv::Mat* getPage() {return pagePnt;}
     string getTranscription() {pthread_rwlock_rdlock(&lock); if (done) return transcription; else return "[ERROR]"; pthread_rwlock_unlock(&lock);}
@@ -345,15 +371,17 @@ private:
     deque<TranscribeBatch*> leftoverQueue;
     map<unsigned long, TranscribeBatch*> returnMap;
     map<unsigned long, chrono::system_clock::time_point> timeMap;
+    map<unsigned long, WordBackPointer*> doneMap;
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
-    void checkIncomplete();
 
 public:
     Corpus();
     ~Corpus()
     {
         pthread_rwlock_destroy(&pagesLock);
+        pthread_rwlock_destroy(&spottingsMapLock);
+        pthread_rwlock_destroy(&batchLock);
         for (auto p : pages)
             delete p.second;
     }
@@ -362,7 +390,7 @@ public:
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
     TranscribeBatch* getManualBatch(int maxWidth);
-    void transcriptionFeedback(unsigned id, string transcription);
+    vector<Spotting*> transcriptionFeedback(unsigned id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 
@@ -371,6 +399,7 @@ public:
         pages[p->getId()]=p;
         return p->getId();
     }
+    void checkIncomplete();
     void show();
     void showProgress(int height, int width);
 };

@@ -5,7 +5,7 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     base64::encoder E;
     vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
     
-
+    manual = batch->isManual();
     batchId=to_string(batch->getId());
     vector<uchar> outBuf;
     cv::imencode(".png",batch->getImage(),outBuf,compression_params);
@@ -43,9 +43,14 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	Nan::Set(obj, Nan::New("color").ToLocalChecked(), Nan::New(spottings[index].getColor()).ToLocalChecked());
 	Nan::Set(spottingsArr, index, obj);
     }
+    string batchType;
+    if (manual)
+       batchType = "manual";
+    else
+       batchType = "transcription";
     Local<Value> argv[] = {
 	Nan::Null(),
-	Nan::New("transcription").ToLocalChecked(),
+	Nan::New(batchType).ToLocalChecked(),
 	Nan::New(batchId).ToLocalChecked(),
 	Nan::New(wordImgStr).ToLocalChecked(),
 	//Nan::New(ngramImgStr).ToLocalChecked(),

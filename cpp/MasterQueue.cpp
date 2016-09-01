@@ -223,10 +223,9 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     BatchWraper* ret=NULL;
     if (finish)
     {
-        return NULL;
-        //ManualTranscribeBatch* batch = getManualTranscriptionBatch(maxWidth);
-        //if (batch!=NULL)
-        //    ret = new BatchWraperManualTranscription(batch);
+        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+        if (batch!=NULL) 
+            ret = new BatchWraperTranscription(batch);
     }
     else
     {
@@ -240,8 +239,12 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
         {
             TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
-            if (batch!=NULL)
+            if (batch!=NULL) {
                 ret = new BatchWraperTranscription(batch);
+#ifdef TEST_MODE
+                finish=true;
+#endif
+            }
         }
         if (ret==NULL)
         {
@@ -620,4 +623,8 @@ void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, 
     //if (newExemplars.size()>0)
         newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
     //delete newExemplars;
+}
+void MasterQueue::enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars)
+{
+    newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
 }

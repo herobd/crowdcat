@@ -80,8 +80,8 @@ public:
     TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
+    void enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars);
     NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
-    void enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long,string> >* toRemoveExemplars) {newExemplarsBatchQueue.enqueue(newExemplars, toRemoveExemplars);}
     vector<SpottingExemplar*> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) 
     {
         vector<SpottingExemplar*> ret = newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars);
@@ -103,7 +103,6 @@ public:
         cout << "* effort: "<<effortAvg/done<<endl;
         cout << "* true/false: "<<numCTrue/(0.0+numCFalse)<<endl;
         cout << "***********"<<endl;
-        delete incompleteChecker;
         pthread_rwlock_destroy(&semResultsQueue);
         pthread_rwlock_destroy(&semResults);
     }

@@ -113,6 +113,7 @@ public:
     WordBackPointer* getBackPointer() {return origin;}
     void setWidth(unsigned int width);
     vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
+    bool isManual() {return manual;}
 };
 
 

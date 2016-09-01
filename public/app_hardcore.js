@@ -411,6 +411,19 @@ function handleTranscriptionBatch(jres) {
     theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
     spinner.hidden=true;
 }
+function handleManualBatch(jres) {
+        
+    if (jres.batchId!=='R' && jres.batchId!=='X') {
+        batchQueue.push({type:'m', id:jres.batchId, transcription:'#'});
+    } else if (jres.batchId=='R') {
+        location.reload(true);
+    } 
+    
+    var wordImg = new Image();
+    wordImg.src='data:image/png;base64,'+jres.wordImg;
+    theWindow.insertBefore(createManualTranscriptionSelector(jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
+    spinner.hidden=true;
+}
 
 
 function handleNewExemplarsBatch(jres) {
@@ -511,10 +524,14 @@ function highlightLast() {
             if (header && !header.classList.contains('ondeck'))
                 header.classList.toggle('ondeck');
         }
-        if (batchQueue[0].type=='s') {
+        else if (batchQueue[0].type=='s') {
             var header = document.getElementById('b'+ondeck.batch);
             if (header &&!header.classList.contains('ondeck'))
                 header.classList.toggle('ondeck');
+        }
+        else if (batchQueue[0].type=='m') {
+            var input = document.getElementById('mt'+ondeck.batch);
+            input.focus();
         }
     }
 }
@@ -607,50 +624,164 @@ function classify(id,word) {
     };
 }
 
-function createTranscriptionSelector(id,wordImg,ngrams,possibilities)
-{
-    
-    var padding = 50; //border
+
+function makeTranscriptionDiv(id,wordImg,ngrams, padding) {
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
     genDiv.appendChild(wordImg);
     //ngramImg.classList.toggle('meat');
     //genDiv.appendChild(ngramImg);
-
-    var ngramDiv = document.createElement("div");
-    ngramDiv.classList.toggle('meat');
-    ngramDiv.classList.toggle('spotteds');
-    for (var ngramP of ngrams) {
-        var d = document.createElement("div");
-        d.classList.toggle('spotted');
-        d.innerHTML=ngramP.ngram+'<br>';
-        d.style.color='#'+ngramP.color;
-        d.style.left=ngramP.x+'px';
-        var closeImg = new Image();
-        closeImg.src='/removeNgram.png';
-        d.appendChild(closeImg);
-        d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
-        d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
-        ngramDiv.appendChild(d);
+    if (ngrams.length>0) {
+        var ngramDiv = document.createElement("div");
+        ngramDiv.classList.toggle('meat');
+        ngramDiv.classList.toggle('spotteds');
+        for (var ngramP of ngrams) {
+            var d = document.createElement("div");
+            d.classList.toggle('spotted');
+            d.innerHTML=ngramP.ngram+'<br>';
+            d.style.color='#'+ngramP.color;
+            d.style.left=ngramP.x+'px';
+            var closeImg = new Image();
+            closeImg.src='/removeNgram.png';
+            d.appendChild(closeImg);
+            d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+            d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+            ngramDiv.appendChild(d);
+        }
+        genDiv.appendChild(ngramDiv);
     }
-    genDiv.appendChild(ngramDiv);
-    var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
     genDiv.id='bt'+id;
     genDiv.batch=id;
     genDiv.style['max-height']=(screenHeight-padding)+'px';
+    genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+    genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
+    return genDiv;
+}
+
+//assumes possibilities is sorted lexigraphically, case-insensitive
+function autocompleteFunc(self,possibilities,possDiv,id) {
+    var limit = 20;
+    var lcPossibilities=[];
+    for (var i=0; i<possibilities.length; i++) {
+        lcPossibilities.push(possibilities[i].toLowerCase());
+    }
+    var ret = function() {
+        var cur = self.value.toLowerCase();
+        if (cur.length>0) {
+            //binary search for starting index
+            var lb=0;
+            var ub=lcPossibilities.length;
+            var i;
+            while (true) {
+                i=Math.floor(lb +(ub+lb)/2);
+                var comp = cur.localeCompare(lcPossibilities[i]);
+                if (comp==0)
+                    break;
+                else if (comp<0)
+                    ub=i;
+                else
+                    lb=i+1;
+                if (ub-lb < 2) {
+                    if (comp<0)
+                        i=lb;
+                    else
+                        i=ub;
+                    break;
+                }
+            }
+            //var comp = cur.localeCompare(lcPossibilities[i]);
+            //if (comp>0)
+            //    i+=1;
+                
+            var matchList = [];
+            for (; i<possibilities.length; i++) {
+                if (cur.length<=possibilities[i].length) {
+                    match=true;
+                    for (var c=0; c<cur.length; c++) {
+                        if (cur[c] != lcPossibilities[i][c]) {
+                            match=false;
+                        }
+                    }
+                    if (match) {
+                        matchList.push(possibilities[i]);
+                        if (matchList.length>=limit)
+                            break;
+                    }
+                    else
+                        break; //because its sorted
+                }
+            }
+            if (matchList.length<limit) {
+                possDiv.innerHTML='';//clear
+                addWordButtons(possDiv,matchList,id);
+            }
+        }
+    };
+    return ret;
+}
+
+//I'm going to make the assumption that possibilites is sorted lexigraphically, case-insensitive
+function createManualTranscriptionSelector(id,wordImg,ngrams,possibilities) {
+    var padding = 50; //border
+    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams,padding);
+    
+    var totalHeight = wordImg.height 
+    if (ngrams.length>0)
+        totalHeight += 75;//ngramDiv.offsetHeight;//ngramImg.height;
+    var possDiv = document.createElement("div");
+    possDiv.classList.toggle('selections');
+    possDiv.classList.toggle('meat');
+    //type box
+    var input = document.createElement('input');
+    input.id='mt'+id;
+    input.classList.toggle('transInput');
+    input.type = "text";
+    input.onkeyup = autocompleteFunc(input,possibilities,possDiv,id);
+    //submit button
+    var submit = document.createElement("div");
+    submit.classList.toggle('transSubmit');
+    submit.addEventListener('mouseup', function() {var f=classify(id,input.value); f();}, false);
+    submit.addEventListener('touchup', function() {var f=classify(id,input.value); f();}, false);
+    
+    genDiv.appendChild(input);
+    genDiv.appendChild(submit);
+    genDiv.appendChild(possDiv);
+    possDiv.style.height = (screenHeight - totalHeight - padding - Math.max(40,submit.offsetHeight,input.offsetHeight))+'px';
+    //error button
+    /*var errDiv = document.createElement("div");
+    errDiv.classList.toggle('selection');
+    errDiv.classList.toggle('error');
+    errDiv.innerHTML="<div>Error (something's not right)</div>";
+    errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
+    errDiv.addEventListener('touchup', classify(id,'$ERROR$'), false);
+    genDiv.appendChild(errDiv);
+    */
+    return genDiv;
+}
+
+function addWordButtons(dest,words,id) {
+    for (var i=0; i<words.length; i++) {
+        var wordDiv = document.createElement("div");
+        wordDiv.classList.toggle('selection');
+        wordDiv.innerHTML='<div>'+words[i]+'</div>';
+        wordDiv.addEventListener('mouseup', classify(id,words[i]), false);
+        wordDiv.addEventListener('touchup', classify(id,words[i]), false);
+        dest.appendChild(wordDiv);
+    }
+}
+
+function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
+    
+    var padding = 50; //border
+    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams,padding);
+
+    var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
     var selectionDiv = document.createElement("div");
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
     selectionDiv.style.height = (screenHeight - totalHeight - padding)+'px';
-    for (var word of possibilities) {
-        var wordDiv = document.createElement("div");
-        wordDiv.classList.toggle('selection');
-        wordDiv.innerHTML='<div>'+word+'</div>';
-        wordDiv.addEventListener('mouseup', classify(id,word), false);
-        wordDiv.addEventListener('touchup', classify(id,word), false);
-        selectionDiv.appendChild(wordDiv);
-    }
+    addWordButtons(selectionDiv,possibilities,id);
 
     var errDiv = document.createElement("div");
     errDiv.classList.toggle('selection');
@@ -661,8 +792,6 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities)
     selectionDiv.appendChild(errDiv);
     
     genDiv.appendChild(selectionDiv);
-    genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
-    genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
 
     return genDiv;
 }

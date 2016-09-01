@@ -250,7 +250,8 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
 
 TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
 {
-
+    //if (sentBatchId!=0)
+    //    return NULL;
     string newQuery = generateQuery();
     TranscribeBatch* ret=NULL;
     if (query.compare(newQuery) !=0)
@@ -278,8 +279,8 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
         }
         else if (matches.size()==0)
         {
-            //TODO, OoV or something is wrong. Perhaps return as manual batch
-            //ret= createManualBatch();
+            //OoV or something is wrong. Return as manual batch
+            ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
         }
     }
     if (ret!=NULL)
@@ -417,22 +418,31 @@ vector<Spotting*> Knowledge::Word::harvest()
     int curI =0;
     for (auto p : spottings)
     {
+        bool found = false;
         for (; curI<transcription.length(); curI++)
         {
             if (transcription.substr(curI,p.second.ngram.length()).compare(p.second.ngram)==0)
             {
+                found=true;
                 spottingsByIndex.insert(make_pair(curI,p.second));
                 for (int i=curI; i<curI+p.second.ngram.length(); i++)
                     unspotted[i]='$';
 #ifdef TEST_MODE
-                cout <<"["<<curI<<"]:"<<p.second.ngram<<", ";
+                //cout <<"["<<curI<<"]:"<<p.second.ngram<<", ";
 #endif
                 break;
             }
         }
+        if (!found)
+        {
+#ifdef TEST_MODE
+            cout<<"ERROR, Word::harvest(): failed to find ngram ("<<p.second.ngram<<") in transcription ("<<transcription<<")"<<endl;
+#endif
+            return ret;
+        }
     }
 #ifdef TEST_MODE
-    cout<<endl<<"unspotted: "<<unspotted<<endl;;
+    //cout<<endl<<"unspotted: "<<unspotted<<endl;;
 #endif
     for (int i=0; i< 1+transcription.length()-MIN_N; i++)
     {
@@ -455,13 +465,13 @@ vector<Spotting*> Knowledge::Word::harvest()
                 for (auto iter=startAndEnd.first; iter!=startAndEnd.second; iter++)
                 {
 #ifdef TEST_MODE
-                        cout<<"comparing, ["<<ngram<<"] to ["<<iter->second.ngram<<"] at "<<i<<endl;
+                        //cout<<"comparing, ["<<ngram<<"] to ["<<iter->second.ngram<<"] at "<<i<<endl;
 #endif
                     if (iter->second.ngram.compare(ngram)==0)
                     {
                         isNew=false;
 #ifdef TEST_MODE
-                        cout<<"Nope, ["<<ngram<<"] already there. "<<i<<endl;
+                        //cout<<"Nope, ["<<ngram<<"] already there. "<<i<<endl;
 #endif
                         break;
                     }
@@ -581,6 +591,7 @@ vector<Spotting*> Knowledge::Word::harvest()
                         ret.push_back(toRet);
                         //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
 #ifdef TEST_MODE
+#if SHOW
                         cout <<"EXAMINE harvested: "<<ngram<<endl;
                         cv::imshow("harvested",toRet->ngramImg());
                         cv::imshow("boundary image",toRet->img());
@@ -588,6 +599,7 @@ vector<Spotting*> Knowledge::Word::harvest()
                         cv::waitKey(100);
 #else
                         cv::waitKey();
+#endif
 #endif
 #endif
                     }
@@ -850,6 +862,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
 
 
 #ifdef TEST_MODE
+#if SHOW
     //cv::resize(showA,showA,cv::Size(),2,2,cv::INTER_NEAREST);
     cv::imshow("anchors",showA);
 #ifdef TEST_MODE_LONG
@@ -857,6 +870,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
     //{
     //    cv::waitKey();
     //}
+#endif
 #endif
 #endif
 
@@ -936,6 +950,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
     cv::Mat exe = inpainting(wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)),mask(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)));
     SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,NAN,exe);
 #ifdef TEST_MODE
+#if SHOW
     cv::Mat show;
     cv::cvtColor(wordImg,show,CV_GRAY2RGB);
     
@@ -961,6 +976,7 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
     //cv::imshow("exe",ret->ngramImg());
     //cv::imshow("fromPage",ret->img());
     //cv::waitKey();
+#endif
 #endif
     delete g;
     return ret;
@@ -1206,11 +1222,13 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
     }
 
 #ifdef TEST_MODE
+#if SHOW
     orig=orig.clone();
     for (int r=0; r<orig.rows; r++)
         orig.at<unsigned char>(r,retX)=0;
     cv::imshow("break point",orig);
     cv::waitKey();
+#endif
 #endif
 
     return retX+lxBound;
@@ -1867,14 +1885,23 @@ TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should k
                 {
                     int tlx,tly,brx,bry;
                     bool done;
-                    word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
-                    if (!done)
+                    bool sent;
+                    word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
+                    //cout << "at word, "<<done<<", "<<sent<<endl;
+                    if (!done && !sent)
                     {
                         vector<string> prunedDictionary;//TODO
-                        ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottings(),tlx,tly,brx,bry);
+                        ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottingsPointer(),tlx,tly,brx,bry);
+                        word->sent(ret->getId());
+                        cout <<"sentBatch: "<<ret->getId()<<endl;
+                        break;
                     }
                 }
+                if (ret!=NULL)
+                    break;
             }
+            if (ret!=NULL)
+                break;
         }
         pthread_rwlock_unlock(&pagesLock);
     }
@@ -1911,28 +1938,31 @@ void Knowledge::Corpus::checkIncomplete()
     }
     pthread_rwlock_unlock(&batchLock);
 }
-void Knowledge::Corpus::transcriptionFeedback(unsigned id, string transcription)
+vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
+    vector<Spotting*> newNgramExemplars;
     pthread_rwlock_rdlock(&batchLock);
     if (returnMap.find(id) != returnMap.end())
     {
-        if (transcription.compare("$PASS$")!=0)
+        if (transcription.compare("$PASS$")==0)
         {
+            leftoverQueue.push_front(returnMap[id]);
         }
         else
         {
             newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
             doneMap[id] = returnMap[id]->getBackPointer();
             delete returnMap[id];
-            
-            returnMap.erase(id);
-            timeMap.erase(id);
         }
+        returnMap.erase(id);
+        timeMap.erase(id);
     }
-    else //resend?
+    else if (doneMap.find(id) != doneMap.end())//resend?
     {
         if (transcription.compare("$PASS$")!=0)
-                        newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+            newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
     }
-    return newNgram?
+    else
+        cout <<"ERROR: Corpus got trans id that is unrecognized: "<<id<<"  trans is: "<<transcription<<endl;
+    return newNgramExemplars;
 }

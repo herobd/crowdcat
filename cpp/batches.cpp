@@ -22,9 +22,22 @@ TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string>
     }
     init(origin, origImg, spottings, tlx, tly, brx, bry, id);
 }
+
+bool icompare(const string& a, const string& b)
+{
+    int len = min(a.length(),b.length());
+    for (unsigned int i = 0; i < len; ++i)
+        if (tolower(a[i]) < tolower(b[i]))
+            return true;
+        else if (tolower(a[i]) > tolower(b[i]))
+            return false;
+    //They are the same up to this point
+    return a.length() < b.length();
+}
 TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id) : manual(true)
 {
     possibilities=prunedDictionary;
+    sort(possibilities.begin(), possibilities.end(), icompare);
     init(origin, origImg, spottings, tlx, tly, brx, bry, id);
 }
 void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id)

@@ -317,12 +317,12 @@ var ControllerApp = function(port) {
                         //setTimeout(function(){
                         if (batchType==='spottings')
                             res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
-                        else if (batchType==='transcription')
+                        else if (batchType==='transcription' || batchType==='manual')
                             res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
                         else if (batchType==='newExemplars')
                             res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
-                        else if (batchType==='manual')
-                            res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                        //else if (batchType==='manual')
+                       //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
                         else
                             res.send({batchType:'ERROR',batchId:-1});
                         //},2000);
@@ -388,7 +388,7 @@ var ControllerApp = function(port) {
                         spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
                             if (err) console.log(err);
                         });
-                    else if (req.query.type=='manual')
+                    else if (req.query.type=='transcriptionManual')
                         spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });

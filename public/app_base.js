@@ -254,8 +254,11 @@ function batchShiftAndSend(batchId,callback) {
                 callback();
         });
         batches[batchId].sent=true;
-    } else if (info.type=='t') {
+    } else if (info.type=='t' || info.type=='m') {
         var query='?type=transcription';
+        if (info.type=='m') {
+            query+='Manual';
+        }
         httpPostAsync('/app/submitBatch'+query,{batchId:info.id,label:info.transcription,time:new Date().getTime()-startTime},function (res){
             
             var jres=JSON.parse(res);

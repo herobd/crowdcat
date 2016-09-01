@@ -123,7 +123,7 @@ NAN_METHOD(transcriptionBatchDone) {
 
     AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,cattss,id,transcription));
 }
-NAN_METHOD(manualTranscriptionBatchDone) {
+NAN_METHOD(manualBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
     String::Utf8Value resultsIdNAN(info[0]);
@@ -239,6 +239,9 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<String>("transcriptionBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(transcriptionBatchDone)).ToLocalChecked());
+    
+    Nan::Set(target, New<String>("manualBatchDone").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(manualBatchDone)).ToLocalChecked());
     
     Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
