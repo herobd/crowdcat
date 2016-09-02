@@ -8,7 +8,9 @@
 #include <mutex>
 #include <iostream>
 
-#include "Knowledge.h"
+#include "spotting.h"
+#include "batches.h"
+#include "WordBackPointer.h"
 
 using namespace std;
 
@@ -23,13 +25,13 @@ class TranscribeBatchQueue
         vector<Spotting*> feedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
 
         void checkIncomplete();
-        void lock() { mutLock.lock(); }
-        void unlock() { mutLock.unlock(); }
     private:
         deque<TranscribeBatch*> queue;
         map<unsigned long, TranscribeBatch*> returnMap;
         map<unsigned long, chrono::system_clock::time_point> timeMap;
         map<unsigned long, WordBackPointer*> doneMap;
         mutex mutLock;
+        void lock() { mutLock.lock(); }
+        void unlock() { mutLock.unlock(); }
 };
 #endif

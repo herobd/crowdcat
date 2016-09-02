@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include "batches.h"
+#include "Global.h"
 
 #define UPDATE_OVERLAP_THRESH 0.4
 #define UPDATE_OVERLAP_THRESH_TIGHT 0.7

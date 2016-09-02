@@ -69,15 +69,31 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
 {
     vector<Spotting*> newNgramExemplars;
     lock();
+    WordBackPointer* backPointer=NULL;
+    bool resend=false;
     if (returnMap.find(id) != returnMap.end())
     {
-        if (transcription[0]=='$' && transcription[transcription.length()-1]=='$')
+        backPointer=returnMap[id]->getBackPointer();
+    }
+    else if (doneMap.find(id) != doneMap.end())
+    {
+        //This occurs on a resend
+        backPointer=doneMap[id];
+        resend=true;
+        //if (transcription.length()!=0 && transcription.compare("$PASS$")!=0)
+        //    newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+    }
+
+    if (backPointer!=NULL)
+    {
+        if ((transcription[0]=='$' && transcription[transcription.length()-1]=='$') || transcription.length()==0)
         {
             if (transcription.compare("$ERROR$")==0)
             {//This probably will occur with bad segmentation
-                returnMap[id]->getBackPointer()->error(toRemoveExemplars);//change into manual batch or remove spottings?
+                backPointer->error(id,resend,toRemoveExemplars);//change into manual batch or remove spottings?
                 cout<<"ERROR returned for trans "<<id<<endl;
-                delete returnMap[id];
+                if (!resend)
+                    delete returnMap[id];
             }
             else if (transcription.length()>9 && transcription.substr(0,8).compare("$REMOVE:")==0)
             {
@@ -86,7 +102,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //{
                     sid= stoul(transcription.substr(8,transcription.length()-9));
 
-                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid,&newNgramExemplars,toRemoveExemplars);
+                    TranscribeBatch* newBatch = backPointer->removeSpotting(sid,id,resend,&newNgramExemplars,toRemoveExemplars);
                     if (newBatch!=NULL)
                         queue.push_back(newBatch);
                 //}
@@ -96,32 +112,45 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //    cout << ia.what() << endl;
                 //    assert(false);
                 //}
-                delete returnMap[id];
+                if (!resend)
+                {
+                    doneMap[id] = backPointer;
+                    delete returnMap[id];
+                }
             }
-            else if (transcription.compare("$PASS$")==0)
+            else if (!resend && (transcription.length()==0 || transcription.compare("$PASS$")==0))
             {
                 queue.push_front(returnMap[id]);
             }
             else
             {
                 cout << "invalid_argument TranscribeBatchQueue::feedback(#,"<<transcription<<")"<<endl;
+                if (!resend)
+                    queue.push_front(returnMap[id]);
             }
         }
         else
         {
-            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
-            doneMap[id] = returnMap[id]->getBackPointer();
-            delete returnMap[id];
+            newNgramExemplars=backPointer->result(transcription,id,resend,toRemoveExemplars);
+            if (!resend)
+            {
+                doneMap[id] = backPointer;
+                delete returnMap[id];
+            }
         }
-        returnMap.erase(id);
-        timeMap.erase(id);
+
+        if (!resend)
+        {
+            returnMap.erase(id);
+            timeMap.erase(id);
+        }
     }
     else
     {
-        //This occurs on a resend
-        
-        if (transcription.compare("$PASS$")!=0)
-            newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+        cout <<"ERROR: TranscribeBatchQueue::feedback unrecogized id: "<<id<<"   for trans: "<<transcription<<endl;
+#ifdef TEST_MODE
+        assert(false);
+#endif
     }
     unlock();
     return newNgramExemplars;

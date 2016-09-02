@@ -14,12 +14,14 @@
 #include <pthread.h>
 #include <atomic>
 #include "maxflow/graph.h"
+#include <assert.h>
 
 #include "spotting.h"
 #include "Lexicon.h"
 #include "Global.h"
 #include "batches.h"
 #include "WordBackPointer.h"
+#include "TranscribeBatchQueue.h"
 
 using namespace std;
 
@@ -37,6 +39,8 @@ typedef Graph<float,float,float> GraphType;
 #define CHAR_ASPECT_RATIO 2.45 //TODO
 
 #define ANCHOR_CONST 500
+
+#define PRUNED_LEXICON_MAX_SIZE 200
 
 #define SHOW 0
 
@@ -96,6 +100,7 @@ private:
     SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
     void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
     void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);
+    void getWordImg(cv::Mat& wordImg);
     cv::Point wordCord(int r, int c)
     {
         return cv::Point(c-tlx,r-tly);
@@ -106,6 +111,10 @@ private:
     }
 
     string transcription;
+
+    map<unsigned long, vector<Spotting> > removedSpottings;
+    void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
+
 public:
     Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
@@ -126,9 +135,9 @@ public:
         pthread_rwlock_destroy(&lock);
     }
     
-    TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars);
-    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
-    TranscribeBatch* removeSpotting(unsigned long sid, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,NULL,newExemplars,toRemoveExemplars);}
+    TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars, bool findBatch=true);
+    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
+    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,batchId,resend,NULL,newExemplars,toRemoveExemplars);}
     
     void getBaselines(int* top, int* bot);
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
@@ -150,46 +159,12 @@ public:
         *word_bry=bry;
 	*isDone=done;
         *isSent=sentBatchId!=0;
-        if (*isSent)
-            cout<<"I've ["<<gt<<"] been sent: "<<sentBatchId<<endl;
         pthread_rwlock_unlock(&lock);
     }
 
-    vector<Spotting*> result(string selected, vector< pair<unsigned long, string> >* toRemoveExemplars)
-    {
-        cout <<"recived trans: "<<selected<<endl;
-        vector<Spotting*> ret;
-        pthread_rwlock_wrlock(&lock);
-        if (!done)
-        {
-            done=true;
-            transcription=selected;
-            ret = harvest();
-        }
-        else
-        {
-            //this is a resubmission
-            if (transcription.compare(selected)!=0)
-            {
-                //Retract harvested ngrams
-                toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
-                transcription=selected;
-                ret= harvest();
-            }
-        }
-        pthread_rwlock_unlock(&lock);
-        return ret;
-        //Harvested ngrams should be approved before spotting with them
-    }
+    vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
 
-    void error(vector< pair<unsigned long, string> >* toRemoveExemplars)
-    {
-        pthread_rwlock_rdlock(&lock);
-        spottings.clear();
-        toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
-        harvested.clear();
-        pthread_rwlock_unlock(&lock);
-    }
+    void error(unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
 
     vector<Spotting> getSpottings() 
     {
@@ -202,11 +177,12 @@ public:
     }
     void sent(unsigned long id)
     {
-        pthread_rwlock_rdlock(&lock);
+        pthread_rwlock_wrlock(&lock);
         sentBatchId=id;
         pthread_rwlock_unlock(&lock);
     }
     const multimap<int,Spotting>* getSpottingsPointer() {return & spottings;}
+    vector<string> getRestrictedLexicon(int max);
 
     const cv::Mat* getPage() {return pagePnt;}
     string getTranscription() {pthread_rwlock_rdlock(&lock); if (done) return transcription; else return "[ERROR]"; pthread_rwlock_unlock(&lock);}
@@ -361,17 +337,13 @@ class Corpus
 private:
     pthread_rwlock_t pagesLock;
     pthread_rwlock_t spottingsMapLock;
-    pthread_rwlock_t batchLock;
     float averageCharWidth;
     int countCharWidth;
     float threshScoring;
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
-    deque<TranscribeBatch*> leftoverQueue;
-    map<unsigned long, TranscribeBatch*> returnMap;
-    map<unsigned long, chrono::system_clock::time_point> timeMap;
-    map<unsigned long, WordBackPointer*> doneMap;
+    TranscribeBatchQueue manQueue;
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 
@@ -381,7 +353,6 @@ public:
     {
         pthread_rwlock_destroy(&pagesLock);
         pthread_rwlock_destroy(&spottingsMapLock);
-        pthread_rwlock_destroy(&batchLock);
         for (auto p : pages)
             delete p.second;
     }
@@ -390,7 +361,7 @@ public:
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
     TranscribeBatch* getManualBatch(int maxWidth);
-    vector<Spotting*> transcriptionFeedback(unsigned id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
+    vector<Spotting*> transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 

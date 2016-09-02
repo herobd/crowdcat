@@ -6,7 +6,6 @@ Knowledge::Corpus::Corpus()
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
-    pthread_rwlock_init(&batchLock,NULL);
     averageCharWidth=30;
     countCharWidth=0;
     threshScoring= 1.0;
@@ -86,7 +85,7 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
             {
                 
                 unsigned long retractId=0;  
-                TranscribeBatch* newBatch = word->removeSpotting(sid.first,&retractId,newExemplars,toRemoveExemplars);
+                TranscribeBatch* newBatch = word->removeSpotting(sid.first,0,false,&retractId,newExemplars,toRemoveExemplars);
                 if (retractId!=0 && newBatch==NULL)
                 {
                     //retract the batch
@@ -217,7 +216,75 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     }
 }*/
 
-TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* newExemplars)
+void Knowledge::Word::reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars)
+{
+    auto s = removedSpottings.find(batchId);
+    if (s != removedSpottings.end())
+    {
+        for (Spotting& spotting : s->second)
+            addSpotting(spotting,newExemplars, false);
+        removedSpottings.erase(s);
+    }
+}
+
+vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars)
+{
+    vector<Spotting*> ret;
+    pthread_rwlock_wrlock(&lock);
+    if (resend)
+    {
+        reAddSpottings(batchId, &ret);
+    }
+    if (!done)
+    {
+        done=true;
+        transcription=selected;
+        ret = harvest();
+    }
+    else
+    {
+        //this is a resubmission
+        if (transcription.compare(selected)!=0)
+        {
+            //Retract harvested ngrams
+            toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+            transcription=selected;
+            ret= harvest();
+        }
+    }
+    pthread_rwlock_unlock(&lock);
+    return ret;
+    //Harvested ngrams should be approved before spotting with them
+}
+
+void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars)
+{
+    pthread_rwlock_wrlock(&lock);
+    if (resend)
+    {
+        //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
+        auto s = removedSpottings.find(batchId);
+        if (s != removedSpottings.end())
+        {
+            for (Spotting& spotting : s->second)
+                spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
+            removedSpottings.erase(s);
+        }
+
+    }
+    vector<Spotting> removed;
+    for (auto p : spottings)
+    {
+        removed.push_back(p.second);
+    }
+    removedSpottings[batchId]=removed;
+    spottings.clear();
+    toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+    harvested.clear();
+    pthread_rwlock_unlock(&lock);
+}
+
+TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* newExemplars, bool findBatch)
 {
     pthread_rwlock_wrlock(&lock);
     //decide if it should be merge with another
@@ -243,7 +310,9 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
     {
         spottings.insert(make_pair(s.tlx,s));//multimap, so they are properly ordered
     }
-    TranscribeBatch* ret=queryForBatch(newExemplars);//This has an id matching the sent batch (if it exists)
+    TranscribeBatch* ret=NULL;
+    if (findBatch)
+        ret=queryForBatch(newExemplars);//This has an id matching the sent batch (if it exists)
     pthread_rwlock_unlock(&lock);
     return ret;
 }
@@ -257,7 +326,7 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
     if (query.compare(newQuery) !=0)
     {
         query=newQuery;
-        vector<string> matches = Lexicon::instance()->search(query,meta);
+        vector<string> matches = Lexicon::instance()->search(query,meta,THRESH_LEXICON_LOOKUP_COUNT);
         if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
@@ -279,17 +348,30 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
         }
         else if (matches.size()==0)
         {
-            //OoV or something is wrong. Return as manual batch
-            ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+            //OoV or something is wrong. Return as manual batch.
+            //But we'll do it later to keep the state of the Corpus's queue good.
+            //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
         }
     }
     if (ret!=NULL)
         sentBatchId=ret->getId();
     return ret;
 }
-TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
+vector<string> Knowledge::Word::getRestrictedLexicon(int max)
+{
+    pthread_rwlock_rdlock(&lock);
+    string newQuery = generateQuery();
+    pthread_rwlock_unlock(&lock);
+    return Lexicon::instance()->search(query,meta,max);
+}
+
+TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
     pthread_rwlock_wrlock(&lock);
+    if (resend)
+    {
+        reAddSpottings(batchId,newExemplars);
+    }
     if (sentBatchId!=NULL)
         *sentBatchId = this->sentBatchId;
 
@@ -298,6 +380,11 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     {
         if (iter->second.id == sid)
         {
+            if (batchId!=0 && sentBatchId==NULL)
+            {
+                vector<Spotting> aSpot={iter->second};
+                removedSpottings[batchId]=aSpot;
+            }
             spottings.erase(iter);
             break;
         }
@@ -311,10 +398,32 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
 
 multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, float thresh)
 {
-    //TODO, perhaps find a good thresh point?
-    multimap<float,string> ret;
-    for (string m : match)
-        ret.insert(make_pair(0.1,m));
+    multimap<float,string> scores;
+    //swan threads?
+    float min=999999;
+    float max=-999999;
+    for (string word : match)
+    {
+        Mat im;
+        getWordImg(im);
+        float score = spotter->score(word,im);
+        scores.insert(make_pair(score,word));
+        if (score<min)
+            min=score;
+        if (score>max)
+            max=score;
+    }
+    vector<int> histogram(100);
+    for (auto p : scores)
+    {
+        int bin = 100*(p.first-min)/(max-min);
+        histogram[bin]++;
+    }
+    float thresh = (otsu(histogram)/100)*(max-min)+min;
+
+    multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
+    //for (string m : match)
+    //    ret.insert(make_pair(0.1,m));
     return ret;
 }
 
@@ -394,13 +503,18 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
+void Knowledge::Word::getWordImg(cv::Mat& wordImg, cv::Mat& b)
+{
+    wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+}
 void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 {
     //cv::Mat b;
     int blockSize = (1+bry-tly)/2;
     if (blockSize%2==0)
         blockSize++;
-    wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+    getWordImg(wordImg);
+    //wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
     if (wordImg.type()==CV_8UC3)
         cv::cvtColor(wordImg,wordImg,CV_RGB2GRAY);
     cv::adaptiveThreshold(wordImg, b, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, blockSize, 10);
@@ -411,6 +525,8 @@ vector<Spotting*> Knowledge::Word::harvest()
 #ifdef TEST_MODE
     cout<<"harvesting: "<<transcription<<endl;
 #endif
+    assert (transcription[0]!='$' || transcription[transcription.length()-1]!='$');
+
     cv::Mat wordImg, b;
     vector<Spotting*> ret;
     string unspotted = transcription;
@@ -1868,9 +1984,8 @@ const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
 
 TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should keep reference to batch for timeout, etc
 {
-    TranscribeBatch* ret=NULL;
-    pthread_rwlock_rdlock(&batchLock);
-    if (leftoverQueue.size()==0)
+    TranscribeBatch* ret=manQueue.dequeue(maxWidth);
+    if (ret==NULL)
     {
         pthread_rwlock_rdlock(&pagesLock);
         for (auto p : pages)
@@ -1890,10 +2005,15 @@ TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should k
                     //cout << "at word, "<<done<<", "<<sent<<endl;
                     if (!done && !sent)
                     {
-                        vector<string> prunedDictionary;//TODO
+                        vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
+                        if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
+                            prunedDictionary.clear();
                         ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottingsPointer(),tlx,tly,brx,bry);
                         word->sent(ret->getId());
-                        cout <<"sentBatch: "<<ret->getId()<<endl;
+                        //enqueue and dequeue to keep the queue's state good.
+                        vector<TranscribeBatch*> theBatch = {ret};
+                        manQueue.enqueueAll(theBatch);
+                        ret=manQueue.dequeue(maxWidth);
                         break;
                     }
                 }
@@ -1905,64 +2025,14 @@ TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should k
         }
         pthread_rwlock_unlock(&pagesLock);
     }
-    else
-    {
-        ret = leftoverQueue.back();
-        leftoverQueue.pop_back();
-    }
-    if (ret!=NULL)
-    {
-        returnMap[ret->getId()]=ret;
-        timeMap[ret->getId()]=chrono::system_clock::now();
-        ret->setWidth(maxWidth);
-    }
-    pthread_rwlock_unlock(&batchLock);
     return ret;
 }
 
 void Knowledge::Corpus::checkIncomplete()
 {
-    pthread_rwlock_rdlock(&batchLock);
-    for (auto start : timeMap)
-    {
-        unsigned long id = start.first;
-        chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
-        chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
-        if (pass.count() > 20) //if 20 mins has passed
-        {
-            leftoverQueue.push_front(returnMap[id]);
-
-            returnMap.erase(id);
-            timeMap.erase(id);
-        }
-    }
-    pthread_rwlock_unlock(&batchLock);
+    manQueue.checkIncomplete();
 }
-vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
+vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
-    vector<Spotting*> newNgramExemplars;
-    pthread_rwlock_rdlock(&batchLock);
-    if (returnMap.find(id) != returnMap.end())
-    {
-        if (transcription.compare("$PASS$")==0)
-        {
-            leftoverQueue.push_front(returnMap[id]);
-        }
-        else
-        {
-            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
-            doneMap[id] = returnMap[id]->getBackPointer();
-            delete returnMap[id];
-        }
-        returnMap.erase(id);
-        timeMap.erase(id);
-    }
-    else if (doneMap.find(id) != doneMap.end())//resend?
-    {
-        if (transcription.compare("$PASS$")!=0)
-            newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
-    }
-    else
-        cout <<"ERROR: Corpus got trans id that is unrecognized: "<<id<<"  trans is: "<<transcription<<endl;
-    return newNgramExemplars;
+    return manQueue.feedback(id,transcription,toRemoveExemplars);
 }

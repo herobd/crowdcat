@@ -17,6 +17,7 @@ var swipeOn=true;
 var screenHeight;
 
 var lastUndo=false;
+var menuHeaderHeight=50;
 
 function handleTouchStart(evt) {
     if (evt.touches)                                     
@@ -253,12 +254,23 @@ function setup() {
     while (!imgWidth)
         imgWidth=Math.min(x,maxImgWidth);
     console.log(imgWidth);
-    document.onresize=function(){
+    window.onresize=function(){
         var e = d.documentElement,
         g = d.getElementsByTagName('body')[0],
         x = w.innerWidth || e.clientWidth || g.clientWidth,
         y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+        var dif = y-screenHeight;
+        screenHeight=y;
         imgWidth=Math.min(x,maxImgWidth);
+        //console.log('resize: '+x+', '+y);
+        //SHould this be for all transcriptions, and not just ondeck?
+        var trans = theWindow.getElementsByClassName('transcription');
+        for (var i=0; i<trans.length; i++) {
+            trans[i].style['max-height']=(screenHeight-menuHeaderHeight)+'px';
+            selectionsDiv = trans[i].getElementsByClassName('selections')[0];
+            selectionsDiv.height += dif;
+            selectionsDiv.style.height = selectionsDiv.height+'px';
+        }
     };
     getNextBatch(toBeInQueue,function() { 
         highlightLast();
@@ -602,6 +614,9 @@ function isBatchDone(batchId) {
 }
 
 function classify(id,word) {
+    return classifyR(id,function(){return word;});
+}
+function classifyR(id,vFunc) {
     return function(ele) {
         lastRemovedEle.push(ondeck);
         
@@ -616,7 +631,7 @@ function classify(id,word) {
             console.log('ERROR, wrong inst in batchQueue');
             console.log(batchQueue);
         }
-        batchQueue[0].transcription=word;
+        batchQueue[0].transcription=vFunc();
         ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
         isBatchDone(id);
@@ -625,7 +640,7 @@ function classify(id,word) {
 }
 
 
-function makeTranscriptionDiv(id,wordImg,ngrams, padding) {
+function makeTranscriptionDiv(id,wordImg,ngrams) {
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
@@ -653,68 +668,78 @@ function makeTranscriptionDiv(id,wordImg,ngrams, padding) {
     }
     genDiv.id='bt'+id;
     genDiv.batch=id;
-    genDiv.style['max-height']=(screenHeight-padding)+'px';
+    genDiv.style['max-height']=(screenHeight-menuHeaderHeight)+'px';
     genDiv.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
     genDiv.addEventListener("animationend", function(e){if(e.animationName=='collapse') theWindow.removeChild(this);}, false);
     return genDiv;
 }
 
 //assumes possibilities is sorted lexigraphically, case-insensitive
-function autocompleteFunc(self,possibilities,possDiv,id) {
+function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
     var limit = 20;
     var lcPossibilities=[];
     for (var i=0; i<possibilities.length; i++) {
         lcPossibilities.push(possibilities[i].toLowerCase());
     }
-    var ret = function() {
-        var cur = self.value.toLowerCase();
-        if (cur.length>0) {
-            //binary search for starting index
-            var lb=0;
-            var ub=lcPossibilities.length;
-            var i;
-            while (true) {
-                i=Math.floor(lb +(ub+lb)/2);
-                var comp = cur.localeCompare(lcPossibilities[i]);
-                if (comp==0)
-                    break;
-                else if (comp<0)
-                    ub=i;
-                else
-                    lb=i+1;
-                if (ub-lb < 2) {
-                    if (comp<0)
-                        i=lb;
+    var ret = function(event) {
+        if (event.keyCode == 13) {
+            event.preventDefault();
+            onEnter();
+        }
+        else if ((event.keyCode>=65 && event.keyCode<=90) || event.keyCode==8 || event.keyCode==46 || event.keyCode==32)
+        {
+            var cur = self.value.toLowerCase();
+            if (cur.length>0) {
+                //binary search for starting index
+                var lb=0;
+                var ub=lcPossibilities.length;
+                var i;
+                while (true) {
+                    i=Math.floor(lb +(ub-lb)/2);
+                    var comp = cur.localeCompare(lcPossibilities[i]);
+                    if (comp==0)
+                        break;
+                    else if (comp<0)
+                        ub=i;
                     else
-                        i=ub;
-                    break;
+                        lb=i+1;
+                    if (ub-lb < 2) {
+                        if (comp<0)
+                            i=lb;
+                        else
+                            i=ub;
+                        break;
+                    }
                 }
-            }
-            //var comp = cur.localeCompare(lcPossibilities[i]);
-            //if (comp>0)
-            //    i+=1;
-                
-            var matchList = [];
-            for (; i<possibilities.length; i++) {
-                if (cur.length<=possibilities[i].length) {
-                    match=true;
-                    for (var c=0; c<cur.length; c++) {
-                        if (cur[c] != lcPossibilities[i][c]) {
-                            match=false;
+                console.log('Found starting index: '+i);
+                //var comp = cur.localeCompare(lcPossibilities[i]);
+                //if (comp>0)
+                //    i+=1;
+                    
+                var matchList = [];
+                for (; i<possibilities.length; i++) {
+                    if (cur.length<=possibilities[i].length) {
+                        match=true;
+                        for (var c=0; c<cur.length; c++) {
+                            if (cur[c] != lcPossibilities[i][c]) {
+                                match=false;
+                            }
                         }
+                        if (match) {
+                            matchList.push(possibilities[i]);
+                            if (matchList.length>=limit)
+                                break;
+                        }
+                        else
+                            break; //because its sorted
                     }
-                    if (match) {
-                        matchList.push(possibilities[i]);
-                        if (matchList.length>=limit)
-                            break;
-                    }
-                    else
-                        break; //because its sorted
                 }
-            }
-            if (matchList.length<limit) {
-                possDiv.innerHTML='';//clear
-                addWordButtons(possDiv,matchList,id);
+                if (matchList.length<limit) {
+                    console.log('adding:')
+                    console.log(matchList)
+                    possDiv.innerHTML='';//clear
+                    addWordButtons(possDiv,matchList,id);
+                }
             }
         }
     };
@@ -723,31 +748,33 @@ function autocompleteFunc(self,possibilities,possDiv,id) {
 
 //I'm going to make the assumption that possibilites is sorted lexigraphically, case-insensitive
 function createManualTranscriptionSelector(id,wordImg,ngrams,possibilities) {
-    var padding = 50; //border
-    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams,padding);
+    var genDiv = makeTranscriptionDiv(id,wordImg,[]);//ngrams); The ngrams panel makes the window too short when typing on mobile keyboard
     
     var totalHeight = wordImg.height 
-    if (ngrams.length>0)
-        totalHeight += 75;//ngramDiv.offsetHeight;//ngramImg.height;
+    //if (ngrams.length>0)
+    //    totalHeight += 75;//ngramDiv.offsetHeight;//ngramImg.height;
     var possDiv = document.createElement("div");
     possDiv.classList.toggle('selections');
     possDiv.classList.toggle('meat');
     //type box
     var input = document.createElement('input');
     input.id='mt'+id;
+    input.autocomplete="off"
     input.classList.toggle('transInput');
     input.type = "text";
-    input.onkeyup = autocompleteFunc(input,possibilities,possDiv,id);
+    input.onkeyup = inputBoxFunc(input,possibilities,possDiv,id,classifyR(id,function(){return input.value;}));
     //submit button
     var submit = document.createElement("div");
     submit.classList.toggle('transSubmit');
-    submit.addEventListener('mouseup', function() {var f=classify(id,input.value); f();}, false);
-    submit.addEventListener('touchup', function() {var f=classify(id,input.value); f();}, false);
+    submit.innerHTML='&gt;';
+    submit.addEventListener('mouseup', classifyR(id,function(){return input.value;}), false);
+    submit.addEventListener('touchup', classifyR(id,function(){return input.value;}), false);
     
     genDiv.appendChild(input);
     genDiv.appendChild(submit);
     genDiv.appendChild(possDiv);
-    possDiv.style.height = (screenHeight - totalHeight - padding - Math.max(40,submit.offsetHeight,input.offsetHeight))+'px';
+    possDiv.height = (screenHeight - totalHeight - menuHeaderHeight - Math.max(40,submit.offsetHeight,input.offsetHeight));
+    possDiv.style.height = possDiv.height+'px';
     //error button
     /*var errDiv = document.createElement("div");
     errDiv.classList.toggle('selection');
@@ -773,14 +800,13 @@ function addWordButtons(dest,words,id) {
 
 function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     
-    var padding = 50; //border
-    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams,padding);
+    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams);
 
     var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
     var selectionDiv = document.createElement("div");
     selectionDiv.classList.toggle('selections');
     selectionDiv.classList.toggle('meat');
-    selectionDiv.style.height = (screenHeight - totalHeight - padding)+'px';
+    selectionDiv.style.height = (screenHeight - totalHeight - menuHeaderHeight)+'px';
     addWordButtons(selectionDiv,possibilities,id);
 
     var errDiv = document.createElement("div");

@@ -17,7 +17,8 @@ class Meta
 class Lexicon
 {
 public:
-    vector<string> search(string query, Meta meta);
+    //Max does not represent the maximum number of items to return, but a cut off, meaning if more than these are produced the results will be discarded. Thus the Lexicon can stop searching then.
+    vector<string> search(string query, Meta meta, int max=-1);
     bool readIn(string fileName);
     static Lexicon* instance()
     {

@@ -3,7 +3,7 @@
 
 Lexicon* Lexicon::self=NULL;
 
-vector<string> Lexicon::search(string query, Meta meta)
+vector<string> Lexicon::search(string query, Meta meta, int max)
 {
     
     
@@ -15,7 +15,11 @@ vector<string> Lexicon::search(string query, Meta meta)
     {
     
         if (regex_match (word, q ))
+        {
             ret1.push_back(word);
+            if (max>0 && ret1.size()>max)
+                break;
+        }
     }
     /*clock_t time1 = clock()-start;
     
@@ -39,10 +43,15 @@ vector<string> Lexicon::search(string query, Meta meta)
     {
         assert(ret1[i].compare(ret2[i])==0);
     }*/
+#ifdef TEST_MODE
     cout << query <<": ";
-    for (string s : ret1)
-        cout<<s<<", ";
+    if (max>0 && ret1.size()>max)
+        cout<<" MAXED";
+    else
+        for (string s : ret1)
+            cout<<s<<", ";
     cout<<endl;
+#endif
     return ret1;
 }
 

@@ -364,43 +364,8 @@ bool SpottingResults::EMThresholds()
             }
         }
         
-        //otsu
-        double sum =0;
-        for (int i = 1; i < 256; ++i)
-                sum += i * histogram[i];
-        double sumB = 0;
-        double wB = 0;
-        double wF = 0;
-        double mB;
-        double mF;
-        double max = 0.0;
-        double between = 0.0;
-        double threshold1 = 0.0;
-        double threshold2 = 0.0;
-        for (int i = 0; i < 256; ++i)
-        {
-            wB += histogram[i];
-            if (wB == 0)
-                continue;
-            wF = total - wB;
-            if (wF == 0)
-                break;
-            sumB += i * histogram[i];
-            mB = sumB / (wB*1.0);
-            mF = (sum - sumB) / (wF*1.0);
-            between = wB * wF * pow(mB - mF, 2);
-            if ( between >= max )
-            {
-                threshold1 = i;
-                if ( between > max )
-                {
-                    threshold2 = i;
-                }
-                max = between; 
-            }
-        }
         
-        double thresh = ( threshold1 + threshold2 ) / 2.0;
+        double thresh = otsu(historgram);//( threshold1 + threshold2 ) / 2.0;
         pullFromScore = (thresh/256)*(maxScore-minScore)+minScore;
 #ifdef TEST_MODE_LONG
         if (ngram.compare("te")==0)

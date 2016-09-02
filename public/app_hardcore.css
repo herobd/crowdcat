@@ -28,16 +28,16 @@ button {
   float:left;
 }
 #undoButton {
-  color: #ffffff;
+  color: #fffff0;
   background: #a15757;
 }
 #menuButton {
-  color: #ffffff;
+  color: #fffff0;
   background: #380B61;
 }
 #passButton {
-  color: #ffffff;
-  background: #F4D03F;
+  color: #fffff0;
+  background: #9980b3;
 }
 
 .menuItem {
@@ -338,6 +338,7 @@ div.transcription {
 
 .transcription .meat {
     display: none;
+    clear: left;
 }
 .transcription.ondeck .meat {
     display: block;
@@ -375,7 +376,7 @@ div.selection {
 
 div.selection.error {
     font-size: 22px;
-    color: #ffffff;
+    color: #fffff0;
 }
 
 .selection.error div {
@@ -499,7 +500,7 @@ div.selection.error {
   border-top: 1.1em solid rgba(255, 255, 255, 0.2);
   border-right: 1.1em solid rgba(255, 255, 255, 0.2);
   border-bottom: 1.1em solid rgba(255, 255, 255, 0.2);
-  border-left: 1.1em solid #ffffff;
+  border-left: 1.1em solid #fffff0;
   -webkit-transform: translateZ(0);
   -ms-transform: translateZ(0);
   transform: translateZ(0);
@@ -558,7 +559,7 @@ div.selection.error {
 .transInput {
     float: left;
     width: 80%;
-    font-size: 25px;
+    font-size: 29px;
     margin-left: 2%;
     background: #cefdce;
 }
@@ -567,4 +568,6 @@ div.selection.error {
     width: 15%;
     background: darkgreen;
     height: 40px;
+    font-size: 35px;
+    color: #fffff0;
 }

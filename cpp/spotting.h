@@ -196,9 +196,6 @@ public:
 
     cv::Mat ngramImg() const
     {
-#ifdef TEST_MODE
-        cout <<"### SpottingExemplar ngramImg called"<<endl;
-#endif
         return ngramImage; 
     }
 private:

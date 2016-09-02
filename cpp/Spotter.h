@@ -13,14 +13,16 @@ using namespace std;
 class SpottingQuery 
 {
     public:
-    SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram) {}//use e->ngramImg() to get correct exemplar image}
+    SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram), img(e->ngramImg()) {}
     SpottingQuery(const Spotting& e) : SpottingQuery(&e) {}
     string getNgram() {return ngram;}
     unsigned long getId() {return id;}
+    cv::Mat getImg() {return img;}
 
     private:
     string ngram;
     unsigned long id;
+    cv::Mat img;
 };
 
 class Spotter
@@ -37,6 +39,7 @@ class Spotter
     void removeQueries(vector<pair<unsigned long,string> >* toRemove);
 
     virtual vector<Spotting>* runQuery(SpottingQuery* query)=0;
+    virtual float score(string text, const Mat& image)=0;
 
     protected:
     MasterQueue* masterQueue;
