@@ -3,13 +3,40 @@
   "targets": [
     {
       "target_name": "spottingaddon",
-      "sources": [ "SpottingAddon.cpp", "BatchRetrieveWorker.cpp", "SpottingBatchUpdateWorker.cpp", "MasterQueue.h", "MasterQueue.cpp", "SpottingResults.h", "SpottingResults.cpp", "TestQueue.h", "TestQueue.cpp", "BatchWraper.h", "BatchWraperSpottings.h", "BatchWraperSpottings.cpp", "BatchWraperTranscription.h", "BatchWraperTranscription.cpp", "TranscribeBatchQueue.h", "TranscribeBatchQueue.cpp", "Knowledge.h","Knowledge.cpp", "Lexicon.h", "Lexicon.cpp", "MiscWorker.cpp", "CATTSS.h", "CATTSS.cpp", "Spotter.h", "FacadeSpotter.h", "Spotter.cpp", "FacadeSpotter.cpp", "Global.h", "Global.cpp", "Lexicon.h", "Lexicon.cpp", "NewExemplarsBatchQueue.h", "NewExemplarsBatchQueue.cpp", "BatchWraperNewExemplars.h", "BatchWraperNewExemplars.cpp", "NewExemplarsBatchUpdateWorker.cpp", "maxflow/graph.h", "maxflow/graph.cpp", "maxflow/block.h", "maxflow/instances.inc", "maxflow/maxflow.cpp", "batches.h", "batches.cpp", "spotting.h", "WordBackPointer.h" ],
+      "sources": [  "SpottingAddon.cpp", 
+                    "BatchRetrieveWorker.cpp", 
+                    "SpottingBatchUpdateWorker.cpp", 
+                    "MasterQueue.h", "MasterQueue.cpp", 
+                    "SpottingResults.h", "SpottingResults.cpp", 
+                    "TestQueue.h", "TestQueue.cpp", 
+                    "BatchWraper.h", 
+                    "BatchWraperSpottings.h", "BatchWraperSpottings.cpp", 
+                    "BatchWraperTranscription.h", "BatchWraperTranscription.cpp", 
+                    "TranscribeBatchQueue.h", "TranscribeBatchQueue.cpp", 
+                    "Knowledge.h","Knowledge.cpp", 
+                    "Lexicon.h", "Lexicon.cpp", 
+                    "MiscWorker.cpp", 
+                    "CATTSS.h", "CATTSS.cpp", 
+                    "Spotter.h", "Spotter.cpp",
+                    "FacadeSpotter.h", "FacadeSpotter.cpp", 
+                    "Global.h", "Global.cpp", 
+                    "Lexicon.h", "Lexicon.cpp", 
+                    "NewExemplarsBatchQueue.h", "NewExemplarsBatchQueue.cpp", 
+                    "BatchWraperNewExemplars.h", "BatchWraperNewExemplars.cpp", 
+                    "NewExemplarsBatchUpdateWorker.cpp", 
+                    "maxflow/graph.h", "maxflow/graph.cpp", "maxflow/block.h", "maxflow/instances.inc", "maxflow/maxflow.cpp", 
+                    "batches.h", "batches.cpp", 
+                    "spotting.h", 
+                    "WordBackPointer.h",
+                    "AlmazanSpotter.h", "AlmazanSpotter.cpp"
+                ],
       "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DTEST_MODE"],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
-      "include_dirs" : ["<!(node -e \"require('nan')\")"],
+      "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/intel_index/EmbAttSpotter"],
       "libraries": [
-            "-lopencv_highgui", "-lb64", "-lpthread", "-lopencv_imgproc", "-fopenmp"
+            "-lopencv_highgui", "-lb64", "-lpthread", "-lopencv_imgproc", "-fopenmp, 
+            "-L/home/brian/intel_index/EmbAttSpotter", "-lembattspotter"
           ],
       "conditions": [
         [ 'OS=="mac"', {

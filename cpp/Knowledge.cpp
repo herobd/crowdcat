@@ -80,8 +80,8 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
         pthread_rwlock_unlock(&spottingsMapLock);
         for (auto sid : *removeSpottings)
         {
-            vector<Word*> words = wordsForIds[sid.first];
-            for (Word* word : words)
+            vector<Word*> wordsForId = wordsForIds[sid.first];
+            for (Word* word : wordsForId)
             {
                 
                 unsigned long retractId=0;  
@@ -114,7 +114,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     for (Line* line : lines)
     {
         int line_ty, line_by;
-        vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
+        vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
         int overlap = min(s.bry,line_by) - max(s.tly,line_ty);
         float overlapPortion = overlap/(0.0+s.bry-s.tly);
         if (overlapPortion > OVERLAP_LINE_THRESH)
@@ -122,7 +122,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
             oneLine=true;
             //pthread_rwlock_rdlock(&line->wordsLock);
             bool oneWord=false;
-            for (Word* word : words)
+            for (Word* word : wordsForLine)
             {
                 int word_tlx, word_tly, word_brx, word_bry;
                 bool isDone;
@@ -190,6 +190,7 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
         //Addline
         //I'm assumming most lines are added prior with a preprocessing step
         page->addLine(s,newExemplars);
+        recreateDatasetVectors(true);
     }
 }
 
@@ -404,8 +405,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
     float max=-999999;
     for (string word : match)
     {
-        Mat im;
-        getWordImg(im);
+        Mat im=getWordImg();
         float score = spotter->score(word,im);
         scores.insert(make_pair(score,word));
         if (score<min)
@@ -503,9 +503,15 @@ string Knowledge::Word::generateQuery()
     return ret;
 }
 
-void Knowledge::Word::getWordImg(cv::Mat& wordImg, cv::Mat& b)
+const cv::Mat Knowledge::Word::getWordImg() const
 {
-    wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+    return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
+}
+const cv::Mat Knowledge::Word::getImg() const
+{
+    pthread_rwlock_rdlock(&lock);
+    return getWordImg();
+    pthread_rwlock_unlock(&lock);
 }
 void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 {
@@ -513,7 +519,7 @@ void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
     int blockSize = (1+bry-tly)/2;
     if (blockSize%2==0)
         blockSize++;
-    getWordImg(wordImg);
+    wordImg = getWordImg();
     //wordImg = (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
     if (wordImg.type()==CV_8UC3)
         cv::cvtColor(wordImg,wordImg,CV_RGB2GRAY);
@@ -1100,15 +1106,20 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
 
 void Knowledge::Word::getBaselines(int* top, int* bot)
 {
+    pthread_rwlock_rdlock(&lock);
     if (topBaseline<0 || botBaseline<0)
     {
+        pthread_rwlock_unlock(&lock);
+        pthread_rwlock_wrlock(&lock);
         
         cv::Mat wordImg, b;
         getWordImgAndBin(wordImg,b);
         findBaselines(wordImg,b);
     }
+    
     *top=topBaseline;
     *bot=botBaseline;
+    pthread_rwlock_unlock(&lock);
 }
 
 void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
@@ -1749,8 +1760,8 @@ void Knowledge::Corpus::show()
         for (Line* line : lines)
         {
             int line_ty, line_by;
-            vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
-            for (Word* word : words)
+            vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : wordsForLine)
             {
                 int tlx,tly,brx,bry;
                 bool done;
@@ -1820,8 +1831,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
         for (Line* line : lines)
         {
             int line_ty, line_by;
-            vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
-            for (Word* word : words)
+            vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : wordsForLine)
             {
                 int tlx,tly,brx,bry;
                 bool done;
@@ -1878,6 +1889,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     //std::getline(in,line);
     //float initSplit=0;//stof(line);//-0.52284769;
     
+    pthread_rwlock_wrlock(&pagesLock);
     while(std::getline(in,line))
     {
         if (line.length()==0)
@@ -1970,6 +1982,8 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     cout<<"avg char height: "<<heightAvg<<endl;
     cout<<"avg char width : "<<averageCharWidth<<endl;
 #endif
+    recreateDatasetVectors(false);
+    pthread_rwlock_unlock(&pagesLock);
 
     in.close();
 }
@@ -1987,43 +2001,28 @@ TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should k
     TranscribeBatch* ret=manQueue.dequeue(maxWidth);
     if (ret==NULL)
     {
-        pthread_rwlock_rdlock(&pagesLock);
-        for (auto p : pages)
+
+        for (Word* word : _words)
         {
-            Page* page = p.second;
-            vector<Line*> lines = page->lines();
-            for (Line* line : lines)
+            int tlx,tly,brx,bry;
+            bool done;
+            bool sent;
+            word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
+            //cout << "at word, "<<done<<", "<<sent<<endl;
+            if (!done && !sent)
             {
-                int line_ty, line_by;
-                vector<Word*> words = line->wordsAndBounds(&line_ty,&line_by);
-                for (Word* word : words)
-                {
-                    int tlx,tly,brx,bry;
-                    bool done;
-                    bool sent;
-                    word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
-                    //cout << "at word, "<<done<<", "<<sent<<endl;
-                    if (!done && !sent)
-                    {
-                        vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
-                        if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
-                            prunedDictionary.clear();
-                        ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottingsPointer(),tlx,tly,brx,bry);
-                        word->sent(ret->getId());
-                        //enqueue and dequeue to keep the queue's state good.
-                        vector<TranscribeBatch*> theBatch = {ret};
-                        manQueue.enqueueAll(theBatch);
-                        ret=manQueue.dequeue(maxWidth);
-                        break;
-                    }
-                }
-                if (ret!=NULL)
-                    break;
-            }
-            if (ret!=NULL)
+                vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
+                if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
+                    prunedDictionary.clear();
+                ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottingsPointer(),tlx,tly,brx,bry);
+                word->sent(ret->getId());
+                //enqueue and dequeue to keep the queue's state good.
+                vector<TranscribeBatch*> theBatch = {ret};
+                manQueue.enqueueAll(theBatch);
+                ret=manQueue.dequeue(maxWidth);
                 break;
+            }
         }
-        pthread_rwlock_unlock(&pagesLock);
     }
     return ret;
 }
@@ -2035,4 +2034,51 @@ void Knowledge::Corpus::checkIncomplete()
 vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
     return manQueue.feedback(id,transcription,toRemoveExemplars);
+}
+
+const vector<string>& Knowledge::Corpus::labels() const
+{
+    return _gt;
+}
+int Knowledge::Corpus::size() const;
+{
+    return _gt.size();
+}
+const Mat Knowledge::Corpus::image(unsigned int i) const;
+{
+    return _words[i].getImg();
+}
+const Word* Knowledge::Corpus::getWord(unsigned int i) const;
+{
+    return _words[i];
+}
+
+void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
+{
+    _words.clear();
+    _gt.clear();
+    if (lockPages)
+        pthread_rwlock_rdlock(&pagesLock);
+    for (auto p : pages)
+    {
+        Page* page = p.second;
+        vector<Line*> lines = page->lines();
+        for (Line* line : lines)
+        {
+            int line_ty, line_by;
+            vector<Word*> wordsInLine = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : wordsInLine)
+            {
+                _words.push_back(word);
+                _gt.push_back(word->getGT());
+            }
+            if (ret!=NULL)
+                break;
+        }
+        if (ret!=NULL)
+            break;
+    }
+    if (lockPages)
+        pthread_rwlock_unlock(&pagesLock);
+    
 }

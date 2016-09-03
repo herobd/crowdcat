@@ -1,6 +1,6 @@
 #include "Spotter.h"
 class Spotter;
-Spotter::Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir)
+Spotter::Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelPrefix)
 {
     this->masterQueue=masterQueue;
     this->corpus=corpus;
@@ -102,6 +102,17 @@ void Spotter::addQueries(vector<Spotting>& exemplars)
             enqueue(query);
             sem_post(&semLock);
         }
+    }
+    mutLock.unlock();
+}
+void Spotter::addQueries(vector<string>& ngrams)
+{
+    mutLock.lock();
+    for (string ngram : ngrams)
+    {
+        SpottingQuery* query = new SpottingQuery(ngram);
+        enqueue(query);
+        sem_post(&semLock);
     }
     mutLock.unlock();
 }

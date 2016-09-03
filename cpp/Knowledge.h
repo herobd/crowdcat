@@ -100,7 +100,7 @@ private:
     SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
     void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
     void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);
-    void getWordImg(cv::Mat& wordImg);
+    cv::Mat getWordImg() const;
     cv::Point wordCord(int r, int c)
     {
         return cv::Point(c-tlx,r-tly);
@@ -185,6 +185,8 @@ public:
     vector<string> getRestrictedLexicon(int max);
 
     const cv::Mat* getPage() {return pagePnt;}
+    int getPageId() {return pageId;}
+    cv::Mat getImg() const;
     string getTranscription() {pthread_rwlock_rdlock(&lock); if (done) return transcription; else return "[ERROR]"; pthread_rwlock_unlock(&lock);}
 };
 
@@ -332,7 +334,7 @@ public:
 
 
 
-class Corpus
+class Corpus : public Dataset
 {
 private:
     pthread_rwlock_t pagesLock;
@@ -346,6 +348,11 @@ private:
     TranscribeBatchQueue manQueue;
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
+
+    vector<string> _gt;
+    vector<Word*> _words;
+    bool changed;
+    void recreateDatasetVectors(bool lockPages);
 
 public:
     Corpus();
@@ -373,6 +380,11 @@ public:
     void checkIncomplete();
     void show();
     void showProgress(int height, int width);
+
+    const vector<string>& labels() const;
+    int size() const;
+    const Mat image(unsigned int i) const;
+    const Word* getWord(unsigned int i) const;
 };
 
 }

@@ -15,6 +15,7 @@ class SpottingQuery
     public:
     SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram), img(e->ngramImg()) {}
     SpottingQuery(const Spotting& e) : SpottingQuery(&e) {}
+    SpottingQuery(string ngram) : id(0), ngram(ngram) {}
     string getNgram() {return ngram;}
     unsigned long getId() {return id;}
     cv::Mat getImg() {return img;}
@@ -28,7 +29,7 @@ class SpottingQuery
 class Spotter
 {
     public:
-    Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelDir);
+    Spotter(MasterQueue* masterQueue, const Knowledge::Corpus* corpus, string modelPrefix;
     ~Spotter();
     void run(int numThreads);
     void stop();
@@ -36,6 +37,7 @@ class Spotter
     void addQueries(vector<SpottingExemplar*>& exemplars);
     void addQueries(vector<Spotting*>& exemplars);
     void addQueries(vector<Spotting>& exemplars);
+    void addQueries(vector<string>& ngrams);
     void removeQueries(vector<pair<unsigned long,string> >* toRemove);
 
     virtual vector<Spotting>* runQuery(SpottingQuery* query)=0;
