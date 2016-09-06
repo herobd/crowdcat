@@ -20,7 +20,8 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     Lexicon::instance()->readIn(lexiconFile);
     corpus = new Knowledge::Corpus();
     corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
-    spotter = new FacadeSpotter(masterQueue,corpus,"model");
+    corpus->loadSpotter("model/evalGW");
+    spottingQueue = new SpottingQueue(masterQueue,corpus);
     
     incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
@@ -32,7 +33,7 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     //masterQueue->updateSpottingResults(new vector<Spotting>(init));
     Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
     vector<Spotting* > init = {er1};
-    spotter->addQueries(init);
+    spottingQueue->addQueries(init);
 #else
 //#ifdef TEST_MODE
     /*int pageId=2700270;
@@ -65,11 +66,11 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
     Spotting* ha1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ha",0);//[1]
     Spotting* as1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"as",0);//[1]*/
     /*vector<Spotting* > init_first = {th1,at1,or1,er1};
-    spotter->addQueries(init_first);
+    spottingQueue->addQueries(init_first);
     vector<Spotting* > init = {th1,he1,in1,er1,an1,re1,on1,at1,en1,nd1,ti1,es1,or1,te1,of1,ed1,is1,it1,al1,ar1,st1,to1,nt1,ng1,se1,ha1,as1};
-    spotter->addQueries(init);*/
+    spottingQueue->addQueries(init);*/
     vector<string> top100Bigrams={"th","he","in","er","an","re","on","at","en","nd","ti","es","or","te","of","ed","is","it","al","ar","st","to","nt","ng","se","ha","as","ou","io","le","ve","co","me","de","hi","ri","ro","ic","ne","ea","ra","ce","li","ch","ll","be","ma","si","om","ur","ca","el","ta","la","ns","di","fo","ho","pe","ec","pr","no","ct","us","ac","ot","il","tr","ly","nc","et","ut","ss","so","rs","un","lo","wa","ge","ie","wh","ee","wi","em","ad","ol","rt","po","we","na","ul","ni","ts","mo","ow","pa","im","mi","ai","sh"};
-    spotter->addQueries(top100Bigrams);
+    spottingQueue->addQueries(top100Bigrams);
 
 //#endif
 #endif
@@ -183,8 +184,8 @@ void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> l
             //if (toRemoveBatches.size()>0)
             //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
             toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
-            spotter->removeQueries(&toRemoveExemplars);
-            spotter->addQueries(*toAdd);
+            spottingQueue->removeQueries(&toRemoveExemplars);
+            spottingQueue->addQueries(*toAdd);
             delete toAdd;
         }
         /*else //We presume that this set has been finished
@@ -222,7 +223,7 @@ void CATTSS::updateTranscription(string id, string transcription, bool manual)
         {
             masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
         }
-        spotter->removeQueries(&toRemoveExemplars);
+        spottingQueue->removeQueries(&toRemoveExemplars);
 
 #ifndef TEST_MODE
     }
@@ -248,8 +249,8 @@ void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
         vector<pair<unsigned long,string> > toRemoveExemplars;        
         vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(batchId), labels, &toRemoveExemplars);
 
-        spotter->removeQueries(&toRemoveExemplars);
-        spotter->addQueries(toSpot);
+        spottingQueue->removeQueries(&toRemoveExemplars);
+        spottingQueue->addQueries(toSpot);
 #ifndef TEST_MODE
     }
     catch (exception& e)
@@ -283,13 +284,13 @@ void CATTSS::misc(string task)
         }
         else if (task.compare("stopSpotting")==0)
         {
-            spotter->stop();
+            spottingQueue->stop();
         }
         else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));
             if (num>0)
-                spotter->run(num);
+                spottingQueue->run(num);
             else
                 cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
         }

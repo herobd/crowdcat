@@ -2,10 +2,9 @@
 #define CATTSS_H
 
 #include "MasterQueue.h"
-#include "Spotter.h"
-#include "spotting.h"
-#include "FacadeSpotter.h"
 #include "Knowledge.h"
+#include "SpottingQueue.h"
+#include "spotting.h"
 #include "Lexicon.h"
 #include "BatchWraper.h"
 #include "opencv2/core/core.hpp"
@@ -16,7 +15,7 @@ class CATTSS
 {
     private:
     MasterQueue* masterQueue;
-    Spotter* spotter;
+    SpottingQueue* spottingQueue;
     Knowledge::Corpus* corpus;
     thread* incompleteChecker;
 
@@ -25,6 +24,9 @@ class CATTSS
     ~CATTSS()
     {
         delete incompleteChecker;
+        delete masterQueue;
+        delete corpus;
+        delete spottingQueue;
     } 
 
     BatchWraper* getBatch(int num, int width, int color, string prevNgram);

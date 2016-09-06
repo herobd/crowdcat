@@ -350,12 +350,12 @@ bool SpottingResults::EMThresholds()
         //we initailize our split with Otsu, as we are assuming two distributions.
         //make histogram
         vector<int> histogram(256);
-        int total = 0;//instancesById.size();
+        //int total = 0;//instancesById.size();
         for (auto p : instancesById)
         {
             if (p.second.score==p.second.score)
             {
-                total++;
+                //total++;
                 unsigned long id = p.first;
                 int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
                 if (bin<0) bin=0;
@@ -365,7 +365,7 @@ bool SpottingResults::EMThresholds()
         }
         
         
-        double thresh = otsu(historgram);//( threshold1 + threshold2 ) / 2.0;
+        double thresh = GlobalK::otsuThresh(histogram);//( threshold1 + threshold2 ) / 2.0;
         pullFromScore = (thresh/256)*(maxScore-minScore)+minScore;
 #ifdef TEST_MODE_LONG
         if (ngram.compare("te")==0)

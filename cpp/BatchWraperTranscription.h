@@ -10,7 +10,6 @@
 #include "batches.h"
 #include "spotting.h"
 #include "BatchWraper.h"
-#include "Knowledge.h"
 
 using namespace Nan;
 using namespace std;

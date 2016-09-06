@@ -10,7 +10,6 @@
 #include <iostream>
 
 #include "Global.h"
-#include "Knowledge.h"
 #include "spotting.h"
 #include "batches.h"
 

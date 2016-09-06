@@ -2,13 +2,17 @@
 
 int Knowledge::Page::_id=0;
 
-Knowledge::Corpus::Corpus()
+Knowledge::Corpus::Corpus() 
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
     averageCharWidth=30;
     countCharWidth=0;
     threshScoring= 1.0;
+}
+void Knowledge::Corpus::loadSpotter(string modelPrefix)
+{
+    spotter = new AlmazanSpotter(this,modelPrefix);
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
@@ -405,7 +409,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
     float max=-999999;
     for (string word : match)
     {
-        Mat im=getWordImg();
+        const Mat im=getWordImg();
         float score = spotter->score(word,im);
         scores.insert(make_pair(score,word));
         if (score<min)
@@ -419,7 +423,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
         int bin = 100*(p.first-min)/(max-min);
         histogram[bin]++;
     }
-    float thresh = (otsu(histogram)/100)*(max-min)+min;
+    float thresh = (GlobalK::otsuThresh(histogram)/100)*(max-min)+min;
 
     multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
     //for (string m : match)
@@ -507,7 +511,7 @@ const cv::Mat Knowledge::Word::getWordImg() const
 {
     return (*pagePnt)(cv::Rect(tlx,tly,brx-tlx+1,bry-tly+1));
 }
-const cv::Mat Knowledge::Word::getImg() const
+const cv::Mat Knowledge::Word::getImg()// const
 {
     pthread_rwlock_rdlock(&lock);
     return getWordImg();
@@ -751,7 +755,7 @@ vector<Spotting*> Knowledge::Word::harvest()
     }
 
     
-    //sparse otsu
+    //sparse GlobalK::otsuThresh
     double sum =0;
     for (int i = 1; i <= maxV; ++i) {
         if (hist.find(i)!=hist.end())
@@ -1279,7 +1283,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
 int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt)
 {
     int retX;
-    cv::Mat b;// = otsu(*t.pagePnt);
+    cv::Mat b;// = GlobalK::otsuThresh(*t.pagePnt);
     int blockSize = max((rxBound-lxBound)/2,(by-ty)/2);
     if (blockSize%2==0)
         blockSize++;
@@ -1675,7 +1679,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
     //Set it to bounding box of connected component which intersects the given spottings  
     
     //int centerY = s.tly+(s.bry-s.tly)/2.0;
-    cv::Mat b;// = otsu(*t.pagePnt);
+    cv::Mat b;// = GlobalK::otsuThresh(*t.pagePnt);
     int blockSize = max(s.brx-s.tlx,s.bry-s.tly);
     if (blockSize%2==0)
         blockSize++;
@@ -1922,7 +1926,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
                 pthread_rwlock_wrlock(&pagesLock);
                 writing=true;
             }*/
-            page = new Page(imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth);
+            page = new Page(spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth);
             pages[pageId] = page;
         }
         else
@@ -2014,7 +2018,7 @@ TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should k
                 vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
                 if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
                     prunedDictionary.clear();
-                ret = new TranscribeBatch(word,prunedDictionary,page->getImg(),word->getSpottingsPointer(),tlx,tly,brx,bry);
+                ret = new TranscribeBatch(word,prunedDictionary,word->getPage(),word->getSpottingsPointer(),tlx,tly,brx,bry);
                 word->sent(ret->getId());
                 //enqueue and dequeue to keep the queue's state good.
                 vector<TranscribeBatch*> theBatch = {ret};
@@ -2040,15 +2044,15 @@ const vector<string>& Knowledge::Corpus::labels() const
 {
     return _gt;
 }
-int Knowledge::Corpus::size() const;
+int Knowledge::Corpus::size() const
 {
     return _gt.size();
 }
-const Mat Knowledge::Corpus::image(unsigned int i) const;
+const Mat Knowledge::Corpus::image(unsigned int i) const
 {
-    return _words[i].getImg();
+    return _wordImgs[i];
 }
-const Word* Knowledge::Corpus::getWord(unsigned int i) const;
+Knowledge::Word* Knowledge::Corpus::getWord(unsigned int i) const
 {
     return _words[i];
 }
@@ -2056,6 +2060,7 @@ const Word* Knowledge::Corpus::getWord(unsigned int i) const;
 void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
 {
     _words.clear();
+    _wordImgs.clear();
     _gt.clear();
     if (lockPages)
         pthread_rwlock_rdlock(&pagesLock);
@@ -2070,15 +2075,27 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
             for (Word* word : wordsInLine)
             {
                 _words.push_back(word);
+                _wordImgs.push_back(word->getImg());
                 _gt.push_back(word->getGT());
             }
-            if (ret!=NULL)
-                break;
         }
-        if (ret!=NULL)
-            break;
     }
     if (lockPages)
         pthread_rwlock_unlock(&pagesLock);
     
+}
+
+vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
+{
+    vector<SpottingResult> res = spotter->runQuery(query);
+    vector<Spotting>* ret = new vector<Spotting>(res.size());
+    for (int i=0; i<res.size(); i++)
+    {
+        Knowledge::Word* w = getWord(res[i].imIdx);
+        int tlx, tly, brx, bry;
+        bool done;
+        w->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+        ret->at(i) = Spotting(res[i].startX, tly, res[i].endX, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score);
+    }
+    return ret;
 }

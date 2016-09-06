@@ -12,7 +12,6 @@
 #include <atomic>
 #include <iostream>
 
-
 using namespace std;
 
 #define FUZZY 12
@@ -41,6 +40,22 @@ public:
         tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank)
     {
         id = s.id;
+    }
+    Spotting& operator=(const Spotting& other)
+    {
+        //swap(other);
+        tlx = other.tlx;
+        tly = other.tly;
+        brx = other.brx;
+        bry = other.bry;
+        pageId = other.pageId;
+        pagePnt = other.pagePnt;
+        ngram = other.ngram;
+        score = other.score;
+        type = other.type;
+        ngramRank = other.ngramRank;
+
+        return *this;
     }
     virtual ~Spotting() {}
     

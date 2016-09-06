@@ -32,11 +32,11 @@ NAN_METHOD(getNextBatch) {
     int width = To<int>(info[0]).FromJust();
     int color = To<int>(info[1]).FromJust();
     //string prevNgram = To<string>(info[2]).FromJust();
-    //String::Utf8Value str(args[0]->ToString());
+    //v8::String::Utf8Value str(args[0]->ToString());
     string prevNgram;
     if (info[2]->IsString())
     {
-        String::Utf8Value str(info[2]->ToString());
+        v8::String::Utf8Value str(info[2]->ToString());
         prevNgram = string(*str);
         
     }
@@ -53,7 +53,7 @@ NAN_METHOD(getNextBatch) {
 NAN_METHOD(spottingBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
-    String::Utf8Value resultsIdNAN(info[0]);
+    v8::String::Utf8Value resultsIdNAN(info[0]);
     string resultsId = string(*resultsIdNAN);
     
     vector<string> ids;
@@ -63,7 +63,7 @@ NAN_METHOD(spottingBatchDone) {
       Handle<Array> jsArray = Handle<Array>::Cast(info[1]);
       for (unsigned int i = 0; i < jsArray->Length(); i++) {
         val = jsArray->Get(i);
-        ids.push_back(string(*String::Utf8Value(val)));
+        ids.push_back(string(*v8::String::Utf8Value(val)));
         //Nan::Set(arr, i, val);
       }
     }
@@ -84,7 +84,7 @@ NAN_METHOD(spottingBatchDone) {
 NAN_METHOD(newExemplarsBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
-    String::Utf8Value resultsIdNAN(info[0]);
+    v8::String::Utf8Value resultsIdNAN(info[0]);
     string resultsId = string(*resultsIdNAN);
     
     vector<int> labels;
@@ -114,9 +114,9 @@ NAN_METHOD(getNextTranscriptionBatch) {
 NAN_METHOD(transcriptionBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
-    String::Utf8Value resultsIdNAN(info[0]);
+    v8::String::Utf8Value resultsIdNAN(info[0]);
     string id = string(*resultsIdNAN);
-    String::Utf8Value resultNAN(info[1]);
+    v8::String::Utf8Value resultNAN(info[1]);
     string transcription = string(*resultNAN);
     
     Callback *callback = new Callback(info[2].As<Function>());
@@ -126,9 +126,9 @@ NAN_METHOD(transcriptionBatchDone) {
 NAN_METHOD(manualBatchDone) {
     //string batchId = To<string>(info[0]).FromJust();
     //string resultsId = To<string>(info[0]).FromJust();
-    String::Utf8Value resultsIdNAN(info[0]);
+    v8::String::Utf8Value resultsIdNAN(info[0]);
     string id = string(*resultsIdNAN);
-    String::Utf8Value resultNAN(info[1]);
+    v8::String::Utf8Value resultNAN(info[1]);
     string transcription = string(*resultNAN);
     
     Callback *callback = new Callback(info[2].As<Function>());
@@ -174,7 +174,7 @@ NAN_METHOD(getNextTestBatch) {
 
 NAN_METHOD(spottingTestBatchDone) {
     
-    String::Utf8Value resultsIdNAN(info[0]);
+    v8::String::Utf8Value resultsIdNAN(info[0]);
     string resultsId = string(*resultsIdNAN);
     
     vector<string> ids;
@@ -184,7 +184,7 @@ NAN_METHOD(spottingTestBatchDone) {
       Handle<Array> jsArray = Handle<Array>::Cast(info[1]);
       for (unsigned int i = 0; i < jsArray->Length(); i++) {
         val = jsArray->Get(i);
-        ids.push_back(string(*String::Utf8Value(val)));
+        ids.push_back(string(*v8::String::Utf8Value(val)));
       }
     }
     
@@ -225,43 +225,43 @@ NAN_MODULE_INIT(Init) {
 #endif
 #endif
 
-    Nan::Set(target, New<String>("getNextBatch").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("getNextBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("spottingBatchDone").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("spottingBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(spottingBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("newExemplarsBatchDone").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("newExemplarsBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(newExemplarsBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("getNextTranscriptionBatch").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("getNextTranscriptionBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextTranscriptionBatch)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("transcriptionBatchDone").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("transcriptionBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(transcriptionBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("manualBatchDone").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("manualBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(manualBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("showCorpus").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
-    Nan::Set(target, New<String>("showProgress").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 
-    Nan::Set(target, New<String>("startSpotting").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("startSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());
-    Nan::Set(target, New<String>("stopSpotting").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("stopSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(stopSpotting)).ToLocalChecked());
     
     testQueue = new TestQueue();
     
-    Nan::Set(target, New<String>("getNextTestBatch").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("getNextTestBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextTestBatch)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("spottingTestBatchDone").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("spottingTestBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(spottingTestBatchDone)).ToLocalChecked());
     
-    Nan::Set(target, New<String>("clearTestUsers").ToLocalChecked(),
+    Nan::Set(target, New<v8::String>("clearTestUsers").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(clearTestUsers)).ToLocalChecked());
 }
 

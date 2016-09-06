@@ -17,8 +17,6 @@
                     "Lexicon.h", "Lexicon.cpp", 
                     "MiscWorker.cpp", 
                     "CATTSS.h", "CATTSS.cpp", 
-                    "Spotter.h", "Spotter.cpp",
-                    "FacadeSpotter.h", "FacadeSpotter.cpp", 
                     "Global.h", "Global.cpp", 
                     "Lexicon.h", "Lexicon.cpp", 
                     "NewExemplarsBatchQueue.h", "NewExemplarsBatchQueue.cpp", 
@@ -28,15 +26,19 @@
                     "batches.h", "batches.cpp", 
                     "spotting.h", 
                     "WordBackPointer.h",
-                    "AlmazanSpotter.h", "AlmazanSpotter.cpp"
+                    "SpottingQuery.h"
+                    "SpottingQueue.h", "SpottingQueue.cpp",
+                    "Spotter.h", "AlmazanSpotter.h", "AlmazanSpotter.cpp",
+                    "AlmazanDataset.h", "AlmazanDataset.cpp"
                 ],
       "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DTEST_MODE"],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/intel_index/EmbAttSpotter"],
       "libraries": [
-            "-lopencv_highgui", "-lb64", "-lpthread", "-lopencv_imgproc", "-fopenmp, 
-            "-L/home/brian/intel_index/EmbAttSpotter", "-lembattspotter"
+            "-lopencv_highgui", "-lb64", "-lpthread", "-lopencv_imgproc", "-fopenmp", 
+            "-L/home/brian/intel_index/EmbAttSpotter", "-lembattspotter",
+            "-L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/", "-l:libvl.so"
           ],
       "conditions": [
         [ 'OS=="mac"', {

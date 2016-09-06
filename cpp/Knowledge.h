@@ -22,6 +22,9 @@
 #include "batches.h"
 #include "WordBackPointer.h"
 #include "TranscribeBatchQueue.h"
+#include "dataset.h"
+#include "Spotter.h"
+#include "AlmazanSpotter.h"
 
 using namespace std;
 
@@ -75,6 +78,7 @@ private:
     string gt;
     Meta meta;
     const cv::Mat* pagePnt;
+    const Spotter* spotter;
     float* averageCharWidth;
     int* countCharWidth;
     int pageId;
@@ -100,7 +104,7 @@ private:
     SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
     void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
     void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);
-    cv::Mat getWordImg() const;
+    const cv::Mat getWordImg() const;
     cv::Point wordCord(int r, int c)
     {
         return cv::Point(c-tlx,r-tly);
@@ -116,16 +120,16 @@ private:
     void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
 
 public:
-    Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
-    {
-        pthread_rwlock_init(&lock,NULL);
-    }    
+    //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    //{
+    //    pthread_rwlock_init(&lock,NULL);
+    //}    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* spotter, float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -186,8 +190,9 @@ public:
 
     const cv::Mat* getPage() {return pagePnt;}
     int getPageId() {return pageId;}
-    cv::Mat getImg() const;
+    const cv::Mat getImg();// const;
     string getTranscription() {pthread_rwlock_rdlock(&lock); if (done) return transcription; else return "[ERROR]"; pthread_rwlock_unlock(&lock);}
+    string getGT() {return gt;}
 };
 
 class Line
@@ -197,16 +202,17 @@ private:
     vector<Word*> _words;
     int ty, by; // top y and bottom y
     cv::Mat* pagePnt;
+    const Spotter* spotter;
     float* averageCharWidth;
     int* countCharWidth;
     int pageId;
 public:
-    Line() : ty(-1), by(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1)
-    {
-        pthread_rwlock_init(&lock,NULL);
-    }
+    //Line() : ty(-1), by(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1)
+    //{
+    //    pthread_rwlock_init(&lock,NULL);
+    //}
     
-    Line(int ty, int by, cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
+    Line(int ty, int by, cv::Mat* pagePnt, const Spotter* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
     {
         pthread_rwlock_init(&lock,NULL);
     }
@@ -234,7 +240,7 @@ public:
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,spotter,averageCharWidth,countCharWidth,pageId);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -248,7 +254,7 @@ public:
             ty=tly;
         if (by<bry)
             by=bry;
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId,gt);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,spotter,averageCharWidth,countCharWidth,pageId,gt);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -263,22 +269,23 @@ private:
     pthread_rwlock_t lock;
     vector<Line*> _lines;
     cv::Mat pageImg; //I am owner of this Mat
+    const Spotter* spotter;
     float* averageCharWidth;
     int* countCharWidth;
     static int _id;
     int id;
 public:
-    Page() : averageCharWidth(NULL), countCharWidth(NULL)
+    //Page() : averageCharWidth(NULL), countCharWidth(NULL)
+    //{
+    //    pthread_rwlock_init(&lock,NULL);
+    //    id = ++_id;
+    //}
+    Page(cv::Mat pageImg, const Spotter* spotter, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
     {
         pthread_rwlock_init(&lock,NULL);
         id = ++_id;
     }
-    Page(cv::Mat pageImg, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
-    {
-        pthread_rwlock_init(&lock,NULL);
-        id = ++_id;
-    }
-    Page(string imageLoc, float* averageCharWidth, int* countCharWidth) : averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
+    Page( const Spotter* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         id = ++_id;
@@ -302,7 +309,7 @@ public:
     
     TranscribeBatch* addLine(Spotting s,vector<Spotting*>* newExemplars)
     {
-        Line* newLine = new Line(s.tly, s.bry, &pageImg, averageCharWidth, countCharWidth, id);
+        Line* newLine = new Line(s.tly, s.bry, &pageImg, spotter, averageCharWidth, countCharWidth, id);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -314,7 +321,7 @@ public:
 
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
-        Line* newLine = new Line(tly, bry, &pageImg, averageCharWidth, countCharWidth, id);
+        Line* newLine = new Line(tly, bry, &pageImg, spotter, averageCharWidth, countCharWidth, id);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -345,12 +352,14 @@ private:
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
+    Spotter* spotter;
     TranscribeBatchQueue manQueue;
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 
     vector<string> _gt;
     vector<Word*> _words;
+    vector<Mat> _wordImgs;
     bool changed;
     void recreateDatasetVectors(bool lockPages);
 
@@ -362,7 +371,9 @@ public:
         pthread_rwlock_destroy(&spottingsMapLock);
         for (auto p : pages)
             delete p.second;
+        delete spotter;
     }
+    void loadSpotter(string modelPrefix);
     vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
     vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
@@ -373,18 +384,21 @@ public:
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 
     {
-        Page* p = new Page(imagePath,&averageCharWidth,&countCharWidth);
+        Page* p = new Page(spotter, imagePath,&averageCharWidth,&countCharWidth);
         pages[p->getId()]=p;
         return p->getId();
     }
+
+    vector<Spotting>* runQuery(SpottingQuery* query);// const;
+
     void checkIncomplete();
     void show();
     void showProgress(int height, int width);
 
     const vector<string>& labels() const;
     int size() const;
-    const Mat image(unsigned int i) const;
-    const Word* getWord(unsigned int i) const;
+    const cv::Mat image(unsigned int i) const;
+    Word* getWord(unsigned int i) const;
 };
 
 }
