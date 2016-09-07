@@ -235,6 +235,9 @@ void Knowledge::Word::reAddSpottings(unsigned long batchId, vector<Spotting*>* n
 vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
     vector<Spotting*> ret;
+#ifdef TEST_MODE
+        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") result"<<endl;
+#endif
     pthread_rwlock_wrlock(&lock);
     if (resend)
     {
@@ -258,12 +261,18 @@ vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId
         }
     }
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") result"<<endl;
+#endif
     return ret;
     //Harvested ngrams should be approved before spotting with them
 }
 
 void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
+#ifdef TEST_MODE
+        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
+#endif
     pthread_rwlock_wrlock(&lock);
     if (resend)
     {
@@ -287,10 +296,16 @@ void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<uns
     toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
     harvested.clear();
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
+#endif
 }
 
 TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* newExemplars, bool findBatch)
 {
+#ifdef TEST_MODE
+        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") addSpotting"<<endl;
+#endif
     pthread_rwlock_wrlock(&lock);
     //decide if it should be merge with another
     int width = s.brx-s.tlx;
@@ -319,6 +334,9 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
     if (findBatch)
         ret=queryForBatch(newExemplars);//This has an id matching the sent batch (if it exists)
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") addSpotting"<<endl;
+#endif
     return ret;
 }
 
@@ -364,14 +382,23 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
 }
 vector<string> Knowledge::Word::getRestrictedLexicon(int max)
 {
+#ifdef TEST_MODE
+        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getRestrictedLexicon"<<endl;
+#endif
     pthread_rwlock_rdlock(&lock);
     string newQuery = generateQuery();
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getRestrictedLexicon"<<endl;
+#endif
     return Lexicon::instance()->search(query,meta,max);
 }
 
 TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
+#ifdef TEST_MODE
+        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") removeSpotting"<<endl;
+#endif
     pthread_rwlock_wrlock(&lock);
     if (resend)
     {
@@ -398,6 +425,9 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     if (spottings.size()>0)
         ret=queryForBatch(newExemplars);
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") removeSpotting"<<endl;
+#endif
     return ret;
 }
 
@@ -410,7 +440,8 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
     for (string word : match)
     {
         const Mat im=getWordImg();
-        float score = spotter->score(word,im);
+        assert(*spotter != NULL);
+        float score = (*spotter)->score(word,im);
         scores.insert(make_pair(score,word));
         if (score<min)
             min=score;
@@ -424,11 +455,16 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, 
         histogram[bin]++;
     }
     float thresh = (GlobalK::otsuThresh(histogram)/100)*(max-min)+min;
-
-    multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
-    //for (string m : match)
-    //    ret.insert(make_pair(0.1,m));
-    return ret;
+    
+    if (match.size()>LOW_COUNT_PRUNE_THRESH || min+(max-min)*LOW_COUNT_SCORE_THRESH<thresh)
+    {
+        multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
+        //for (string m : match)
+        //    ret.insert(make_pair(0.1,m));
+        return ret;
+    }
+    else
+        return scores;
 }
 
 /*TranscribeBatch* Knowledge::Word::createBatch(multimap<float,string> scored)
@@ -513,9 +549,16 @@ const cv::Mat Knowledge::Word::getWordImg() const
 }
 const cv::Mat Knowledge::Word::getImg()// const
 {
+#ifdef TEST_MODE
+        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getImg"<<endl;
+#endif
     pthread_rwlock_rdlock(&lock);
-    return getWordImg();
+    const cv::Mat ret = getWordImg();
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getImg"<<endl;
+#endif
+    return ret;
 }
 void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 {
@@ -1110,10 +1153,19 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
 
 void Knowledge::Word::getBaselines(int* top, int* bot)
 {
+#ifdef TEST_MODE
+        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getBaselines"<<endl;
+#endif
     pthread_rwlock_rdlock(&lock);
     if (topBaseline<0 || botBaseline<0)
     {
         pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getBaselines"<<endl;
+#endif
+#ifdef TEST_MODE
+        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") getBaselines"<<endl;
+#endif
         pthread_rwlock_wrlock(&lock);
         
         cv::Mat wordImg, b;
@@ -1124,6 +1176,9 @@ void Knowledge::Word::getBaselines(int* top, int* bot)
     *top=topBaseline;
     *bot=botBaseline;
     pthread_rwlock_unlock(&lock);
+#ifdef TEST_MODE
+        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getBaselines"<<endl;
+#endif
 }
 
 void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
@@ -1926,8 +1981,8 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
                 pthread_rwlock_wrlock(&pagesLock);
                 writing=true;
             }*/
-            page = new Page(spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth);
-            pages[pageId] = page;
+            page = new Page(&spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
+            pages[page->getId()] = page;
         }
         else
         {
@@ -2095,7 +2150,8 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
         int tlx, tly, brx, bry;
         bool done;
         w->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
-        ret->at(i) = Spotting(res[i].startX, tly, res[i].endX, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score);
+        ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score);
+        assert(i==0 || ret->at(i).id != ret->at(i-1).id);
     }
     return ret;
 }

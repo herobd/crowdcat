@@ -54,6 +54,7 @@ public:
         score = other.score;
         type = other.type;
         ngramRank = other.ngramRank;
+        id=other.id;
 
         return *this;
     }
@@ -65,11 +66,11 @@ public:
     float score;
     unsigned long id;
     unsigned char type;
-    virtual cv::Mat img()
+    virtual const cv::Mat img() const
     {
         return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
-    virtual cv::Mat ngramImg() const
+    virtual const cv::Mat ngramImg() const
     {
         return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
@@ -174,13 +175,20 @@ public:
         image=s.image;
         ngramImage=s.ngramImage;
     }
+    SpottingImage& operator=(const SpottingImage& other)
+    {
+        Spotting::operator=(other);
+        image=other.image;
+        ngramImage=other.ngramImage;
+        return *this;
+    }
     virtual ~SpottingImage() {}
     
-    virtual cv::Mat img()
+    virtual const cv::Mat img() const
     {
         return image;
     }
-    cv::Mat ngramImg() const
+    const cv::Mat ngramImg() const
     {
         assert(ngramImage.cols>0);
         return ngramImage; //(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
@@ -207,9 +215,21 @@ public:
     {
         type=SPOTTING_TYPE_EXEMPLAR;
     }
+    SpottingExemplar& operator=(const SpottingExemplar& other)
+    {
+        Spotting::operator=(other);
+        ngramImage=other.ngramImg();
+        return *this;
+    }
+    SpottingExemplar& operator=(const SpottingImage& other)
+    {
+        Spotting::operator=(other);
+        ngramImage=other.ngramImg();
+        return *this;
+    }
     virtual ~SpottingExemplar() {}
 
-    cv::Mat ngramImg() const
+    const cv::Mat ngramImg() const
     {
         return ngramImage; 
     }

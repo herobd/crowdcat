@@ -607,12 +607,17 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     cout <<"Creating SpottingResults for "<<spottings->front().ngram<<endl;
 #endif
     SpottingResults *n = new SpottingResults(spottings->front().ngram);
+    assert(spottings->size()>1);
     for (Spotting& s : *spottings)
+    {
         n->add(s);
+        //cout <<"added spotting : "<<s.id<<endl;
+    }
     delete spottings;
+    unsigned long ret = n->getId();
     addSpottingResults(n,true);
     pthread_rwlock_unlock(&semResults);
-    return n->getId();
+    return ret;
 }
 
 void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars) 
