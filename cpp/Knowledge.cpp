@@ -349,21 +349,21 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
     if (query.compare(newQuery) !=0)
     {
         query=newQuery;
-        vector<string> matches = Lexicon::instance()->search(query,meta,THRESH_LEXICON_LOOKUP_COUNT);
-        if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
+        vector<string> matches = Lexicon::instance()->search(query,meta);
+        if (matches.size() == 1)
+        {
+            transcription=matches[0];
+            done=true;
+            if (newExemplars!=NULL)
+            {
+                vector<Spotting*> newE = harvest();
+                newExemplars->insert(newExemplars->end(),newE.begin(),newE.end());
+            }
+        }
+        else if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
-            if (scored.size() == 1)
-            {
-                transcription=scored.begin()->second;
-                done=true;
-                if (newExemplars!=NULL)
-                {
-                    vector<Spotting*> newE = harvest();
-                    newExemplars->insert(newExemplars->end(),newE.begin(),newE.end());
-                }
-            }
-            else if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
+            if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
                 ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
@@ -391,7 +391,9 @@ vector<string> Knowledge::Word::getRestrictedLexicon(int max)
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getRestrictedLexicon"<<endl;
 #endif
-    return Lexicon::instance()->search(query,meta,max);
+    SearchMeta nmeta(meta);
+    nmeta.max=max;
+    return Lexicon::instance()->search(query,nmeta);
 }
 
 TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
@@ -431,17 +433,19 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
     return ret;
 }
 
-multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match)//, float thresh)
+multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) const //, float thresh)
 {
     multimap<float,string> scores;
     //swan threads?
     float min=999999;
     float max=-999999;
+    cout<<"REMOVE, scoreAndThresh -1*"<<endl;
     for (string word : match)
     {
         const Mat im=getWordImg();
         assert(*spotter != NULL);
         float score = (*spotter)->score(word,im);
+        score *= -1;
         scores.insert(make_pair(score,word));
         if (score<min)
             min=score;

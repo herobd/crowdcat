@@ -13,7 +13,16 @@ vector<SpottingResult> AlmazanSpotter::runQuery(SpottingQuery* query) const
     float alpha=ALPHA;
     if (query->getImg().cols==0)
         alpha=0.0;
-    vector< SubwordSpottingResult > res = spotter->subwordSpot(query->getImg(), query->getNgram(), alpha);
+    vector< SubwordSpottingResult > res;
+    if (query->getImg().channels()==1)
+       res = spotter->subwordSpot(query->getImg(), query->getNgram(), alpha);
+    else
+    {
+        cv::Mat gray;
+        cv::cvtColor(query->getImg(),gray,CV_RGB2GRAY);
+        res = spotter->subwordSpot(gray, query->getNgram(), alpha);
+    }
+
     vector <SpottingResult> ret(res.size());
     for (int i=0; i<res.size(); i++)
         ret[i] = SpottingResult(res[i].imIdx,
@@ -26,5 +35,12 @@ vector<SpottingResult> AlmazanSpotter::runQuery(SpottingQuery* query) const
 
 float AlmazanSpotter::score(string text, const cv::Mat& image) const
 {
-    return spotter->compare(text,image);
+    if (image.channels() == 1)
+        return spotter->compare(text,image);
+    else
+    {
+        cv::Mat gray;
+        cv::cvtColor(image,gray,CV_RGB2GRAY);
+        return spotter->compare(text,gray);
+    }
 }

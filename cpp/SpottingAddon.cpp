@@ -6,7 +6,6 @@
 #define BUFFERSIZE 65536
 
 #include "CATTSS.h"
-#include "TestQueue.h"
 
 using namespace Nan;
 using namespace std;
@@ -16,16 +15,12 @@ using namespace v8;
 #include "SpottingBatchUpdateWorker.cpp"
 #include "NewExemplarsBatchUpdateWorker.cpp"
 #include "TranscriptionBatchUpdateWorker.cpp"
-#include "TestBatchRetrieveWorker.cpp"
-#include "SpottingTestBatchUpdateWorker.cpp"
-#include "ClearTestUsersWorker.cpp"
 #include "MiscWorker.cpp"
 
 //test
 #include "spotting.h"
 
 CATTSS* cattss;
-TestQueue* testQueue;
 
 
 NAN_METHOD(getNextBatch) {
@@ -160,7 +155,7 @@ NAN_METHOD(stopSpotting) {
     AsyncQueueWorker(new MiscWorker(callback,cattss, "stopSpotting"));
 }
 
-NAN_METHOD(getNextTestBatch) {
+/*NAN_METHOD(getNextTestBatch) {
     //cout<<"request for test batch"<<endl;
     int width = To<int>(info[0]).FromJust();
     int color = To<int>(info[1]).FromJust();
@@ -206,7 +201,7 @@ NAN_METHOD(clearTestUsers) {
     
     Callback *callback = new Callback(info[0].As<Function>());
     AsyncQueueWorker(new ClearTestUsersWorker(callback,testQueue));
-}
+}*/
 
 NAN_MODULE_INIT(Init) {
     
@@ -253,7 +248,7 @@ NAN_MODULE_INIT(Init) {
     Nan::Set(target, New<v8::String>("stopSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(stopSpotting)).ToLocalChecked());
     
-    testQueue = new TestQueue();
+    /*testQueue = new TestQueue();
     
     Nan::Set(target, New<v8::String>("getNextTestBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextTestBatch)).ToLocalChecked());
@@ -262,7 +257,7 @@ NAN_MODULE_INIT(Init) {
         GetFunction(New<FunctionTemplate>(spottingTestBatchDone)).ToLocalChecked());
     
     Nan::Set(target, New<v8::String>("clearTestUsers").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(clearTestUsers)).ToLocalChecked());
+        GetFunction(New<FunctionTemplate>(clearTestUsers)).ToLocalChecked());*/
 }
 
 NODE_MODULE(SpottingAddon, Init)

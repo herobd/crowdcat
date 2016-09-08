@@ -3,21 +3,25 @@
 
 Lexicon* Lexicon::self=NULL;
 
-vector<string> Lexicon::search(string query, Meta meta, int max)
+vector<string> Lexicon::search(string query, SearchMeta meta) const
 {
-    
-    
     vector<string> ret1;//, ret2;
+
+    auto iter = fields.find(meta.field);
+    if (iter == fields.end())
+        return ret1;
+    
     
     //clock_t start = clock();
     regex q(query);
+    const vector<string>& words = iter->second;
     for (const string& word : words)
     {
     
         if (regex_match (word, q ))
         {
             ret1.push_back(word);
-            if (max>0 && ret1.size()>max)
+            if (meta.max>0 && ret1.size()>meta.max)
                 break;
         }
     }
@@ -45,7 +49,7 @@ vector<string> Lexicon::search(string query, Meta meta, int max)
     }*/
 #ifdef TEST_MODE
     cout << query <<": ";
-    if (max>0 && ret1.size()>max)
+    if (meta.max>0 && ret1.size()>meta.max)
         cout<<" MAXED";
     else
         for (string s : ret1)
@@ -55,17 +59,19 @@ vector<string> Lexicon::search(string query, Meta meta, int max)
     return ret1;
 }
 
-bool Lexicon::readIn(string fileName)
+bool Lexicon::readIn(string fileName, string field)
 {
     
     ifstream in(fileName);
     string word;
     regex notWordChar ("[^\\w]");
+    vector<string>& words = fields[field];
+    
     while(getline(in,word))
     {
         word = regex_replace (word,notWordChar,"");
         
-        words_lineSeperated+=word+"\n";
+        //words_lineSeperated+=word+"\n";
         words.push_back(word);
     }
     in.close();

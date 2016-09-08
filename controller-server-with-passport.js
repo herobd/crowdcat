@@ -511,12 +511,12 @@ var ControllerApp = function(port) {
             
             
         });
-        self.resetTestUsers();
+        //self.resetTestUsers();
         self.showProgress();
     };
     
     
-    self.resetTestUsers = function() {
+    /*self.resetTestUsers = function() {
         
         //This could cuase bad things if people are using it right now. But hopefully nobody's up this late...
         spottingaddon.clearTestUsers(function(){
@@ -531,7 +531,7 @@ var ControllerApp = function(port) {
              millisTillTime += 86400000; // it's after 2am, try 2am tomorrow.
         }
         setTimeout(self.resetTestUsers, millisTillTime);
-    }
+    }*/
     self.showProgress = function() {
         if (self.showing) { 
             spottingaddon.showProgress(self.showH,self.showW,function(){});

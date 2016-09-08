@@ -91,12 +91,18 @@ public:
         return id;
     }
     
+    //For use when creating SpottingResult
     void add(Spotting spotting);
-    void addTrueNoScore(Spotting* spotting);
 
-    bool updateSpottings(vector<Spotting>* spottings);
+    //For use when creating SpottingResult Adds a spotting which is a new exemplar. We just want to prevent a future redundant classification of it.
+    void addTrueNoScore(const SpottingExemplar& spotting);
+
     //This will either replace the spottings or add new ones if it can't find any close enough. spottings is consumed.
     //The return value merely indicates whether this needs "resurrected" (Put back into the MasterQueue).
+    bool updateSpottings(vector<Spotting>* spottings);
+    
+    //This accpets a spotting which is a new exemplar. We just want to prevent a future redundant classification of it.
+    void updateSpottingTrueNoScore(const SpottingExemplar& spotting);
 
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram, bool need=true);
     
@@ -150,6 +156,10 @@ private:
     //returns (and sets allBatchesSent) whether we are now done (all spottings lie outside the thresholds)
     //It uses an Otsu threshold to be used to estimate some initail parameters on the first run.
     bool EMThresholds();
+
+    //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
+    //It returns instancesByLocation.end() if none is found.
+    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting) const;
 };
 
 #endif

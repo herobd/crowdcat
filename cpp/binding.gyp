@@ -8,7 +8,6 @@
                     "SpottingBatchUpdateWorker.cpp", 
                     "MasterQueue.h", "MasterQueue.cpp", 
                     "SpottingResults.h", "SpottingResults.cpp", 
-                    "TestQueue.h", "TestQueue.cpp", 
                     "BatchWraper.h", 
                     "BatchWraperSpottings.h", "BatchWraperSpottings.cpp", 
                     "BatchWraperTranscription.h", "BatchWraperTranscription.cpp", 

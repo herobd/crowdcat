@@ -78,7 +78,7 @@ private:
     int tlx, tly, brx, bry; // top y and bottom y
     string query;
     string gt;
-    Meta meta;
+    SearchMeta meta;
     const cv::Mat* pagePnt;
     const Spotter* const* spotter;
     float* averageCharWidth;
@@ -93,7 +93,7 @@ private:
 
     set<pair<unsigned long,string> > harvested;
 
-    multimap<float,string> scoreAndThresh(vector<string> match);
+    multimap<float,string> scoreAndThresh(vector<string> match) const;
     TranscribeBatch* createBatch(multimap<float,string> scored);
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
@@ -129,10 +129,12 @@ public:
     
     Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
+        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
     }
     Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
+        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
     }
     

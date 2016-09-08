@@ -242,7 +242,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
             if (batch!=NULL) {
                 ret = new BatchWraperTranscription(batch);
 #ifdef TEST_MODE
-                finish=true;
+//                finish=true;
 #endif
             }
         }
@@ -483,7 +483,7 @@ void MasterQueue::addSpottingResults(SpottingResults* res, bool hasSemResults, b
 }
 
 
-void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
+void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings)
 {
 
 #ifdef TEST_MODE_LONG
@@ -509,10 +509,10 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
                 cout<<"update for new ex: "<<spotting->ngram<<endl;
 #endif
                 //pthread_rwlock_unlock(&semResults);
-                vector<Spotting>* toUpdate = new vector<Spotting>(1);
-                toUpdate->at(0)=*(Spotting*)spotting;
-                bool resurrect = res->updateSpottings(toUpdate);
-                if (resurrect)
+                //vector<Spotting>* toUpdate = new vector<Spotting>(1);
+                //toUpdate->at(0)=*(Spotting*)spotting;
+                res->updateSpottingTrueNoScore(*spotting);
+                /*if (resurrect)
                 {
 #ifdef TEST_MODE
                     cout<<"Resurrect "<<res->ngram<<endl;
@@ -520,7 +520,7 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
                     pthread_rwlock_wrlock(&semResultsQueue);
                     resultsQueue[res->getId()] = make_pair(sem,res);
                     pthread_rwlock_unlock(&semResultsQueue);
-                }
+                }*/
             }
 
             
@@ -534,7 +534,7 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
             cout <<"Creating SpottingResults for "<<spotting->ngram<<endl;
 #endif
             SpottingResults *n = new SpottingResults(spotting->ngram);
-            n->addTrueNoScore(spotting);
+            n->addTrueNoScore(*spotting);
             addSpottingResults(n,true,false);
         }
 

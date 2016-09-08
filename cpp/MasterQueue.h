@@ -65,7 +65,7 @@ private:
     int done;
     bool finish;
     int numCTrue, numCFalse;
-    void updateSpottingsMix(vector<SpottingExemplar*>* spottings);
+    void updateSpottingsMix(const vector<SpottingExemplar*>* spottings);
 public:
     MasterQueue();
 #ifndef TEST_MODE_C

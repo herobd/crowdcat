@@ -149,7 +149,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
     {
         cout <<"ERROR: TranscribeBatchQueue::feedback unrecogized id: "<<id<<"   for trans: "<<transcription<<endl;
 #ifdef TEST_MODE
-        assert(false);
+//        assert(false);
 #endif
     }
     unlock();
