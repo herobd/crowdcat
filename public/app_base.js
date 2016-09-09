@@ -207,14 +207,14 @@ var lastRemovedBatchInfo=[];
 function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
-    if (info.id != batchId && info.id != batchId.substr(1)) {
-        console.log("ERROR, not matching ids: "+info.id+" "+batchId);
+    if (info.type+info.id != batchId) {// && info.id != batchId.substr(1)) {
+        console.log("ERROR, not matching ids: "+info.type+info.id+" "+batchId);
         console.log(batchQueue);
     }
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
         
-        var next = document.getElementById('b'+batchQueue[0].id);
+        var next = document.getElementById('s'+batchQueue[0].id);
         if (next)
             next.hidden=false;
             //document.getElementById('b'+batchQueue[0].id).classList.toggle('show');

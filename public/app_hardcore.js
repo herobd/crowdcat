@@ -65,9 +65,11 @@ function removeSpotting(OK) {
     
     if (lastRemovedEle.length>10) {
         var removed=lastRemovedEle.shift();
-        if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].id) {
+        //console.log('removed, of batch: '+removed.batch);
+        if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].type+lastRemovedBatchInfo[0].id) {
+            //console.log('removing batch info of: '+lastRemovedBatchInfo[0].type+lastRemovedBatchInfo[0].id);
             lastRemovedBatchInfo.shift();
-            //console.log(lastRemovedBatchInfo)
+            //console.log(lastRemovedBatchInfo.length)
         }
     }
     
@@ -156,7 +158,7 @@ function undo() {
         countUndos++;
         ondeck.classList.toggle('ondeck');
         if (batchQueue[0].type=='s') {
-            var ondeckHeader = document.getElementById('b'+batchQueue[0].id)
+            var ondeckHeader = document.getElementById('s'+batchQueue[0].id)
             if (ondeckHeader)
                 ondeckHeader.classList.toggle('ondeck');
         } else if (batchQueue[0].type=='e') {
@@ -170,8 +172,8 @@ function undo() {
 
         if (lastRemovedBatchInfo.length>0){
             var pastInfo= ondeck.batch;//lastRemovedBatchInfo[lastRemovedBatchInfo.length-1];
-            console.log(pastInfo +' ?= '+batchQueue[0].id)
-            if (pastInfo!=batchQueue[0].id) {
+            //console.log(pastInfo +' ?= '+batchQueue[0].type+batchQueue[0].id)
+            if (pastInfo!=batchQueue[0].type+batchQueue[0].id) {
                 batchQueue = [lastRemovedBatchInfo.pop()].concat(batchQueue);
             }
             
@@ -193,8 +195,8 @@ function undo() {
         if (ondeck.classList.contains('spotting'))
             batches[ondeck.batch].spottings[ondeck.id]=null;
         //console.log(batches[ondeck.batch].spottings);
-        if (ondeck.batch!=batchQueue[0].id)
-                console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].id)
+        if (ondeck.batch!=batchQueue[0].type+batchQueue[0].id)
+                console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
         theWindow.appendChild(ondeck);
     }
     
@@ -272,12 +274,11 @@ function setup() {
             selectionsDiv.style.height = selectionsDiv.height+'px';
         }
     };
-    getNextBatch(toBeInQueue,function() { 
-        highlightLast();
+    getNextBatch(toBeInQueue,highlightLast);
         //var headers = theWindow.getElementsByClassName('batchHeader');
         //if (headers.length>0)
         //    headers[headers.length-1].classList.toggle('ondeck');
-    });
+    //});
 
 
     // create an observer instance
@@ -357,25 +358,32 @@ var batchQueue=[]
 
 function handleSpottingsBatch(jres) {
     //console.log("got batch "+jres.batchId);
-    batches[jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
+    batches['s'+jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
     
-    var batchHeader = document.createElement("div");
-    //batchHeader.classList.toggle('spotting');
-    batchHeader.classList.toggle('batchHeader');
-    batchHeader.id='b'+jres.batchId
-    batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
-    if (batchQueue.length>0 && jres.ngram == batchQueue[batchQueue.length-1].ngram) {
-        batchHeader.hidden=true
+    var lastBatch = batchQueue[batchQueue.length-1]; 
+    if (batchQueue.length>0 && jres.ngram == lastBatch.ngram) {
+        //batchHeader.hidden=true
+        var lastHeader = document.getElementById(lastBatch.type+lastBatch.id);
+        lastHeader.id='s'+jres.batchId;
     
     } else {
         colorIndex = (++colorIndex)%headerColors.length;
         lastNgram=jres.ngram;
+
+
+        var batchHeader = document.createElement("div");
+        //batchHeader.classList.toggle('spotting');
+        batchHeader.classList.toggle('batchHeader');
+        batchHeader.id='s'+jres.batchId;
+        batchHeader.classList.toggle('s'+jres.batchId);
+        batchHeader.innerHTML='<div>'+jres.ngram+'</div>';
+        batchHeader.style.background=headerColors[colorIndex];
+        theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
     }
         /*if (lastNgram!=jres.ngram) {
             colorIndex = (++colorIndex)%headerColors.length;
             lastNgram=jres.ngram;
     }*/
-        batchHeader.style.background=headerColors[colorIndex];
         
         if (jres.resultsId!=='X') {
             batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
@@ -388,7 +396,6 @@ function handleSpottingsBatch(jres) {
     }
     //console.log('gott '+allReceived);
     
-    theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
     for (var index=0; index<jres.spottings.length; index++) {
         var i=jres.spottings[index];
         var im = new Image();
@@ -398,10 +405,10 @@ function handleSpottingsBatch(jres) {
         //widget.appendChild(im);
         //widget.id=i.id;
         //widget.batch=jres.batchId;
-        var widget = createSlider(im,i.id,jres.batchId);
+        var widget = createSlider(im,i.id,'s'+jres.batchId);
         theWindow.insertBefore(widget,theWindow.childNodes[0]);
         //initSlider(widget);
-        batches[jres.batchId].spottings[i.id]=null;
+        batches['s'+jres.batchId].spottings[i.id]=null;
     }
     spinner.hidden=true;
 }
@@ -420,7 +427,7 @@ function handleTranscriptionBatch(jres) {
     wordImg.src='data:image/png;base64,'+jres.wordImg;
     //var ngramImg = new Image();
     //ngramImg.src='data:image/png;base64,'+jres.ngramImg;
-    theWindow.insertBefore(createTranscriptionSelector(jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
+    theWindow.insertBefore(createTranscriptionSelector('t'+jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
     spinner.hidden=true;
 }
 function handleManualBatch(jres) {
@@ -433,7 +440,7 @@ function handleManualBatch(jres) {
     
     var wordImg = new Image();
     wordImg.src='data:image/png;base64,'+jres.wordImg;
-    theWindow.insertBefore(createManualTranscriptionSelector(jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
+    theWindow.insertBefore(createManualTranscriptionSelector('m'+jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
     spinner.hidden=true;
 }
 
@@ -499,6 +506,7 @@ function getNextBatch(toload,callback) {
     }
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
+        var fromEmpty = batchQueue.length==0;
         if (jres.err==null) {
             if (jres.batchType=='spottings') {
                 handleSpottingsBatch(jres);                
@@ -517,6 +525,8 @@ function getNextBatch(toload,callback) {
                 getNextBatch(toload,callback);
             else if (callback!==undefined)
                 callback();
+            else if (fromEmpty)
+                highlightLast();
             
             
         }
@@ -537,12 +547,13 @@ function highlightLast() {
                 header.classList.toggle('ondeck');
         }
         else if (batchQueue[0].type=='s') {
-            var header = document.getElementById('b'+ondeck.batch);
-            if (header &&!header.classList.contains('ondeck'))
-                header.classList.toggle('ondeck');
+            var header_s = document.getElementsByClassName(ondeck.batch);
+            if (header_s && header_s.length>0 &&!header_s[0].classList.contains('ondeck'))
+                header_s[0].classList.toggle('ondeck');
+            
         }
         else if (batchQueue[0].type=='m') {
-            var input = document.getElementById('mt'+ondeck.batch);
+            var input = document.getElementById('in_'+ondeck.batch);
             input.focus();
         }
     }
@@ -571,11 +582,12 @@ function isBatchDone(batchId) {
     //base
     batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
     //base
-    var nextElement=null;
+    /*var nextElement=null;
     if (batchQueue.length>0) {
-        if (batchQueue[0].type=='s')
-            nextElement=document.getElementById('b'+batchQueue[0].id);
-    }
+        if (batchQueue[0].type=='s') {
+            nextElement=document.getElementById('s'+batchQueue[0].id);
+        }
+    }*/
     /*
     if (nextElement) {
         nextElement.classList.toggle('ondeck');
@@ -585,31 +597,31 @@ function isBatchDone(batchId) {
         //}
     }*/
     //highlightLast();
-    var oldElement = document.getElementById('b'+batchId);
+    var oldElement = document.getElementById(batchId);
     if (oldElement) {
-        var typeLastRemoved = lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type;
-        if (typeLastRemoved!='t' && typeLastRemoved!='m') {
-            if (batchQueue.length > 0 && typeLastRemoved.ngram == batchQueue[0].ngram) {
-                theWindow.removeChild(oldElement);
+        //var typeLastRemoved = lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type;
+        //if (typeLastRemoved!='t' && typeLastRemoved!='m') {
+        //    if (batchQueue.length > 0 && typeLastRemoved.ngram == batchQueue[0].ngram) {
+        //        theWindow.removeChild(oldElement);
                 
                 //we shift the header past the collapsing element to provide the illusion of a smooth transition
-                if (nextElement) {
-                    theWindow.removeChild(nextElement);
-                    theWindow.appendChild(nextElement);
-                }
-            } else {
+        //        if (nextElement) {
+        //            theWindow.removeChild(nextElement);
+        //            theWindow.appendChild(nextElement);
+        //        }
+        //    } else {
                 oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
                 oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
                 oldElement.classList.toggle('batchHeader');
                 oldElement.classList.toggle('collapserH');
-            }
-        } else {
+         //   }
+        //} else {
             //TODO fix gradient
             //gradient.hidden=false;
             /*oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
             oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
             oldElement.classList.toggle('collapser');*/
-        }
+        //}
     }
 }
 
@@ -622,9 +634,11 @@ function classifyR(id,vFunc) {
         
         if (lastRemovedEle.length>10) {
             var removed=lastRemovedEle.shift();
-            if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].id) {
+            //console.log('removed, of batch: '+removed.batch);
+            if (lastRemovedEle[0].batch!=lastRemovedBatchInfo[0].type+lastRemovedBatchInfo[0].id) {
+                //console.log('removing batch info of: '+lastRemovedBatchInfo[0].type+lastRemovedBatchInfo[0].id);
                 lastRemovedBatchInfo.shift();
-                //console.log(lastRemovedBatchInfo)
+                //console.log(lastRemovedBatchInfo.length)
             }
         }
         if (batchQueue[0].type!='t' && batchQueue[0].type!='m') {
@@ -758,7 +772,7 @@ function createManualTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     possDiv.classList.toggle('meat');
     //type box
     var input = document.createElement('input');
-    input.id='mt'+id;
+    input.id='in_'+id;
     input.autocomplete="off"
     input.classList.toggle('transInput');
     input.type = "text";
@@ -824,7 +838,7 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
 
 function pass() {
     if (ondeck.classList.contains('transcription')) {
-        classify(batchQueue[0].id,'$PASS$')();
+        classify(batchQueue[0].type+batchQueue[0].id,'$PASS$')();
     } else if (ondeck.classList.contains('spotting')) {
         removeSpotting(-1);//-1 means pass to spottingAddon
     }

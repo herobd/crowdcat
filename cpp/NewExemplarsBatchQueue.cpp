@@ -168,7 +168,10 @@ void NewExemplarsBatchQueue::checkIncomplete()
             delete returnMap[id];
             returnMap.erase(id);
             iter=timeMap.erase(iter);
-            iter--;
+            if (iter!=timeMap.begin())
+                iter--;
+            if (iter==timeMap.end())
+                break;
         }
     }
     for (auto iter = timeDoneMap.begin(); iter!=timeDoneMap.end(); iter++)
@@ -182,7 +185,10 @@ void NewExemplarsBatchQueue::checkIncomplete()
             delete doneMap[id];
             doneMap.erase(id);
             iter=timeDoneMap.erase(iter);
-            iter--;
+            if (iter!=timeDoneMap.begin())
+                iter--;
+            if (iter==timeDoneMap.end())
+                break;
         }
     }
     unlock();

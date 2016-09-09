@@ -651,9 +651,10 @@ bool SpottingResults::checkIncomplete()
 {
     bool incomp=false;
     //cout <<"checkIncomplete, starts is "<<starts.size()<<endl;
-    vector<unsigned long> toRemove;
-    for (auto start : starts)
+    //vector<unsigned long> toRemove;
+    for (auto iter=starts.begin(); iter!=starts.end(); iter++)
     {
+        auto start = *iter;
         chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         //cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
@@ -662,14 +663,19 @@ bool SpottingResults::checkIncomplete()
             instancesByScore.insert(&instancesById[start.first]);
             tracer = instancesByScore.begin();
             incomp=true;
-            toRemove.push_back(start.first);
+            //toRemove.push_back(start.first);
 #ifdef TEST_MODE
             cout<<"Timeout ("<<pass.count()<<") on batch "<<start.first<<endl;
 #endif     
+            iter = starts.erase(iter);
+            if (iter!=starts.begin())
+                iter--;
+            if (iter==starts.end())
+                break;
         }
     }
-    for (unsigned long id : toRemove)
-        starts.erase(id);
+    //for (unsigned long id : toRemove)
+    //    starts.erase(id);
     if (incomp && allBatchesSent)
     {
         allBatchesSent=false;

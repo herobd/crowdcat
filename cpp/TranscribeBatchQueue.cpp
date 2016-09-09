@@ -159,17 +159,22 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
 void TranscribeBatchQueue::checkIncomplete()
 {
     lock();
-    for (auto start : timeMap)
+    for (auto iter=timeMap.begin(); iter!=timeMap.end(); iter++)
     {
-        unsigned long id = start.first;
-        chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
+        unsigned long id = iter->first;
+        chrono::system_clock::duration d = chrono::system_clock::now()-iter->second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed
         {
             queue.push_front(returnMap[id]);
 
             returnMap.erase(id);
-            timeMap.erase(id);
+            iter = timeMap.erase(iter);
+            if (iter!=timeMap.begin())
+                iter--;
+
+            if (iter==timeMap.end())
+                break;
         }
     }
     unlock();

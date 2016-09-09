@@ -440,6 +440,9 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
     float min=999999;
     float max=-999999;
     cout<<"REMOVE, scoreAndThresh -1*"<<endl;
+#ifdef TEST_MODE
+    cout<<"Scoring poss  ";
+#endif
     for (string word : match)
     {
         const Mat im=getWordImg();
@@ -451,7 +454,14 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
             min=score;
         if (score>max)
             max=score;
+
+#ifdef TEST_MODE
+        cout<<word<<":"<<score<<", ";
+#endif
     }
+#ifdef TEST_MODE
+    cout<<endl;
+#endif
     vector<int> histogram(100);
     for (auto p : scores)
     {
