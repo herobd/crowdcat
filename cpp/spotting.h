@@ -20,6 +20,8 @@ using namespace std;
 #define SPOTTING_TYPE_APPROVED 2
 #define SPOTTING_TYPE_THRESHED 3
 #define SPOTTING_TYPE_EXEMPLAR 4
+#define SPOTTING_TYPE_TRANS_TRUE 5
+#define SPOTTING_TYPE_TRANS_FALSE 6
 
 class Spotting {
 public:

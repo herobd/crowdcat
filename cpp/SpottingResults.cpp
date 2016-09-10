@@ -42,7 +42,20 @@ void SpottingResults::add(Spotting spotting) {
     allBatchesSent=false;
     instancesById[spotting.id]=spotting;
     assert(spotting.score==spotting.score);
-    instancesByScore.insert(&instancesById[spotting.id]);
+    if (spotting.type==SPOTTING_TYPE_TRANS_TRUE)
+    {
+        classById[spotting.id]=true;
+        numberClassifiedTrue++;
+    }
+    else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
+    {
+        classById[spotting.id]=false;
+        numberClassifiedFalse++;
+    }
+    else
+    {
+        instancesByScore.insert(&instancesById[spotting.id]);
+    }
     instancesByLocation.insert(&instancesById[spotting.id]);
     tracer = instancesByScore.begin();
     if (spotting.score>maxScore)
@@ -216,7 +229,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     {
         unsigned long id = stoul(ids[i]);
         int check = starts.erase(id);
-        assert(check==1 || resent);
+        //assert(check==1 || resent);
 
         //In the event this spotting has been updated
         while (updateMap.find(id)!=updateMap.end())
@@ -226,9 +239,13 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             //instancesById.erase(oldId);
         }
 
+        auto iterClass = classById.find(id);
+        if (!resent && iterClass!=classById.end())
+            continue;//we'll skip processing if they waited to long and it got done. Unreliable
+
         if (resent)
         {
-            if (classById[id])
+            if (iterClass->second)
                 numberClassifiedTrue--;
             else
                 numberClassifiedFalse--;
@@ -239,7 +256,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         if (userClassifications[i]>0)
         {
             numberClassifiedTrue++;
-            if (!resent || !classById[id])
+            if (!resent || !iterClass->second)
             {
                 ret->push_back(instancesById.at(id)); //otherwise we've already sent it
             }
@@ -248,7 +265,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         else if (userClassifications[i]==0)
         {
             numberClassifiedFalse++;
-            if (resent && (retRemove && classById[id]))
+            if (resent && (retRemove && iterClass->second))
             {
                 retRemove->push_back(make_pair(id,instancesById.at(id).ngram));
             }
@@ -793,53 +810,71 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
             minScore=spotting.score;
         }
 
-        //Scan for possibly overlapping (the same) spottings
-        Spotting* best=NULL;
-        auto bestIter = findOverlap(spotting);
-        if (bestIter != instancesByLocation.end())
-            best=*bestIter;
-        if (best!=NULL)
+        if (spotting.type==SPOTTING_TYPE_TRANS_TRUE)
         {
-
-            if (spotting.score < (best)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
-            {
-                bool updateWhenInBatch = (best)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(best)==instancesByScore.end();
-                if (updateWhenInBatch)
-                    updateMap[best->id]=spotting.id;
-#ifdef TEST_MODE
-                else
-                    testUpdateMap[best->id]=spotting.id;
-#endif
-                //Add this spotting
-                instancesById[spotting.id]=spotting;
-                instancesByLocation.insert(&instancesById[spotting.id]);
-                instancesByLocation.erase(bestIter); //erase by iterator
-
-                //remove the old one
-                int removed = instancesByScore.erase(best); //erase by value (pointer)
-                if (removed)
-                {
-                    //add
-                    instancesByScore.insert(&instancesById[spotting.id]);
-                    tracer = instancesByScore.begin();
-                }
-                else if ((best)->type==SPOTTING_TYPE_THRESHED && classById[(best)->id]==false)
-                {//This occurs after being resurrected. We'll give a better score another chance.
-                    //cout<<"{} replaced false spotting "<<spotting.score<<endl;
-                    //(best)->type=SPOTTING_TYPE_NONE;
-                    classById.erase((best)->id);
-                    instancesByScore.insert(&instancesById[spotting.id]);
-                    tracer = instancesByScore.begin();
-                }
-                instancesById.erase(best->id);
-            }
+            classById[spotting.id]=true;
+            numberClassifiedTrue++;
+            instancesById[spotting.id]=spotting;
+            instancesByLocation.insert(&instancesById[spotting.id]);
+        }
+        else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
+        {
+            classById[spotting.id]=false;
+            numberClassifiedFalse++;
+            instancesById[spotting.id]=spotting;
+            instancesByLocation.insert(&instancesById[spotting.id]);
         }
         else
         {
-            instancesById[spotting.id]=spotting;
-            instancesByScore.insert(&instancesById[spotting.id]);
-            instancesByLocation.insert(&instancesById[spotting.id]);
-            tracer = instancesByScore.begin();
+
+            //Scan for possibly overlapping (the same) spottings
+            Spotting* best=NULL;
+            auto bestIter = findOverlap(spotting);
+            if (bestIter != instancesByLocation.end())
+                best=*bestIter;
+            if (best!=NULL)
+            {
+
+                if (spotting.score < (best)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
+                {
+                    bool updateWhenInBatch = (best)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(best)==instancesByScore.end();
+                    if (updateWhenInBatch)
+                        updateMap[best->id]=spotting.id;
+#ifdef TEST_MODE
+                    else
+                        testUpdateMap[best->id]=spotting.id;
+#endif
+                    //Add this spotting
+                    instancesById[spotting.id]=spotting;
+                    instancesByLocation.insert(&instancesById[spotting.id]);
+                    instancesByLocation.erase(bestIter); //erase by iterator
+
+                    //remove the old one
+                    int removed = instancesByScore.erase(best); //erase by value (pointer)
+                    if (removed)
+                    {
+                        //add
+                        instancesByScore.insert(&instancesById[spotting.id]);
+                        tracer = instancesByScore.begin();
+                    }
+                    else if ((best)->type==SPOTTING_TYPE_THRESHED && classById[(best)->id]==false)
+                    {//This occurs after being resurrected. We'll give a better score another chance.
+                        //cout<<"{} replaced false spotting "<<spotting.score<<endl;
+                        //(best)->type=SPOTTING_TYPE_NONE;
+                        classById.erase((best)->id);
+                        instancesByScore.insert(&instancesById[spotting.id]);
+                        tracer = instancesByScore.begin();
+                    }
+                    instancesById.erase(best->id);
+                }
+            }
+            else
+            {
+                instancesById[spotting.id]=spotting;
+                instancesByScore.insert(&instancesById[spotting.id]);
+                instancesByLocation.insert(&instancesById[spotting.id]);
+                tracer = instancesByScore.begin();
+            }
         }
     }
     delete spottings;

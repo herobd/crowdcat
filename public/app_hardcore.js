@@ -18,6 +18,7 @@ var screenHeight;
 
 var lastUndo=false;
 var menuHeaderHeight=50;
+var removeNgramButtonWidth=40;
 
 function handleTouchStart(evt) {
     if (evt.touches)                                     
@@ -662,10 +663,42 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
     //ngramImg.classList.toggle('meat');
     //genDiv.appendChild(ngramImg);
     if (ngrams.length>0) {
+
+        //The remove buttons are too hard to press if they're close together
+        //This spaces them out.
+        var chain=[ngrams[0]];
+        for (var i=1; i<ngrams.length; i++) {
+            if (ngrams[i].x-ngrams[i-1].x < removeNgramButtonWidth) {
+                chain.push(ngrams[i]);
+            }
+            else
+            {
+                //adjust chain
+                if (chain.length>1) {
+                    console.log('adjust chain:');
+                    console.log(chain);
+                    var mid=0;
+                    for (var c=0; c<chain.length; c++) {
+                        mid+=chain[c].x;
+                    }
+                    mid/=chain.length;
+                    for (var c=0; c<chain.length; c++) {
+                        var fromCenter=c-((chain.length-1)/2.0);
+                        chain[c].x=mid + fromCenter*removeNgramButtonWidth;
+                    }
+                    console.log(mid);
+                    console.log(chain);
+                }
+
+                chain=[ngrams[i]];
+            }
+        }
+
         var ngramDiv = document.createElement("div");
         ngramDiv.classList.toggle('meat');
         ngramDiv.classList.toggle('spotteds');
-        for (var ngramP of ngrams) {
+        for (var i=0; i<ngrams.length; i++) {
+            var ngramP = ngrams[i];
             var d = document.createElement("div");
             d.classList.toggle('spotted');
             d.innerHTML=ngramP.ngram+'<br>';

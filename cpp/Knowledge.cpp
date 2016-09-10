@@ -439,7 +439,6 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
     //swan threads?
     float min=999999;
     float max=-999999;
-    cout<<"REMOVE, scoreAndThresh -1*"<<endl;
 #ifdef TEST_MODE
     cout<<"Scoring poss  ";
 #endif
@@ -448,7 +447,6 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
         const Mat im=getWordImg();
         assert(*spotter != NULL);
         float score = (*spotter)->score(word,im);
-        score *= -1;
         scores.insert(make_pair(score,word));
         if (score<min)
             min=score;
@@ -513,6 +511,9 @@ string Knowledge::Word::generateQuery()
                 least-=1;
             if (most-numChars < THRESH_UNKNOWN_EST)
                 most+=1;
+
+            if (spot==spottings.begin()) //This characters (particularly capitol) are often larger
+                least-=1;
             least = max(0,least);
             ret += "[a-zA-Z0-9]{"+to_string(least)+","+to_string(most)+"}";
         }
@@ -545,6 +546,9 @@ string Knowledge::Word::generateQuery()
             least-=1;
         if (most-numChars < THRESH_UNKNOWN_EST)
             most+=1;
+
+        //The last character sometimes has a trail making it larger
+        least-=1;
         least = max(0,least);
         ret += "[a-zA-Z0-9]{"+to_string(least)+","+to_string(most)+"}";
     }
@@ -2166,6 +2170,72 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
         w->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
         ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score);
         assert(i==0 || ret->at(i).id != ret->at(i-1).id);
+        if (done)
+            w->preapproveSpotting(&ret->at(i));
+        /*if (word.done)
+        {
+            if (word->hasNgram(&ret->at(i)))
+                ret->at(i).type=SPOTTING_TYPE_TRUE;
+            else
+                ret->at(i).type=SPOTTING_TYPE_FALSE;
+        }*/
     }
     return ret;
+}
+
+void Knowledge::Word::preapproveSpotting(Spotting* spotting)
+{
+    pthread_rwlock_rdlock(&lock);
+    int posN = transcription.find_first_of(spotting->ngram);
+    if (posN !=  string::npos)
+    {
+        auto spot = spottings.begin();
+        int pos = tlx;
+        string ret = "";
+        int posWord=0;
+        while (spot != spottings.end())
+        {
+            int posC = transcription.find_first_of(spot->second.ngram);
+            if (posC==posN)
+            {
+                //it will be combine with the one alread in the SpottingResult
+                break;
+            }
+            else if (posN < posC)
+            {
+                //int numCharInGap=posC-posWord;
+                int charsIn = posN-posWord;
+                //int gapWidth = spot->second.tlx-pos;
+                int pixIn = (spotting->tlx + (spotting->brx-spotting->tlx)/2) - pos;
+                int idealPixIn = charsIn*(*averageCharWidth);
+                if (fabs(pixIn-idealPixIn)<(*averageCharWidth)*1.75)
+                    spotting->type=SPOTTING_TYPE_TRANS_TRUE;
+                else
+                    spotting->type=SPOTTING_TYPE_TRANS_FALSE;
+                break;
+            }
+
+            pos = spot->second.brx;
+            posWord = posC+spot->second.ngram.length();
+            spot++;
+        }
+
+        if (spot==spottings.end())
+        {
+            //int numCharInGap=transcription.length()-posWord;
+            int charsIn = posN-posWord;
+            //int gapWidth = spot->second.tlx-pos;
+            int pixIn = (spotting->tlx + (spotting->brx-spotting->tlx)/2) - pos;
+            int idealPixIn = charsIn*(*averageCharWidth);
+            if (fabs(pixIn-idealPixIn)<(*averageCharWidth)*1.75)
+                spotting->type=SPOTTING_TYPE_TRANS_TRUE;
+            else
+                spotting->type=SPOTTING_TYPE_TRANS_FALSE;
+            
+        }
+    }
+    else
+        spotting->type=SPOTTING_TYPE_TRANS_FALSE;
+
+    pthread_rwlock_unlock(&lock);
 }

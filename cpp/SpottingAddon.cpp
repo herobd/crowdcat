@@ -205,11 +205,12 @@ NAN_METHOD(clearTestUsers) {
 
 NAN_MODULE_INIT(Init) {
     
-#ifndef TEST_MODE
+//#ifndef TEST_MODE
     cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
                         "/home/brian/intel_index/data/gw_20p_wannot",
-                        "data/queries.gtp");
-#else
+                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp");
+                        //"data/queries.gtp");
+/*#else
 #ifdef TEST_MODE_LONG
     cattss = new CATTSS("test/lexicon.txt","test/","test/seg.gtp");
 #else
@@ -218,7 +219,7 @@ NAN_MODULE_INIT(Init) {
                         "data/twopage_queries.gtp");
 
 #endif
-#endif
+#endif*/
 
     Nan::Set(target, New<v8::String>("getNextBatch").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(getNextBatch)).ToLocalChecked());

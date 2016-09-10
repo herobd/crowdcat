@@ -34,8 +34,8 @@ typedef Graph<float,float,float> GraphType;
 
 #define OVERLAP_LINE_THRESH 0.45
 #define OVERLAP_WORD_THRESH 0.45
-#define THRESH_UNKNOWN_EST 0.2
-#define THRESH_LEXICON_LOOKUP_COUNT 20
+#define THRESH_UNKNOWN_EST 0.3
+#define THRESH_LEXICON_LOOKUP_COUNT 50
 //#define THRESH_SCORING 1.0
 #define LOW_COUNT_PRUNE_THRESH 5
 #define LOW_COUNT_SCORE_THRESH 0.75
@@ -81,7 +81,7 @@ private:
     SearchMeta meta;
     const cv::Mat* pagePnt;
     const Spotter* const* spotter;
-    float* averageCharWidth;
+    const float* averageCharWidth;
     int* countCharWidth;
     int pageId;
    
@@ -127,12 +127,12 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //}    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
@@ -237,6 +237,7 @@ public:
         return ret;
     }
     string getGT() {return gt;}
+    void preapproveSpotting(Spotting* spotting);
 };
 
 class Line
