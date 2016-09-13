@@ -7,7 +7,7 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
     //cout <<"kill is "<<q->kill.load()<<endl;
     while(!q->kill.load()) {
         //cout <<"begin sleep"<<endl;
-        this_thread::sleep_for(chrono::hours(1));
+        this_thread::sleep_for(chrono::minutes(30));
         q->checkIncomplete();
         c->checkIncomplete();
     }
@@ -20,7 +20,14 @@ void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, in
     }
 }
 
-CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile, string spottingModelPrefix)
+CATTSS::CATTSS( string lexiconFile, 
+                string pageImageDir, 
+                string segmentationFile, 
+                string spottingModelPrefix,
+                int numSpottingThreads,
+                int showHeight,
+                int showWidth,
+                int showMilli )
 {
     
     masterQueue = new MasterQueue();
@@ -32,6 +39,8 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile,
     
     incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
+    showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
+    showChecker->detach();
 #ifdef TEST_MODE_LONG
     int pageId=0;
 
@@ -81,6 +90,7 @@ CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile,
 
 //#endif
 #endif
+    spottingQueue->run(numSpottingThreads);
     //test
     /*
         Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);
@@ -281,7 +291,7 @@ void CATTSS::misc(string task)
         {
             corpus->show();
         }
-        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
+/*        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {
             cout <<"CATTSS::showProgress()"<<endl;
             string dims = task.substr(13);
@@ -292,12 +302,12 @@ void CATTSS::misc(string task)
             int milli = stoi(dims.substr(1+split2));
             showChecker = new thread(showSleeper,masterQueue,corpus,height,width,milli);
             showChecker->detach();
-        }
+        }*/
         else if (task.compare("stopSpotting")==0)
         {
             spottingQueue->stop();
         }
-        else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
+        /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));
             //cout<<"startSpotting:"<<num<<endl;
@@ -305,7 +315,7 @@ void CATTSS::misc(string task)
                 spottingQueue->run(num);
             else
                 cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
-        }
+        }*/
 #ifndef TEST_MODE
     }
     catch (exception& e)

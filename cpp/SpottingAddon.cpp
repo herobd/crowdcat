@@ -136,7 +136,7 @@ NAN_METHOD(showCorpus) {
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "showCorpus"));
 }
-NAN_METHOD(showProgress) {
+/*NAN_METHOD(showProgress) {
     int height = To<int>(info[0]).FromJust();
     int width = To<int>(info[1]).FromJust();
     int milli = To<int>(info[2]).FromJust();
@@ -150,6 +150,30 @@ NAN_METHOD(startSpotting) {
     Callback *callback = new Callback(info[1].As<Function>());
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "startSpotting:"+to_string(num)));
+}*/
+NAN_METHOD(start) {
+    v8::String::Utf8Value lexiconFileNAN(info[0]);
+    string lexiconFile = string(*lexiconFileNAN);
+    v8::String::Utf8Value pageImageDirNAN(info[1]);
+    string pageImageDir = string(*pageImageDirNAN);
+    v8::String::Utf8Value segmentationFileNAN(info[2]);
+    string segmentationFile = string(*segmentationFileNAN);
+    v8::String::Utf8Value spottingModelPrefixNAN(info[3]);
+    string spottingModelPrefix = string(*spottingModelPrefixNAN);
+    int numSpottingThreads = To<int>(info[4]).FromJust();
+    int height = To<int>(info[5]).FromJust();
+    int width = To<int>(info[6]).FromJust();
+    int milli = To<int>(info[7]).FromJust();
+    cattss = new CATTSS(lexiconFile,
+                        pageImageDir,
+                        segmentationFile,
+                        spottingModelPrefix,
+                        numSpottingThreads,
+                        height,
+                        width,
+                        milli);
+                        
+                        
 }
 NAN_METHOD(stopSpotting) {
     Callback *callback = new Callback(info[0].As<Function>());
@@ -208,9 +232,9 @@ NAN_METHOD(clearTestUsers) {
 NAN_MODULE_INIT(Init) {
     
 //#ifndef TEST_MODE
-    cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
-                        "/home/brian/intel_index/data/gw_20p_wannot",
-                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp");
+    //cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
+    //                    "/home/brian/intel_index/data/gw_20p_wannot",
+    //                    "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp");
                         //"data/queries.gtp");
 /*#else
 #ifdef TEST_MODE_LONG
@@ -243,14 +267,16 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<v8::String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
-    Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
+    //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
+    //    GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 
-    Nan::Set(target, New<v8::String>("startSpotting").ToLocalChecked(),
-        GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());
+    //Nan::Set(target, New<v8::String>("startSpotting").ToLocalChecked(),
+    //    GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("stopSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(stopSpotting)).ToLocalChecked());
     
+    Nan::Set(target, New<v8::String>("start").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(start)).ToLocalChecked());
     /*testQueue = new TestQueue();
     
     Nan::Set(target, New<v8::String>("getNextTestBatch").ToLocalChecked(),

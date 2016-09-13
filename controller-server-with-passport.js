@@ -26,8 +26,18 @@ var spottingaddon = require("./cpp/build/Debug/spottingaddon")
 
 var debug=true;
 numberOfTests=2;
+
+//SYSTEM PARAMS
+var lexiconFile="/home/brian/intel_index/data/wordsEnWithNames.txt";
+var pageImageDir="/home/brian/intel_index/data/gw_20p_wannot";
+var segmentationFile="/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
+var spottingModelPrefix="model/CATTSS";
+var numThreadsSpotting=4;
+var showWidth=2500;
+var showHeight=1000;
+var showMilli=4000;
 /**
- *  Define the sample application.
+ *  Define the application.
  */
 var ControllerApp = function(port) {
 
@@ -39,8 +49,6 @@ var ControllerApp = function(port) {
         self.port=port;
     
     self.showing=true;
-    self.showW=2500;
-    self.showH=1000;
     /*  ================================================================  */
     /*  Helper functions.                                                 */
     /*  ================================================================  */
@@ -500,6 +508,15 @@ var ControllerApp = function(port) {
         self.userSessionMap={};
         self.userStateMap={};
         self.initializeServer();
+
+        spottingaddon.start(lexiconFile,
+                            pageImageDir,
+                            segmentationFile,
+                            spottingModelPrefix,
+                            numThreadsSpotting,
+                            showHeight,
+                            showWidth,
+                            showMilli);
     };
 
 
@@ -512,10 +529,10 @@ var ControllerApp = function(port) {
             console.log('%s: CATTSS-Node server started on :%d ...',
                         Date(Date.now() ), self.port);
             
-            for (var ii=0; ii<4; ii++)
+            /*for (var ii=0; ii<4; ii++)
             {
                 spottingaddon.startSpotting(1,function(){console.log("done spotting, thread "+ii);});
-            }
+            }*/
             
         });
         //self.resetTestUsers();

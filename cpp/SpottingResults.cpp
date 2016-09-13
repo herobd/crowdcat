@@ -353,7 +353,8 @@ bool SpottingResults::EMThresholds()
      *initailly. This should be fine as we sample from the middle of
      *the thresholds outward.
      */
-     
+    
+#ifdef TEST_MODE 
     //test
     int displayLen=90;
     vector<int> histogramCP(displayLen);
@@ -361,6 +362,7 @@ bool SpottingResults::EMThresholds()
     vector<int> histogramGP(displayLen);
     vector<int> histogramGN(displayLen);
     //test
+#endif
     
     if (init)
     {
@@ -394,6 +396,7 @@ bool SpottingResults::EMThresholds()
     //bool initV=init;
     //while (1)
     //{
+#ifdef TEST_MODE
         for (int i=0; i<displayLen; i++)
         {
             histogramCP[i]=0;
@@ -401,6 +404,7 @@ bool SpottingResults::EMThresholds()
             histogramCN[i]=0;
             histogramGN[i]=0;;
         }
+#endif        
         
         //map<unsigned long, bool> expected;
         vector<float> expectedTrue;
@@ -410,22 +414,10 @@ bool SpottingResults::EMThresholds()
         
         
         
-#ifdef TEST_MODE
-        bool noTest=true;
-        unsigned long ttt;
-#endif        
         
         numLeftInRange=0;
         for (auto p : instancesById)
         {
-#ifdef TEST_MODE
-            bool isTest = ngram.compare("he")==0 && p.second.tlx<527 && p.second.brx>527 && p.second.tly<2419 && p.second.bry>2419;
-            assert((isTest && noTest) || !isTest);
-            if (isTest) {
-                noTest=false;
-                ttt=p.first;
-            }
-#endif
             if (p.second.score!=p.second.score)
                 continue; 
             unsigned long id = p.first;

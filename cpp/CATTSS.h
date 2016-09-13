@@ -11,6 +11,8 @@
 #include <exception>
 #include <pthread.h>
 
+//#include "ctpl_stl.h"
+
 class CATTSS
 {
     private:
@@ -20,11 +22,21 @@ class CATTSS
     thread* incompleteChecker;
     thread* showChecker;
 
+    //ctpl::thread_pool* pool;
+
     public:
-    CATTSS(string lexiconFile, string pageImageDir, string segmentationFile, string spottingModelPrefix="model/CATTSS");
+    CATTSS( string lexiconFile,
+            string pageImageDir, 
+            string segmentationFile, 
+            string spottingModelPrefix,
+            int numSpottingThreads,
+            int showHeight,
+            int showWidth,
+            int showMilli );
     ~CATTSS()
     {
         delete incompleteChecker;
+        delete showChecker;
         delete masterQueue;
         delete corpus;
         delete spottingQueue;

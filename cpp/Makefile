@@ -1,6 +1,6 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS =  -O3  -std=c++11 -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  -g  -std=c++11 -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 
 LIBS += -lpthread
 
@@ -36,6 +36,7 @@ data: makeData
 clean:
 	- rm  $(PROGRAM_NAME)
 	- rm  train
+	- rm  makeData
 	- rm  obj/*.o
 
 
@@ -45,7 +46,7 @@ $(PROGRAM_NAME):  $(OBJECTS)
 train: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o train train.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
-data: $(OBJECTS)
+makeData: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o makeData makeData.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h FacadeSpotter.h

@@ -26,7 +26,11 @@ function handleTouchStart(evt) {
     else
            this.xDown = evt.clientX;                                 
                                          
-};                                                
+};
+
+var trainingNum=0;
+var instructions;
+var instructionsText;
 
 function handleTouchMove(evt) {
     if ( ! this.xDown || !swipeOn) {
@@ -199,6 +203,8 @@ function undo() {
         if (ondeck.batch!=batchQueue[0].type+batchQueue[0].id)
                 console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
         theWindow.appendChild(ondeck);
+        if (trainingMode)
+            trainingNum-=1;
     }
     
 }
@@ -240,7 +246,10 @@ function setup() {
     theWindow=windows[0];
     gradient = document.getElementById("overlay");
     icons = document.getElementById("icons");
-    
+    if (testMode) {
+       instructions=document.getElementById('instructions'); 
+       instructionsText=document.getElementById('instructionsText');
+    } 
     
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
@@ -256,7 +265,7 @@ function setup() {
     screenHeight=y;
     while (!imgWidth)
         imgWidth=Math.min(x,maxImgWidth);
-    console.log(imgWidth);
+    //console.log(imgWidth);
     window.onresize=function(){
         var e = d.documentElement,
         g = d.getElementsByTagName('body')[0],
@@ -312,13 +321,18 @@ function setup() {
     
     
     if (testMode) {
-        document.getElementById('instructions').addEventListener('mouseup', function(e){
+        instructions.addEventListener('mouseup', function(e){
             e.preventDefault(); 
-            startTime = new Date().getTime();
-            this.parentNode.removeChild(this);
+            //startTime = new Date().getTime();
+            //this.parentNode.removeChild(this);
+            this.hidden=true;
         }, false);
     }
+
+
 }
+
+
 
 function createSlider(im,id,batchId) {
     var genDiv = document.createElement("div");
@@ -362,7 +376,8 @@ function handleSpottingsBatch(jres) {
     batches['s'+jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
     
     var lastBatch = batchQueue[batchQueue.length-1]; 
-    if (batchQueue.length>0 && jres.ngram == lastBatch.ngram) {
+    if (batchQueue.length>0 && jres.ngram == lastBatch.ngram))// || 
+                //lastBatch.type=='e' && batches[lastBatch.type+lastBatch.id].) {
         //batchHeader.hidden=true
         var lastHeader = document.getElementById(lastBatch.type+lastBatch.id);
         lastHeader.id='s'+jres.batchId;
@@ -500,11 +515,11 @@ function getNextBatch(toload,callback) {
     var prevNgram='.';
     if (batchQueue.length>0)
         prevNgram=batchQueue[batchQueue.length-1].ngram;
-    if (testMode) {
+    /*if (testMode) {
         query+='&test='+testNum;
         if (toload==toBeInQueue)
             query+='&reset=true';
-    }
+    }*/
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;
@@ -517,6 +532,12 @@ function getNextBatch(toload,callback) {
                 handleNewExemplarsBatch(jres);
             } else if (jres.batchType=='manual') {
                 handleManualBatch(jres);
+            }
+
+            if (trainingMode) {
+                batchQueue[batchQueue.length-1].instructions=jres.instructions;
+                batchQueue[batchQueue.length-1].lastTraining=jres.lastTraining;
+                batchQueue[batchQueue.length-1].correct=jres.correct;
             }
             /*if (colorIndex==1)
                 colorIndex=-1;
@@ -624,6 +645,31 @@ function isBatchDone(batchId) {
             oldElement.classList.toggle('collapser');*/
         //}
     }
+
+    if (testMode && trainingMode) {
+        var right=false;
+        if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='s') {
+            for (spottingId in batches[batchId].spottings) {
+                if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct) {
+                    right = true;
+                }
+            }
+        } else if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='t' || (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='m') {
+            right =  lastRemovedBatchInfo[lastRemovedBatchInfo-1].transcription.toLowerCase() == lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct;
+        }
+        }
+        if (right) {
+            instructionsText.innerHTML=batchQueue[0].instructions;
+            if (batchQueue[0].instructions.length>0)
+                instructions.hidden=false;
+        } else {
+            instructionsText.innerHTML='That was incorrect; use the [undo] button to correct the error.';
+
+            instructions.hidden=false;
+        }
+        if (batchQueue[0].lastTraining)
+            trainingMode=false;
+    }
 }
 
 function classify(id,word) {
@@ -654,6 +700,23 @@ function classifyR(id,vFunc) {
     };
 }
 
+function adjustChain(chain) {
+    if (chain.length>1) {
+        //console.log('adjust chain:');
+        //console.log(chain);
+        var mid=0;
+        for (var c=0; c<chain.length; c++) {
+            mid+=chain[c].x;
+        }
+        mid/=chain.length;
+        for (var c=0; c<chain.length; c++) {
+            var fromCenter=c-((chain.length-1)/2.0);
+            chain[c].x=mid + fromCenter*removeNgramButtonWidth;
+        }
+        //console.log(mid);
+        //console.log(chain);
+    }
+}
 
 function makeTranscriptionDiv(id,wordImg,ngrams) {
     var genDiv = document.createElement("div");
@@ -663,6 +726,9 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
     //ngramImg.classList.toggle('meat');
     //genDiv.appendChild(ngramImg);
     if (ngrams.length>0) {
+        for (var i=0; i<ngrams.length; i++) {
+            ngrams[i].x=parseInt(ngrams[i].x);
+        }
 
         //The remove buttons are too hard to press if they're close together
         //This spaces them out.
@@ -673,26 +739,12 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
             }
             else
             {
-                //adjust chain
-                if (chain.length>1) {
-                    console.log('adjust chain:');
-                    console.log(chain);
-                    var mid=0;
-                    for (var c=0; c<chain.length; c++) {
-                        mid+=chain[c].x;
-                    }
-                    mid/=chain.length;
-                    for (var c=0; c<chain.length; c++) {
-                        var fromCenter=c-((chain.length-1)/2.0);
-                        chain[c].x=mid + fromCenter*removeNgramButtonWidth;
-                    }
-                    console.log(mid);
-                    console.log(chain);
-                }
+                adjustChain(chain);
 
                 chain=[ngrams[i]];
             }
         }
+        adjustChain(chain);
 
         var ngramDiv = document.createElement("div");
         ngramDiv.classList.toggle('meat');
@@ -758,7 +810,7 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                         break;
                     }
                 }
-                console.log('Found starting index: '+i);
+                //console.log('Found starting index: '+i);
                 //var comp = cur.localeCompare(lcPossibilities[i]);
                 //if (comp>0)
                 //    i+=1;
@@ -782,8 +834,8 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                     }
                 }
                 if (matchList.length<limit) {
-                    console.log('adding:')
-                    console.log(matchList)
+                    //console.log('adding:')
+                    //console.log(matchList)
                     possDiv.innerHTML='';//clear
                     addWordButtons(possDiv,matchList,id);
                 }
@@ -875,6 +927,14 @@ function pass() {
     } else if (ondeck.classList.contains('spotting')) {
         removeSpotting(-1);//-1 means pass to spottingAddon
     }
+}
+
+function exit() {
+        toBeInQueue=0;
+        while (batchQueue.length>0){
+            pass();
+        }
+        history.go(-1);
 }
 
 /*window.onbeforeunload = confirmExit;
