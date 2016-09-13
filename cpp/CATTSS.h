@@ -18,9 +18,10 @@ class CATTSS
     SpottingQueue* spottingQueue;
     Knowledge::Corpus* corpus;
     thread* incompleteChecker;
+    thread* showChecker;
 
     public:
-    CATTSS(string lexiconFile, string pageImageDir, string segmentationFile);
+    CATTSS(string lexiconFile, string pageImageDir, string segmentationFile, string spottingModelPrefix="model/CATTSS");
     ~CATTSS()
     {
         delete incompleteChecker;

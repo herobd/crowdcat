@@ -1,28 +1,52 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS =  -g  -std=c++11 -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  -O3  -std=c++11 -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 
 LIBS += -lpthread
 
 LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
-
-
+LIBS += -L/home/brian/intel_index/EmbAttSpotter -lembattspotter -larmadillo
+LIBS += -L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/ -l:libvl.so
+INCLUDE +=-I/home/brian/intel_index/EmbAttSpotter
 PROGRAM_NAME = test
 
-OBJECTS = obj/TranscribeBatchQueue.o obj/NewExemplarsBatchQueue.o obj/Global.o obj/test.o obj/MasterQueue.o obj/SpottingResults.o obj/TestQueue.o obj/Knowledge.o obj/Lexicon.o obj/maxflow.o obj/graph.o obj/FacadeSpotter.o obj/Spotter.o
+OBJECTS = obj/TranscribeBatchQueue.o \
+          obj/NewExemplarsBatchQueue.o \
+          obj/Global.o \
+          obj/MasterQueue.o \
+          obj/SpottingResults.o \
+          obj/Knowledge.o \
+          obj/Lexicon.o \
+          obj/maxflow.o \
+          obj/graph.o \
+          obj/SpottingQueue.o \
+          obj/batches.o \
+          obj/AlmazanSpotter.o \
+          obj/AlmazanDataset.o
+          #obj/FacadeSpotter.o \
+          #obj/test.o \
+          #obj/TestQueue.o 
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME)
+tr: train
+data: makeData
 
 
 clean:
 	- rm  $(PROGRAM_NAME)
+	- rm  train
 	- rm  obj/*.o
 
 
 $(PROGRAM_NAME):  $(OBJECTS)  
 	$(LINK) $(CXX_FLAGS) -o $(PROGRAM_NAME) $(OBJECTS) $(LIBS)
 
+train: $(OBJECTS)
+	$(LINK) $(CXX_FLAGS) -o train train.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
+	
+data: $(OBJECTS)
+	$(LINK) $(CXX_FLAGS) -o makeData makeData.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h FacadeSpotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
@@ -32,6 +56,21 @@ obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Know
 
 obj/NewExemplarsBatchQueue.o: NewExemplarsBatchQueue.h NewExemplarsBatchQueue.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/NewExemplarsBatchQueue.o NewExemplarsBatchQueue.cpp $(LIBS)
+
+obj/AlmazanSpotter.o: AlmazanSpotter.h AlmazanSpotter.cpp AlmazanDataset.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/AlmazanSpotter.o AlmazanSpotter.cpp $(LIBS)
+
+obj/AlmazanDataset.o: AlmazanDataset.h AlmazanDataset.cpp
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/AlmazanDataset.o AlmazanDataset.cpp $(LIBS)
+
+obj/SpottingQueue.o: SpottingQueue.h SpottingQueue.cpp Knowledge.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/SpottingQueue.o SpottingQueue.cpp $(LIBS)
+
+obj/batches.o: batches.h batches.cpp WordBackPointer.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/batches.o batches.cpp $(LIBS)
+
+#obj/SpottingQuery.o: SpottingQuery.h SpottingQuery.cpp
+#	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/SpottingQuery.o SpottingQuery.cpp $(LIBS)
 
 obj/Global.o: Global.h Global.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Global.o Global.cpp $(LIBS)

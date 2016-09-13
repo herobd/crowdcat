@@ -12,15 +12,22 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
         c->checkIncomplete();
     }
 }
+void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
+{
+    while(!q->kill.load()) {
+        this_thread::sleep_for(chrono::milliseconds(milli));
+        c->showProgress(height,width);
+    }
+}
 
-CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile)
+CATTSS::CATTSS(string lexiconFile, string pageImageDir, string segmentationFile, string spottingModelPrefix)
 {
     
     masterQueue = new MasterQueue();
     Lexicon::instance()->readIn(lexiconFile);
     corpus = new Knowledge::Corpus();
     corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
-    corpus->loadSpotter("model/evalGW");
+    corpus->loadSpotter(spottingModelPrefix);
     spottingQueue = new SpottingQueue(masterQueue,corpus);
     
     incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
@@ -276,11 +283,15 @@ void CATTSS::misc(string task)
         }
         else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {
+            cout <<"CATTSS::showProgress()"<<endl;
             string dims = task.substr(13);
             int split = dims.find_first_of(',');
+            int split2 = dims.find_last_of(',');
             int height = stoi(dims.substr(0,split));
-            int width = stoi(dims.substr(1+split));
-            corpus->showProgress(height,width);
+            int width = stoi(dims.substr(1+split,split2));
+            int milli = stoi(dims.substr(1+split2));
+            showChecker = new thread(showSleeper,masterQueue,corpus,height,width,milli);
+            showChecker->detach();
         }
         else if (task.compare("stopSpotting")==0)
         {
@@ -289,6 +300,7 @@ void CATTSS::misc(string task)
         else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));
+            //cout<<"startSpotting:"<<num<<endl;
             if (num>0)
                 spottingQueue->run(num);
             else

@@ -141,6 +141,11 @@ var ControllerApp = function(port) {
         });
         
         
+        self.app.get('/progress_image', function(req, res) {
+            res.writeHead(200, "image/jpeg");
+            var fileStream = fs.createReadStream('progress/show.jpg');
+            fileStream.pipe(res);
+        });
         
         
         self.app.get('/app', function(req, res) {
@@ -503,16 +508,19 @@ var ControllerApp = function(port) {
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
-        spottingaddon.startSpotting(6,function(){console.log("done spotting");});
         self.app.listen(self.port, /*self.ipaddress,*/ function() {
-            console.log('%s: Node server started on :%d ...',
+            console.log('%s: CATTSS-Node server started on :%d ...',
                         Date(Date.now() ), self.port);
             
-            
+            for (var ii=0; ii<4; ii++)
+            {
+                spottingaddon.startSpotting(1,function(){console.log("done spotting, thread "+ii);});
+            }
             
         });
         //self.resetTestUsers();
-        self.showProgress();
+        //self.showProgress();
+        //spottingaddon.showProgress(self.showH,self.showW,4000,function(){});
     };
     
     
@@ -532,12 +540,13 @@ var ControllerApp = function(port) {
         }
         setTimeout(self.resetTestUsers, millisTillTime);
     }*/
-    self.showProgress = function() {
+    /*self.showProgress = function() {
         if (self.showing) { 
+            console.log('Server::showProgress()');
             spottingaddon.showProgress(self.showH,self.showW,function(){});
             setTimeout(self.showProgress, 2500);
         }
-    }
+    }*/
     
     
     //////////////////////////////additional functions

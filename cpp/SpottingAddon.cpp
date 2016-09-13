@@ -139,12 +139,14 @@ NAN_METHOD(showCorpus) {
 NAN_METHOD(showProgress) {
     int height = To<int>(info[0]).FromJust();
     int width = To<int>(info[1]).FromJust();
-    Callback *callback = new Callback(info[2].As<Function>());
+    int milli = To<int>(info[2]).FromJust();
+    Callback *callback = new Callback(info[3].As<Function>());
 
-    AsyncQueueWorker(new MiscWorker(callback,cattss, "showProgress:"+to_string(height)+","+to_string(width)));
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "showProgress:"+to_string(height)+","+to_string(width)+","+to_string(milli)));
 }
 NAN_METHOD(startSpotting) {
     int num = To<int>(info[0]).FromJust();
+    //cout<<"startSpotting("<<num<<")"<<endl;
     Callback *callback = new Callback(info[1].As<Function>());
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "startSpotting:"+to_string(num)));

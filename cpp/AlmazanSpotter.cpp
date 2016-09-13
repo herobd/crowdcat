@@ -2,7 +2,7 @@
 
 AlmazanSpotter::AlmazanSpotter(const Dataset* corpus, string modelPrefix) 
 {
-    spotter = new EmbAttSpotter(modelPrefix,true);
+    spotter = new EmbAttSpotter(modelPrefix+"_emb",true);
     
     dataset = new AlmazanDataset(corpus);
     spotter->setCorpus_dataset(dataset,true);

@@ -1873,6 +1873,9 @@ void Knowledge::Corpus::show()
 }
 void Knowledge::Corpus::showProgress(int height, int width)
 {
+#ifdef TEST_MODE
+    cout<<"Corpus::showProgress()"<<endl;
+#endif
     //I'll assume all page images are the same dimensions
     int pageH=pages.begin()->second->getImg()->rows;
     int pageW=pages.begin()->second->getImg()->cols;
@@ -1951,7 +1954,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
         }
     }
     cv::imshow("progress",draw);
-    cv::waitKey(1000);
+    cv::waitKey(2000);
 
     pthread_rwlock_unlock(&pagesLock);
 }
