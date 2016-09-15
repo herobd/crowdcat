@@ -21,6 +21,8 @@ class BatchWraperTranscription: public BatchWraper
         string batchId;
         string wordImgStr;
         string ngramImgStr;
+        string wordIndex;
+        string gt;
         vector<string> retPoss;
         vector<SpottingPoint> spottings;
         bool manual;

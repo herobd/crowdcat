@@ -25,6 +25,7 @@ class AlmazanSpotter : public Spotter
     }
     vector<SpottingResult> runQuery(SpottingQuery* query) const;
     float score(string text, const cv::Mat& image) const;
+    float score(string text, int wordIndex) const;
 };
 
 #endif

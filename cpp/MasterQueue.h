@@ -77,20 +77,18 @@ public:
     void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
     
-    TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
+    //TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
     void transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
     void enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars);
-    NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
+    //NewExemplarsBatch* getNewExemplarsBatch(int batchSize, unsigned int maxWidth, int color) {return newExemplarsBatchQueue.dequeue(batchSize,maxWidth,color);}
     vector<SpottingExemplar*> newExemplarsFeedback(unsigned long id,  const vector<int>& userClassifications, vector<pair<unsigned long, string> >* toRemoveExemplars) 
     {
         vector<SpottingExemplar*> ret = newExemplarsBatchQueue.feedback(id, userClassifications, toRemoveExemplars);
         updateSpottingsMix(&ret);
         return ret;
     }
-    //test
-    vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
-    bool test_autoBatch();
+    void needExemplar(string ngram);
     ~MasterQueue()
     {
         kill.store(true);
@@ -108,5 +106,9 @@ public:
     }
     void checkIncomplete();
     atomic_bool kill;
+
+    //test
+    vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
+    bool test_autoBatch();
 };
 #endif

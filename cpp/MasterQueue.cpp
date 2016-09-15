@@ -223,7 +223,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     BatchWraper* ret=NULL;
     if (finish)
     {
-        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+        TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
         if (batch!=NULL) 
             ret = new BatchWraperTranscription(batch);
     }
@@ -232,13 +232,13 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
 
         if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
         {
-            NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
+            NewExemplarsBatch* batch=newExemplarsBatchQueue.dequeue(numberOfInstances,maxWidth,color);
             if (batch!=NULL)
                 ret = new BatchWraperNewExemplars(batch);
         }
         if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
         {
-            TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
             if (batch!=NULL) {
                 ret = new BatchWraperTranscription(batch);
 #ifdef TEST_MODE
@@ -255,21 +255,21 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         //a second pass without conditions
         if (ret==NULL)
         {
-            TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
             if (batch!=NULL)
                 ret = new BatchWraperTranscription(batch);
-        }
-        if (ret == NULL)
-        {
-            NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
-            if (batch!=NULL)
-                ret = new BatchWraperNewExemplars(batch);
         }
         if (ret==NULL)
         {
             SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
             if (batch!=NULL)
                 ret = new BatchWraperSpottings(batch);
+        }
+        if (ret == NULL)
+        {
+            NewExemplarsBatch* batch=newExemplarsBatchQueue.dequeue(numberOfInstances,maxWidth,color,true);
+            if (batch!=NULL)
+                ret = new BatchWraperNewExemplars(batch);
         }
     }
 
@@ -632,4 +632,9 @@ void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, 
 void MasterQueue::enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
     newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
+}
+
+void MasterQueue::needExemplar(string ngram)
+{
+    newExemplarsBatchQueue.needExemplar(ngram);
 }

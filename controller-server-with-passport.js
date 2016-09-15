@@ -33,6 +33,7 @@ var pageImageDir="/home/brian/intel_index/data/gw_20p_wannot";
 var segmentationFile="/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
 var spottingModelPrefix="model/CATTSS";
 var numThreadsSpotting=4;
+var numThreadsUpdating=3;
 var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
@@ -191,6 +192,17 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
+        self.app.get('/app-test', function(req, res) {
+            if (req.user || debug) {
+                //console.log('[app] user:'+req.user.id+' hit app');
+                //res.setHeader('Content-Type', 'text/html');
+                //res.send(self.cache_get('app.html') );
+                var appName = 'app_hardcore';
+                res.render(appName, {app_version:'app_hardcore', testMode:true, message: req.flash('error') });
+            } else {
+                res.redirect('/login');
+            }
+        });
         
         self.app.get('/home', function(req, res) {
             if (req.user) {
@@ -306,27 +318,7 @@ var ControllerApp = function(port) {
             res.setHeader("Pragma", "no-cache"); // HTTP 1.0.
             res.setHeader("Expires", "0"); // Proxies.
             if (req.user || debug) {
-                var num=-1;
-                if (req.query.num!==undefined && req.query.num!==null)
-                    num=+req.query.num;
-                
-                if (req.query.test) {
-                    //console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
-                    if (+req.query.test == self.userStateMap[self.userSessionMap[req.sessionID]]) {
-                        var reset=0;
-                        if (req.query.reset)
-                            reset=1;
-                        spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],reset,function (err,batchType,batchId,resultsId,ngram,spottings) {
-                            //setTimeout(function(){
-                            res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
-                            //},2000);
-                        });
-                    } else {
-                        res.send({batchType:"spottings",batchId:"R",resultsId:"X",ngram:"Error, refresh",spottings:[]});
-                    }
-                    
-                } else {
-                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,function (err,batchType,batchId,arg3,arg4,arg5) {
+                /*var batchHandler=function (err,batchType,batchId,arg3,arg4,arg5) {
                         //setTimeout(function(){
                         if (batchType==='spottings')
                             res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
@@ -339,7 +331,55 @@ var ControllerApp = function(port) {
                         else
                             res.send({batchType:'ERROR',batchId:-1});
                         //},2000);
-                    });
+                    };*/
+                var num=-1;
+                if (req.query.num!==undefined && req.query.num!==null)
+                    num=+req.query.num;
+                
+                if (req.query.test) {
+                    /*//console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
+                    if (+req.query.test == self.userStateMap[self.userSessionMap[req.sessionID]]) {
+                        var reset=0;
+                        if (req.query.reset)
+                            reset=1;
+                        spottingaddon.getNextTestBatch(+req.query.width,+req.query.color,num,self.userSessionMap[req.sessionID],reset,function (err,batchType,batchId,resultsId,ngram,spottings) {
+                            //setTimeout(function(){
+                            res.send({batchType:batchType,batchId:batchId,resultsId:resultsId,ngram:ngram,spottings:spottings});
+                            //},2000);
+                        });
+                    } else {
+                        res.send({batchType:"spottings",batchId:"R",resultsId:"X",ngram:"Error, refresh",spottings:[]});
+                    }*/
+                    
+                } else if(req.query.trainingNum) {
+
+                    spottingaddon.getNextTrainingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,+req.query.trainingNum,
+                            function (err,batchType,batchId,arg3,arg4,arg5,loc,correct,instructions,lastTraining) {
+                                if (batchType==='spottings')
+                                    res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5,instructions:instructions,lastTraining:lastTraining,correct:correct});
+                                else if (batchType==='transcription' || batchType==='manual')
+                                    res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5,instructions:instructions,lastTraining:lastTraining,correct:correct});
+                                else if (batchType==='newExemplars')
+                                    res.send({batchType:batchType,batchId:batchId,exemplars:arg3,instructions:instructions,lastTraining:lastTraining,correct:correct});
+                                //else if (batchType==='manual')
+                               //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                                else
+                                    res.send({batchType:'ERROR',batchId:-1});
+                            });
+                } else {
+                    spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
+                            function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
+                                if (batchType==='spottings')
+                                    res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                                else if (batchType==='transcription' || batchType==='manual')
+                                    res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
+                                else if (batchType==='newExemplars')
+                                    res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
+                                //else if (batchType==='manual')
+                               //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                                else
+                                    res.send({batchType:'ERROR',batchId:-1});
+                            });
                 }
                 
             } else {
@@ -388,6 +428,8 @@ var ControllerApp = function(port) {
                             res.send({done:false});
                         }
                     });
+                } else if (req.query.trainingNum) {
+                    //nothing
                 } else {
                     if (req.query.type=='spottings')
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
@@ -514,6 +556,7 @@ var ControllerApp = function(port) {
                             segmentationFile,
                             spottingModelPrefix,
                             numThreadsSpotting,
+                            numThreadsUpdating,
                             showHeight,
                             showWidth,
                             showMilli);

@@ -35,7 +35,7 @@
       'cflags_cc!': [ '-fno-exceptions' ],
       "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/intel_index/EmbAttSpotter"],
       "libraries": [
-            "-lopencv_highgui", "-lb64", "-lpthread", "-lopencv_imgproc", "-fopenmp", 
+            "-lopencv_highgui", "-lb64", "-pthread", "-lopencv_imgproc", "-fopenmp", 
             "-L/home/brian/intel_index/EmbAttSpotter", "-lembattspotter",
             "-L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/", "-l:libvl.so"
           ],

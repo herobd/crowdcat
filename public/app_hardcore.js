@@ -323,7 +323,7 @@ function setup() {
     if (testMode) {
         instructions.addEventListener('mouseup', function(e){
             e.preventDefault(); 
-            //startTime = new Date().getTime();
+            startTime = new Date().getTime();
             //this.parentNode.removeChild(this);
             this.hidden=true;
         }, false);
@@ -376,7 +376,7 @@ function handleSpottingsBatch(jres) {
     batches['s'+jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
     
     var lastBatch = batchQueue[batchQueue.length-1]; 
-    if (batchQueue.length>0 && jres.ngram == lastBatch.ngram))// || 
+    if (batchQueue.length>0 && jres.ngram == lastBatch.ngram) {// || 
                 //lastBatch.type=='e' && batches[lastBatch.type+lastBatch.id].) {
         //batchHeader.hidden=true
         var lastHeader = document.getElementById(lastBatch.type+lastBatch.id);
@@ -520,6 +520,9 @@ function getNextBatch(toload,callback) {
         if (toload==toBeInQueue)
             query+='&reset=true';
     }*/
+    if (trainingMode) {
+        query+='&trainingNum='+trainingNum;
+    }
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;
@@ -654,11 +657,17 @@ function isBatchDone(batchId) {
                     right = true;
                 }
             }
-        } else if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='t' || (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='m') {
-            right =  lastRemovedBatchInfo[lastRemovedBatchInfo-1].transcription.toLowerCase() == lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct;
+        } else if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='t' || lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='m') {
+                right =  lastRemovedBatchInfo[lastRemovedBatchInfo-1].transcription.toLowerCase() == lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct;
         }
-        }
-        if (right) {
+        
+        if (batchQueue[0].lastTraining) {
+            trainingMode=false;
+            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on real instances. Work fast and accurately.</p><p>Good luck!</p>";
+
+            instructions.hidden=false;
+
+        } else if (right) {
             instructionsText.innerHTML=batchQueue[0].instructions;
             if (batchQueue[0].instructions.length>0)
                 instructions.hidden=false;
@@ -667,8 +676,6 @@ function isBatchDone(batchId) {
 
             instructions.hidden=false;
         }
-        if (batchQueue[0].lastTraining)
-            trainingMode=false;
     }
 }
 
@@ -907,6 +914,7 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     selectionDiv.classList.toggle('meat');
     selectionDiv.style.height = (screenHeight - totalHeight - menuHeaderHeight)+'px';
     addWordButtons(selectionDiv,possibilities,id);
+
 
     var errDiv = document.createElement("div");
     errDiv.classList.toggle('selection');

@@ -84,6 +84,7 @@ private:
     const float* averageCharWidth;
     int* countCharWidth;
     int pageId;
+    int spottingIndex;
    
     int topBaseline, botBaseline;
 
@@ -212,6 +213,20 @@ public:
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") sent"<<endl;
 #endif
+    }
+    void setSpottingIndex(int index)
+    {
+        pthread_rwlock_wrlock(&lock);
+        spottingIndex=index;
+        pthread_rwlock_unlock(&lock);
+    }
+    int getSpottingIndex()
+    {
+        int ret;
+        pthread_rwlock_rdlock(&lock);
+        ret=spottingIndex;
+        pthread_rwlock_unlock(&lock);
+        return ret;
     }
     const multimap<int,Spotting>* getSpottingsPointer() {return & spottings;}
     vector<string> getRestrictedLexicon(int max);

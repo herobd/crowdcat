@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS <% if (testMode) { %>user study alpha part <%= testNum %><% } else { %>demo app [swipe]<% } %></title>
+<title>CATTSS <% if (testMode) { %>user study beta <% } else { %>demo app [swipe]<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<script src="https://jsconsole.com/js/remote.js?592868ac-017c-4e8e-9ec4-8301f025b9b4"></script>
 
 <link href="app_hardcore.css" rel="stylesheet" type="text/css" />
 <script> 
     <% if (testMode) { %>
     testMode=true; 
-    testNum=<%= testNum %>;
+    trainingMode=true;
     <% } else { %>
     testMode=false; 
+    trainingMode=false;
     testNum=-1;
     <% } %>
 </script>

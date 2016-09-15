@@ -11,6 +11,7 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
     int batchSize = batch->size();
     retData.resize(batchSize);
     retId.resize(batchSize);
+    locations.resize(batchSize);
     for (int index=0; index<batchSize; index++) 
     {
         retId[index]=to_string(batch->at(index).id);
@@ -26,6 +27,13 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
         E.encode(ss, encoded);
         string dataBase64 = encoded.str();
         retData[index]=dataBase64;
+
+        locations[index]=Location(  batch->at(index).pageId,
+                                    batch->at(index).tlx,
+                                    batch->at(index).tly,
+                                    batch->at(index).brx,
+                                    batch->at(index).bry
+                                 );
     }
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;
@@ -34,11 +42,22 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
     v8::Local<v8::Array> arr = Nan::New<v8::Array>(retId.size());
+    v8::Local<v8::Array> locs = Nan::New<v8::Array>(locations.size());
     for (unsigned int index=0; index<retId.size(); index++) {
 	v8::Local<v8::Object> obj = Nan::New<v8::Object>();
 	Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New(retId[index]).ToLocalChecked());
 	Nan::Set(obj, Nan::New("data").ToLocalChecked(), Nan::New(retData[index]).ToLocalChecked());
 	Nan::Set(arr, index, obj);
+
+        Location l=locations[index];
+        v8::Local<v8::Object> loc = Nan::New<v8::Object>();
+        loc->Set(Nan::New("page").ToLocalChecked(), Nan::New(l.pageId).ToLocalChecked());
+        loc->Set(Nan::New("x1").ToLocalChecked(), Nan::New(l.x1).ToLocalChecked());
+        loc->Set(Nan::New("y1").ToLocalChecked(), Nan::New(l.y1).ToLocalChecked());
+        loc->Set(Nan::New("x2").ToLocalChecked(), Nan::New(l.x2).ToLocalChecked());
+        loc->Set(Nan::New("y2").ToLocalChecked(), Nan::New(l.y2).ToLocalChecked());
+
+        Nan::Set(locs, index, loc);
     }
     Local<Value> argv[] = {
 	Nan::Null(),
@@ -46,7 +65,9 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 	Nan::New(batchId).ToLocalChecked(),
 	Nan::New(resultsId).ToLocalChecked(),
 	Nan::New(ngram).ToLocalChecked(),
-	Nan::New(arr)
+	Nan::New(arr),
+        locs,
+        Nan::New("UNKNOWN").ToLocalChecked()
     };
     /*Local<Value> argv[5];
     argv[0] = Nan::Null();
@@ -56,5 +77,5 @@ void BatchWraperSpottings::doCallback(Callback *callback)
     argv[4] = Nan::New(retArr);*/
     
 
-    callback->Call(6, argv);
+    callback->Call(8, argv);
 }

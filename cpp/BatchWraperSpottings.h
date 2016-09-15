@@ -19,6 +19,7 @@ class BatchWraperSpottings: public BatchWraper
         //output
         vector<string> retData;
         vector<string> retId;
+        vecotr<Locations> locations;
         string batchId;
         string resultsId;
         string ngram;

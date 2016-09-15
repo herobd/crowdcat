@@ -1,6 +1,6 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS =  -g  -std=c++11 -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  -g  -std=c++11 -pthread -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 
 LIBS += -lpthread
 

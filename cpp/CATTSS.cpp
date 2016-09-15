@@ -3,6 +3,8 @@
 
 void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
 {
+    //This is the lowest priority of the systems threads
+    nice(3);
     //this_thread::sleep_for(chrono::hours(1));
     //cout <<"kill is "<<q->kill.load()<<endl;
     while(!q->kill.load()) {
@@ -14,6 +16,8 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
 }
 void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
 {
+    //This is the lowest priority of the systems threads
+    nice(3);
     while(!q->kill.load()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
         c->showProgress(height,width);
@@ -25,6 +29,7 @@ CATTSS::CATTSS( string lexiconFile,
                 string segmentationFile, 
                 string spottingModelPrefix,
                 int numSpottingThreads,
+                int numTaskThreads,
                 int showHeight,
                 int showWidth,
                 int showMilli )
@@ -37,6 +42,10 @@ CATTSS::CATTSS( string lexiconFile,
     corpus->loadSpotter(spottingModelPrefix);
     spottingQueue = new SpottingQueue(masterQueue,corpus);
     
+    cont.store(1);
+    sem_init(&semLock, 0, 0);
+   
+    //should be priority 77 
     incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
     showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
@@ -91,6 +100,7 @@ CATTSS::CATTSS( string lexiconFile,
 //#endif
 #endif
     spottingQueue->run(numSpottingThreads);
+    run(numTaskThreads);
     //test
     /*
         Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);
@@ -182,103 +192,17 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 
 void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent)
 {
-#ifndef TEST_MODE
-    try
-    {
-#endif
-        //cout <<"Recieved batch for "<<resultsId<<endl;
-        vector<pair<unsigned long,string> > toRemoveSpottings;        
-        vector<unsigned long> toRemoveBatches;        
-        vector<Spotting>* toAdd = masterQueue->feedback(stoul(resultsId),ids,labels,resent,&toRemoveSpottings);
-        if (toAdd!=NULL)
-        {
-            vector<Spotting*> newExemplars;
-            vector<pair<unsigned long,string> > toRemoveExemplars;        
-            vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
-            masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-            masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
-            //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
-            //if (toRemoveBatches.size()>0)
-            //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
-            toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
-            spottingQueue->removeQueries(&toRemoveExemplars);
-            spottingQueue->addQueries(*toAdd);
-            delete toAdd;
-        }
-        /*else //We presume that this set has been finished
-        {
-            for (int i=0; i<ids.size(); i++)
-            {
-                if (labels[i]==0)
-        */
-#ifndef TEST_MODE
-    }
-    catch (exception& e)
-    {
-        cout <<"Exception in CATTSS::updateSpottings(), "<<e.what()<<endl;
-    }
-    catch (...)
-    {
-        cout <<"Exception in CATTSS::updateSpottings(), UNKNOWN"<<endl;
-    }
-#endif
+    enqueue(new UpdateTask(resultsId,ids,labels,resent));
 }
 
 void CATTSS::updateTranscription(string id, string transcription, bool manual)
 {
-#ifndef TEST_MODE
-    try
-    {
-#endif
-        vector<pair<unsigned long, string> > toRemoveExemplars;
-        if (manual)
-        {
-            vector<Spotting*> newExemplars = corpus->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
-            masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
-        }
-        else
-        {
-            masterQueue->transcriptionFeedback(stoul(id),transcription,&toRemoveExemplars);
-        }
-        spottingQueue->removeQueries(&toRemoveExemplars);
-
-#ifndef TEST_MODE
-    }
-    catch (exception& e)
-    {
-        cout <<"Exception in CATTSS::updateTranscription(), "<<e.what()<<endl;
-    }
-    catch (...)
-    {
-        cout <<"Exception in CATTSS::updateTranscription(), UNKNOWN"<<endl;
-    }
-#endif
+    enqueue(new UpdateTask(id,transcription,manual));
 }
-
-
 
 void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
 {
-#ifndef TEST_MODE
-    try
-    {
-#endif
-        vector<pair<unsigned long,string> > toRemoveExemplars;        
-        vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(batchId), labels, &toRemoveExemplars);
-
-        spottingQueue->removeQueries(&toRemoveExemplars);
-        spottingQueue->addQueries(toSpot);
-#ifndef TEST_MODE
-    }
-    catch (exception& e)
-    {
-        cout <<"Exception in CATTSS::updateNewExemplars(), "<<e.what()<<endl;
-    }
-    catch (...)
-    {
-        cout <<"Exception in CATTSS::updateNewExemplars(), UNKNOWN"<<endl;
-    }
-#endif
+    enqueue(new UpdateTask(batchId,labels,resent));
 }
 
 void CATTSS::misc(string task)
@@ -306,6 +230,7 @@ void CATTSS::misc(string task)
         else if (task.compare("stopSpotting")==0)
         {
             spottingQueue->stop();
+            stop();
         }
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
@@ -329,3 +254,156 @@ void CATTSS::misc(string task)
 #endif
 }    
 
+void* threadTask(void* cattss)
+{
+    nice(1);
+    ((CATTSS*)cattss)->threadLoop();
+    //pthread_exit(NULL);
+}
+
+void CATTSS::run(int numThreads)
+{
+
+    taskThreads.resize(numThreads);
+    for (int i=0; i<numThreads; i++)
+    {
+        taskThreads[i] = new thread(threadTask,this);
+        taskThreads[i]->detach();
+        
+    }
+}
+void CATTSS::stop()
+{
+    cont.store(0);
+    for (int i=0; i<taskThreads.size(); i++)
+        sem_post(&semLock);
+}
+
+
+void CATTSS::threadLoop()
+{
+    UpdateTask* updateTask;
+    while(1)
+    {
+        
+#ifndef TEST_MODE
+        try
+        {
+#endif
+            updateTask = dequeue();
+            if (!cont.load())
+                break; //END
+            
+            if (updateTask!=NULL)
+            {
+                if (updateTask->type==NEW_EXEMPLAR_TASK)
+                {
+#ifdef TEST_MODE
+                    cout<<"START NewExemplarsTask: ["<<updateTask->id<<"]"<<endl;
+                    clock_t t;
+                    t = clock();
+#endif
+                    vector<pair<unsigned long,string> > toRemoveExemplars;        
+                    vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(updateTask->id),
+                                                                                         updateTask->labels,
+                                                                                         &toRemoveExemplars);
+
+                    spottingQueue->removeQueries(&toRemoveExemplars);
+                    spottingQueue->addQueries(toSpot);
+#ifdef TEST_MODE
+                    t = clock() - t;
+                    cout<<"END NewExemplarsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+#endif
+                }
+                else if (updateTask->type==TRANSCRIPTION_TASK)
+                {
+#ifdef TEST_MODE
+                    cout<<"START TranscriptionTask: ["<<updateTask->id<<"]"<<endl;
+                    clock_t t;
+                    t = clock();
+#endif
+                    vector<pair<unsigned long, string> > toRemoveExemplars;
+                    if (updateTask->resent_manual_bool)
+                    {
+                        vector<Spotting*> newExemplars = corpus->transcriptionFeedback(stoul(updateTask->id),updateTask->strings.front(),&toRemoveExemplars);
+                        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
+                    }
+                    else
+                    {
+                        masterQueue->transcriptionFeedback(stoul(updateTask->id),updateTask->strings.front(),&toRemoveExemplars);
+                    }
+                    spottingQueue->removeQueries(&toRemoveExemplars);
+#ifdef TEST_MODE
+                    t = clock() - t;
+                    cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+#endif
+                }
+                else if (updateTask->type==SPOTTINGS_TASK)
+                {
+#ifdef TEST_MODE
+                    cout<<"START SpottingsTask: ["<<updateTask->id<<"]"<<endl;
+                    clock_t t;
+                    t = clock();
+#endif
+                    vector<pair<unsigned long,string> > toRemoveSpottings;        
+                    vector<unsigned long> toRemoveBatches;        
+                    vector<Spotting>* toAdd = masterQueue->feedback(stoul(updateTask->id),updateTask->strings,updateTask->labels,updateTask->resent_manual_bool,&toRemoveSpottings);
+                    if (toAdd!=NULL)
+                    {
+                        vector<Spotting*> newExemplars;
+                        vector<pair<unsigned long,string> > toRemoveExemplars;        
+                        vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
+                        masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
+                        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
+                        //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
+                        //if (toRemoveBatches.size()>0)
+                        //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
+                        toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
+                        spottingQueue->removeQueries(&toRemoveExemplars);
+                        spottingQueue->addQueries(*toAdd);
+                        delete toAdd;
+                    }
+#ifdef TEST_MODE
+                    t = clock() - t;
+                    cout<<"END SpottingsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+#endif
+                }
+                delete updateTask;
+            }
+            else
+                break; //END
+#ifndef TEST_MODE
+        }
+        catch (exception& e)
+        {
+            cout <<"Exception in CATTSS:threadLoop ["<<updateTask->type<<"], "<<e.what()<<endl;
+        }
+        catch (...)
+        {
+            cout <<"Exception in CATTSS::threadLoop ["<<updateTask->type<<"], UNKNOWN"<<endl;
+        }
+#endif
+    }
+}
+
+void CATTSS::enqueue(UpdateTask* task)
+{
+     
+    taskQueueLock.lock();
+    taskQueue.push_back(task);
+    sem_post(&semLock);
+    taskQueueLock.unlock();
+}
+UpdateTask* CATTSS::dequeue()
+{
+    sem_wait(&semLock);
+    UpdateTask* ret=NULL; 
+    taskQueueLock.lock();
+    if (taskQueue.size()>0)
+    {
+        ret = taskQueue.front();
+        taskQueue.pop_front();
+    }
+    taskQueueLock.unlock();
+    return ret;
+}

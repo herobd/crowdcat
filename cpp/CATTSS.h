@@ -11,7 +11,23 @@
 #include <exception>
 #include <pthread.h>
 
+#include <unistd.h>
 //#include "ctpl_stl.h"
+
+#define NEW_EXEMPLAR_TASK 1
+#define TRANSCRIPTION_TASK 2
+#define SPOTTINGS_TASK 3
+struct UpdateTask
+{
+    int type;
+    string id;
+    vector<int> labels;
+    int resent_manual_bool;
+    vector<string> strings;
+    UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
+    UpdateTask(string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
+    UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 
+};
 
 class CATTSS
 {
@@ -23,6 +39,17 @@ class CATTSS
     thread* showChecker;
 
     //ctpl::thread_pool* pool;
+    //Thread pool stuff
+    vector<thread*> taskThreads;
+    atomic_char cont;
+    deque<UpdateTask*> taskQueue;
+    sem_t semLock;
+    mutex taskQueueLock;
+
+    UpdateTask* dequeue();
+    void enqueue(UpdateTask* task);
+    void run(int numThreads);
+    void stop();
 
     public:
     CATTSS( string lexiconFile,
@@ -30,6 +57,7 @@ class CATTSS
             string segmentationFile, 
             string spottingModelPrefix,
             int numSpottingThreads,
+            int numTaskThreads,
             int showHeight,
             int showWidth,
             int showMilli );
@@ -49,6 +77,7 @@ class CATTSS
     void misc(string task);
 
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
+    void threadLoop();
 
 };
 #endif

@@ -16,12 +16,13 @@ using namespace std;
 
 #define FUZZY 12
 
-#define SPOTTING_TYPE_NONE 1
+/*#define SPOTTING_TYPE_NONE 1
 #define SPOTTING_TYPE_APPROVED 2
 #define SPOTTING_TYPE_THRESHED 3
 #define SPOTTING_TYPE_EXEMPLAR 4
 #define SPOTTING_TYPE_TRANS_TRUE 5
-#define SPOTTING_TYPE_TRANS_FALSE 6
+#define SPOTTING_TYPE_TRANS_FALSE 6*/
+enum SpottingType {SPOTTING_TYPE_NONE, SPOTTING_TYPE_APPROVED, SPOTTING_TYPE_THRESHED, SPOTTING_TYPE_EXEMPLAR, SPOTTING_TYPE_TRANS_TRUE, SPOTTING_TYPE_TRANS_FALSE};
 
 class Spotting {
 public:
@@ -67,7 +68,7 @@ public:
     string ngram;
     float score;
     unsigned long id;
-    unsigned char type;
+    SpottingType type;
     virtual const cv::Mat img() const
     {
         return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));

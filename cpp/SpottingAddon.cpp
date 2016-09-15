@@ -161,14 +161,16 @@ NAN_METHOD(start) {
     v8::String::Utf8Value spottingModelPrefixNAN(info[3]);
     string spottingModelPrefix = string(*spottingModelPrefixNAN);
     int numSpottingThreads = To<int>(info[4]).FromJust();
-    int height = To<int>(info[5]).FromJust();
-    int width = To<int>(info[6]).FromJust();
-    int milli = To<int>(info[7]).FromJust();
+    int numTaskThreads = To<int>(info[5]).FromJust();
+    int height = To<int>(info[6]).FromJust();
+    int width = To<int>(info[7]).FromJust();
+    int milli = To<int>(info[8]).FromJust();
     cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
                         spottingModelPrefix,
                         numSpottingThreads,
+                        numTaskThreads,
                         height,
                         width,
                         milli);

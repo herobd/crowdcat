@@ -26,6 +26,8 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     retPoss = batch->getPossibilities();
     spottings = batch->getSpottingPoints();
     //delete batch;
+    wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
+    gt=batch->getBackPointer()->getGT();
 }
 void BatchWraperTranscription::doCallback(Callback *callback)
 {
@@ -43,6 +45,8 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	Nan::Set(obj, Nan::New("color").ToLocalChecked(), Nan::New(spottings[index].getColor()).ToLocalChecked());
 	Nan::Set(spottingsArr, index, obj);
     }
+    v8::Local<v8::Object> loc = Nan::New<v8::Object>();
+    Nan::Set(loc, Nan::New("wordIndex").ToLocalChecked(), Nan::New(wordIndex).ToLocalChecked());
     string batchType;
     if (manual)
        batchType = "manual";
@@ -55,9 +59,11 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	Nan::New(wordImgStr).ToLocalChecked(),
 	//Nan::New(ngramImgStr).ToLocalChecked(),
 	Nan::New(spottingsArr),
-	Nan::New(possibilities)
+	Nan::New(possibilities),
+        loc,
+        Nan::New(gt).ToLocalChecked()
     };
     
 
-    callback->Call(6, argv);
+    callback->Call(8, argv);
 }

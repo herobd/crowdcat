@@ -1,4 +1,5 @@
 #include "Knowledge.h"
+#include <time.h>
 
 int Knowledge::Page::_id=0;
 
@@ -446,7 +447,8 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
     {
         const Mat im=getWordImg();
         assert(*spotter != NULL);
-        float score = (*spotter)->score(word,im);
+        float score = (*spotter)->score(word,spottingIndex);
+        //float score = (*spotter)->score(word,im);
         scores.insert(make_pair(score,word));
         if (score<min)
             min=score;
@@ -2148,6 +2150,7 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
             vector<Word*> wordsInLine = line->wordsAndBounds(&line_ty,&line_by);
             for (Word* word : wordsInLine)
             {
+                word->setSpottingIndex(_words.size());
                 _words.push_back(word);
                 _wordImgs.push_back(word->getImg());
                 _gt.push_back(word->getGT());

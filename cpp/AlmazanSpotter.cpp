@@ -44,3 +44,7 @@ float AlmazanSpotter::score(string text, const cv::Mat& image) const
         return spotter->compare(text,gray);
     }
 }
+float AlmazanSpotter::score(string text, int wordIndex) const
+{
+    return spotter->compare(text,wordIndex);
+}
