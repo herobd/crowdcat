@@ -111,6 +111,9 @@ var ControllerApp = function(port) {
         ].forEach(function(element, index, array) {
             process.on(element, function() { self.terminator(element); });
         });
+        process.on('SIGPIPE', function () {
+              console.log('SIGPIPE fired');
+        });
     };
 
 
@@ -364,7 +367,7 @@ var ControllerApp = function(port) {
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
                                 else
-                                    res.send({batchType:'ERROR',batchId:-1});
+                                    res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
                             });
                 } else {
                     spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,

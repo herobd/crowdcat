@@ -20,7 +20,7 @@ class BatchWraperNewExemplars: public BatchWraper
         //output
         vector<string> retData;
         vector<string> retNgram;
-        vecotr<Locations> locations;
+        vector<Location> locations;
         string batchId;
         
     public:

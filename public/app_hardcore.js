@@ -326,6 +326,7 @@ function setup() {
             startTime = new Date().getTime();
             //this.parentNode.removeChild(this);
             this.hidden=true;
+            this.style.display='none';
         }, false);
     }
 
@@ -522,6 +523,7 @@ function getNextBatch(toload,callback) {
     }*/
     if (trainingMode) {
         query+='&trainingNum='+trainingNum;
+        trainingNum+=1;
     }
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
@@ -540,7 +542,10 @@ function getNextBatch(toload,callback) {
             if (trainingMode) {
                 batchQueue[batchQueue.length-1].instructions=jres.instructions;
                 batchQueue[batchQueue.length-1].lastTraining=jres.lastTraining;
-                batchQueue[batchQueue.length-1].correct=jres.correct;
+                batchQueue[batchQueue.length-1].correct=jres.correct.toLowerCase();
+
+                if (fromEmpty)
+                    instructionsText.innerHTML=jres.instructions;
             }
             /*if (colorIndex==1)
                 colorIndex=-1;
@@ -651,14 +656,14 @@ function isBatchDone(batchId) {
 
     if (testMode && trainingMode) {
         var right=false;
-        if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='s') {
+        if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type=='s') {
             for (spottingId in batches[batchId].spottings) {
-                if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct) {
+                if (batches[batchId].spottings.hasOwnProperty(spottingId) && batches[batchId].spottings[spottingId]==lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].correct) {
                     right = true;
                 }
             }
-        } else if (lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='t' || lastRemovedBatchInfo[lastRemovedBatchInfo-1].type=='m') {
-                right =  lastRemovedBatchInfo[lastRemovedBatchInfo-1].transcription.toLowerCase() == lastRemovedBatchInfo[lastRemovedBatchInfo-1].correct;
+        } else if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type=='t' || lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type=='m') {
+                right =  lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].transcription.toLowerCase() == lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].correct;
         }
         
         if (batchQueue[0].lastTraining) {
@@ -666,15 +671,19 @@ function isBatchDone(batchId) {
             instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on real instances. Work fast and accurately.</p><p>Good luck!</p>";
 
             instructions.hidden=false;
+            instructions.style.display='flex';
 
         } else if (right) {
             instructionsText.innerHTML=batchQueue[0].instructions;
-            if (batchQueue[0].instructions.length>0)
+            if (batchQueue[0].instructions.length>0) {
                 instructions.hidden=false;
+                instructions.style.display='flex';
+            }
         } else {
-            instructionsText.innerHTML='That was incorrect; use the [undo] button to correct the error.';
+            instructionsText.innerHTML='That was incorrect; use the <b>undo</b> button to correct the error.';
 
             instructions.hidden=false;
+            instructions.style.display='flex';
         }
     }
 }
@@ -919,7 +928,7 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     var errDiv = document.createElement("div");
     errDiv.classList.toggle('selection');
     errDiv.classList.toggle('error');
-    errDiv.innerHTML="<div>Error (something's not right)</div>";
+    errDiv.innerHTML="<div>[None / Error]</div>";
     errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
     errDiv.addEventListener('touchup', classify(id,'$ERROR$'), false);
     selectionDiv.appendChild(errDiv);

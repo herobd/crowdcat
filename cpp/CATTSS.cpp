@@ -256,6 +256,7 @@ void CATTSS::misc(string task)
 
 void* threadTask(void* cattss)
 {
+    signal(SIGPIPE, SIG_IGN);
     nice(1);
     ((CATTSS*)cattss)->threadLoop();
     //pthread_exit(NULL);

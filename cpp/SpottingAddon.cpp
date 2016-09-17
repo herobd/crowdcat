@@ -12,6 +12,7 @@ using namespace std;
 using namespace v8;
 
 #include "BatchRetrieveWorker.cpp"
+#include "TrainingBatchRetrieveWorker.cpp"
 #include "SpottingBatchUpdateWorker.cpp"
 #include "NewExemplarsBatchUpdateWorker.cpp"
 #include "TranscriptionBatchUpdateWorker.cpp"
@@ -21,7 +22,7 @@ using namespace v8;
 #include "spotting.h"
 
 CATTSS* cattss;
-
+TrainingInstances* trainingInstances;
 
 NAN_METHOD(getNextBatch) {
     int width = To<int>(info[0]).FromJust();
@@ -43,6 +44,28 @@ NAN_METHOD(getNextBatch) {
     Callback *callback = new Callback(info[4].As<Function>());
 
     AsyncQueueWorker(new BatchRetrieveWorker(callback,cattss, width,color,prevNgram,num));
+}
+NAN_METHOD(getNextTrainingBatch) {
+    int width = To<int>(info[0]).FromJust();
+    int color = To<int>(info[1]).FromJust();
+    //string prevNgram = To<string>(info[2]).FromJust();
+    //v8::String::Utf8Value str(args[0]->ToString());
+    string prevNgram;
+    if (info[2]->IsString())
+    {
+        v8::String::Utf8Value str(info[2]->ToString());
+        prevNgram = string(*str);
+        
+    }
+    
+    //String::Utf8Value str = To<String::Utf8Value>(info[2]).FromJust();
+    
+    int num = To<int>(info[3]).FromJust();
+    int trainingNum = To<int>(info[4]).FromJust();
+    
+    Callback *callback = new Callback(info[5].As<Function>());
+
+    AsyncQueueWorker(new TrainingBatchRetrieveWorker(callback,trainingInstances, width,color,prevNgram,num,trainingNum));
 }
 
 NAN_METHOD(spottingBatchDone) {
@@ -71,9 +94,17 @@ NAN_METHOD(spottingBatchDone) {
       }
     }
     int resent = To<int>(info[3]).FromJust();
+
+    //Which way is better, synchronous (enqueue), or async?
+    //Will waiting at queue lock or spawning worker  thread be more detrimental?
+
+    //cattss->updateSpottings(resultsId,ids,labels,resent);
+    //OR
+    /**/
     Callback *callback = new Callback(info[4].As<Function>());
 
     AsyncQueueWorker(new SpottingBatchUpdateWorker(callback,cattss,resultsId,ids,labels,resent));
+    /**/
 }
 
 NAN_METHOD(newExemplarsBatchDone) {
@@ -175,7 +206,7 @@ NAN_METHOD(start) {
                         width,
                         milli);
                         
-                        
+    trainingInstances = new TrainingInstances(); 
 }
 NAN_METHOD(stopSpotting) {
     Callback *callback = new Callback(info[0].As<Function>());
@@ -232,7 +263,7 @@ NAN_METHOD(clearTestUsers) {
 }*/
 
 NAN_MODULE_INIT(Init) {
-    
+    signal(SIGPIPE, SIG_IGN);    
 //#ifndef TEST_MODE
     //cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
     //                    "/home/brian/intel_index/data/gw_20p_wannot",
@@ -289,6 +320,8 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<v8::String>("clearTestUsers").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(clearTestUsers)).ToLocalChecked());*/
+    Nan::Set(target, New<v8::String>("getNextTrainingBatch").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(getNextTrainingBatch)).ToLocalChecked());
 }
 
 NODE_MODULE(SpottingAddon, Init)

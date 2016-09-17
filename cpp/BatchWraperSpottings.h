@@ -15,11 +15,11 @@ using namespace std;
 using namespace v8;
 class BatchWraperSpottings: public BatchWraper
 {
-    private:
+    protected:
         //output
         vector<string> retData;
         vector<string> retId;
-        vecotr<Locations> locations;
+        vector<Location> locations;
         string batchId;
         string resultsId;
         string ngram;
@@ -27,6 +27,6 @@ class BatchWraperSpottings: public BatchWraper
     public:
         BatchWraperSpottings(SpottingsBatch* batch);
         ~BatchWraperSpottings() {}
-        void doCallback(Callback* callback);
+        virtual void doCallback(Callback* callback);
 };
 #endif

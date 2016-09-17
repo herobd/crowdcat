@@ -16,7 +16,7 @@ using namespace std;
 using namespace v8;
 class BatchWraperTranscription: public BatchWraper
 {
-    private:
+    protected:
         //output
         string batchId;
         string wordImgStr;
@@ -30,6 +30,6 @@ class BatchWraperTranscription: public BatchWraper
     public:
         BatchWraperTranscription(TranscribeBatch* batch);
         ~BatchWraperTranscription() {}
-        void doCallback(Callback* callback);
+        virtual void doCallback(Callback* callback);
 };
 #endif

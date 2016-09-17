@@ -109,7 +109,7 @@ void TranscribeBatch::setWidth(unsigned int width)
     int wordH = wordImg.rows;
     int wordW = wordImg.cols;
     //int textH= textImg.rows;
-    newWordImg = cv::Mat::zeros(wordH,width,CV_8UC3);
+    newWordImg = cv::Mat::zeros(wordH,width,origImg->type());
     //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
     int padLeft = max((((int)width)-wordW)/2,0);
     for (SpottingPoint& sp : spottingPoints)
@@ -127,6 +127,8 @@ void TranscribeBatch::setWidth(unsigned int width)
             (*origImg)(cv::Rect(cropX,tly,cropWidth,wordH)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordH)));
 
         }
+        if (newWordImg.type() != CV_8UC3)
+            cv::cvtColor(newWordImg,newWordImg,CV_GRAY2RGB);
         wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, 0, wordW, wordH)));
         //textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
     }

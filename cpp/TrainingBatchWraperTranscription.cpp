@@ -1,35 +1,9 @@
 
-#include "BatchWraperTranscription.h"
-BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
+#include "TrainingBatchWraperTranscription.h"
+TrainingBatchWraperTranscription::TrainingBatchWraperTranscription(TranscribeBatch* batch, string correct, string instructions, bool last) : BatchWraperTranscription(batch), correct(correct), instructions(instructions), last(last)
 {
-    base64::encoder E;
-    vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
-    
-    manual = batch->isManual();
-    batchId=to_string(batch->getId());
-    vector<uchar> outBuf;
-    cv::imencode(".png",batch->getImage(),outBuf,compression_params);
-    stringstream ss;
-    ss.write((char*)outBuf.data(),outBuf.size());
-    stringstream encoded;
-    E.encode(ss, encoded);
-    string dataBase64 = encoded.str();
-    wordImgStr=dataBase64;
-    /*outBuf.clear();
-    cv::imencode(".png",batch->getTextImage(),outBuf,compression_params);
-    stringstream ss2;
-    ss2.write((char*)outBuf.data(),outBuf.size());
-    stringstream encoded2;
-    E.encode(ss2, encoded2);
-    dataBase64 = encoded2.str();
-    ngramImgStr=dataBase64;*/
-    retPoss = batch->getPossibilities();
-    spottings = batch->getSpottingPoints();
-    //delete batch;
-    wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
-    gt=batch->getBackPointer()->getGT();
 }
-void BatchWraperTranscription::doCallback(Callback *callback)
+void TrainingBatchWraperTranscription::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
     v8::Local<v8::Array> possibilities = Nan::New<v8::Array>(retPoss.size());
@@ -61,9 +35,11 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	Nan::New(spottingsArr),
 	Nan::New(possibilities),
         Nan::New(loc),
-        Nan::New(gt).ToLocalChecked()
+        Nan::New(correct).ToLocalChecked(),
+        Nan::New(instructions).ToLocalChecked(),
+        Nan::New(last)
     };
     
 
-    callback->Call(8, argv);
+    callback->Call(10, argv);
 }

@@ -62,7 +62,7 @@ void BatchWraperNewExemplars::doCallback(Callback *callback)
 	Nan::New(arr),
 	Nan::Null(),
 	Nan::Null(),
-        locs,
+        Nan::New(locs),
         Nan::New("UNKNOWN").ToLocalChecked()
     };
 

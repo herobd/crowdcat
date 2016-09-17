@@ -378,12 +378,13 @@ div.selection {
 
 div.selection.error {
     font-size: 22px;
-    color: #fffff0;
+    color: #a15757;
 }
 
-.selection.error div {
+/*.selection.error div {
     background: #a15757;
-}
+}*/
+
 @keyframes expand {
     from {max-height:0px;
           min-height:0px;}
@@ -466,7 +467,7 @@ div.selection.error {
     color: #0E0E0E;
     height:140px;
     border-width:20px 0px;
-    border-color: #FFFF77;
+    border-color: #200020;
     border-style: solid;
 }
 
