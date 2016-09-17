@@ -21,6 +21,7 @@ class TrainingInstances
         BatchWraper* makeInstance(int trainingNum, int width,int color);
 
         cv::Mat line;
+        cv::Mat letsgo;
         Spotting spotting_0;
         Spotting spotting_1;
         Spotting spotting_2;
@@ -36,6 +37,7 @@ class TrainingInstances
         Spotting spotting_11a;
         Spotting spotting_12a;
         Spotting spotting_12b;
+        Spotting spotting_GO;
 };
 
 #endif 

@@ -2171,8 +2171,13 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
         Knowledge::Word* w = getWord(res[i].imIdx);
         int tlx, tly, brx, bry;
         bool done;
-        w->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
-        ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score);
+        int gt=UNKNOWN_GT;
+        string wordGT;
+        w->getBoundsAndDoneAndGT(&tlx, &tly, &brx, &bry, &done, &wordGT);
+        int posN = wordGT.find_first_of(query->getNgram());
+        if (posN ==  string::npos && wordGT.length()>0)
+            gt=0;
+        ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score, gt);
         assert(i==0 || ret->at(i).id != ret->at(i-1).id);
         if (done)
             w->preapproveSpotting(&ret->at(i));

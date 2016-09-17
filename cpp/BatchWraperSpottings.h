@@ -23,6 +23,7 @@ class BatchWraperSpottings: public BatchWraper
         string batchId;
         string resultsId;
         string ngram;
+        vector<string> gt;
         
     public:
         BatchWraperSpottings(SpottingsBatch* batch);

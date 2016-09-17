@@ -15,6 +15,7 @@
 using namespace std;
 
 #define FUZZY 12
+#define UNKNOWN_GT -1
 
 /*#define SPOTTING_TYPE_NONE 1
 #define SPOTTING_TYPE_APPROVED 2
@@ -27,20 +28,26 @@ enum SpottingType {SPOTTING_TYPE_NONE, SPOTTING_TYPE_APPROVED, SPOTTING_TYPE_THR
 class Spotting {
 public:
     Spotting() :
-        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
+        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1), gt(UNKNOWN_GT) {}
     Spotting(int tlx, int tly, int brx, int bry) :
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1), gt(UNKNOWN_GT) {}
     Spotting(int tlx, int tly) :
-        tlx(tlx), tly(tly), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
+        tlx(tlx), tly(tly), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1), gt(UNKNOWN_GT) {}
     
     Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1)
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1), gt(UNKNOWN_GT)
+    {
+        id = ++_id;
+    }
+
+    Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score, int gt) : 
+        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1), gt(gt)
     {
         id = ++_id;
     }
     
     Spotting(const Spotting& s) : 
-        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank)
+        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank), gt(s.gt)
     {
         id = s.id;
     }
@@ -57,6 +64,7 @@ public:
         score = other.score;
         type = other.type;
         ngramRank = other.ngramRank;
+        gt = other.gt;
         id=other.id;
 
         return *this;
@@ -68,6 +76,7 @@ public:
     string ngram;
     float score;
     unsigned long id;
+    int gt;
     SpottingType type;
     virtual const cv::Mat img() const
     {

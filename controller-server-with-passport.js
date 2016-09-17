@@ -37,6 +37,8 @@ var numThreadsUpdating=3;
 var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
+
+var saveMode=false;
 /**
  *  Define the application.
  */
@@ -50,6 +52,10 @@ var ControllerApp = function(port) {
         self.port=port;
     
     self.showing=true;
+    if (saveMode) {
+        self.saveSpottingsQueue={};
+        self.saveTransQueue={};
+    }    
     /*  ================================================================  */
     /*  Helper functions.                                                 */
     /*  ================================================================  */
@@ -358,26 +364,42 @@ var ControllerApp = function(port) {
 
                     spottingaddon.getNextTrainingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,+req.query.trainingNum,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct,instructions,lastTraining) {
-                                if (batchType==='spottings')
+                                if (batchType==='spottings') {
                                     res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5,instructions:instructions,lastTraining:lastTraining,correct:correct});
-                                else if (batchType==='transcription' || batchType==='manual')
+                                }
+                                else if (batchType==='transcription' || batchType==='manual') {
                                     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5,instructions:instructions,lastTraining:lastTraining,correct:correct});
-                                else if (batchType==='newExemplars')
+                                }
+                                else if (batchType==='newExemplars') {
                                     res.send({batchType:batchType,batchId:batchId,exemplars:arg3,instructions:instructions,lastTraining:lastTraining,correct:correct});
+                                }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
                                 else
                                     res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
+                                
                             });
                 } else {
                     spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
-                                if (batchType==='spottings')
+                                if (batchType==='spottings') {
                                     res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
-                                else if (batchType==='transcription' || batchType==='manual')
+                                    if (saveMode) {
+                                        for (var index=0; index<arg5.spottings.length; index++) {
+                                            var spotting = arg5[index];
+                                            self.saveSpottingsQueue[spotting.id] = {ngram:arg3, loc:loc[index], label:null};
+                                        }
+                                    }
+                                }
+                                else if (batchType==='transcription' || batchType==='manual') {
                                     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
-                                else if (batchType==='newExemplars')
+                                    if (saveMode) {
+                                        if (batchType==='transcription') {
+                                            self.saveTransQueue[batchId] = {loc:loc,poss:arg5, ngrams:??}
+                                }
+                                else if (batchType==='newExemplars') {
                                     res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
+                                }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
                                 else
@@ -434,22 +456,33 @@ var ControllerApp = function(port) {
                 } else if (req.query.trainingNum) {
                     //nothing
                 } else {
-                    if (req.query.type=='spottings')
+                    if (req.query.type=='spottings') {
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
                            if (err) console.log(err); 
                         });
-                    else if (req.query.type=='transcription')
+                        if (saveMode) {
+                            for (var index=0; index<req.body.ids.length; index++) {
+                                self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
+                                database.saveSpotting(self.saveSpottingsQueue[req.body.ids[index]]);
+                                self.saveSpottingsQueue[req.body.ids[index]]=null;
+                            }
+                        }
+                    }
+                    else if (req.query.type=='transcription') {
                         spottingaddon.transcriptionBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
-                    else if (req.query.type=='newExemplars')
+                    }
+                    else if (req.query.type=='newExemplars') {
                         spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
                             if (err) console.log(err);
                         });
-                    else if (req.query.type=='transcriptionManual')
+                    }
+                    else if (req.query.type=='transcriptionManual') {
                         spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
+                    }
 
                     res.send({done:false});
                 }

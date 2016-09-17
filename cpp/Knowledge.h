@@ -151,9 +151,6 @@ public:
     void getBaselines(int* top, int* bot);
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
-#ifdef TEST_MODE
-        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getBoundsAndDone"<<endl;
-#endif
         pthread_rwlock_rdlock(&lock);
         *word_tlx=tlx;
         *word_tly=tly;
@@ -161,15 +158,9 @@ public:
         *word_bry=bry;
 	*isDone=done;
         pthread_rwlock_unlock(&lock);
-#ifdef TEST_MODE
-        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getBoundsAndDone"<<endl;
-#endif
     }
     void getBoundsAndDoneAndSent(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent)
     {
-#ifdef TEST_MODE
-        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getBoundsAndDoneAndSent"<<endl;
-#endif
         pthread_rwlock_rdlock(&lock);
         *word_tlx=tlx;
         *word_tly=tly;
@@ -178,9 +169,17 @@ public:
 	*isDone=done;
         *isSent=sentBatchId!=0;
         pthread_rwlock_unlock(&lock);
-#ifdef TEST_MODE
-        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getBoundsAndDoneAndSent"<<endl;
-#endif
+    }
+    void getBoundsAndDoneAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, string* gt)
+    {
+        pthread_rwlock_rdlock(&lock);
+        *word_tlx=tlx;
+        *word_tly=tly;
+        *word_brx=brx;
+        *word_bry=bry;
+	*isDone=done;
+        *gt=this->gt;
+        pthread_rwlock_unlock(&lock);
     }
 
     vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
@@ -189,30 +188,18 @@ public:
 
     vector<Spotting> getSpottings() 
     {
-#ifdef TEST_MODE
-        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getSpottings"<<endl;
-#endif
         pthread_rwlock_rdlock(&lock);
         vector<Spotting> ret;
         for (auto p : spottings)
             ret.push_back(p.second);
         pthread_rwlock_unlock(&lock);
-#ifdef TEST_MODE
-        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getSpottings"<<endl;
-#endif
         return ret;
     }
     void sent(unsigned long id)
     {
-#ifdef TEST_MODE
-        //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") sent"<<endl;
-#endif
         pthread_rwlock_wrlock(&lock);
         sentBatchId=id;
         pthread_rwlock_unlock(&lock);
-#ifdef TEST_MODE
-        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") sent"<<endl;
-#endif
     }
     void setSpottingIndex(int index)
     {
