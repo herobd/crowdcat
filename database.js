@@ -6,7 +6,7 @@ module.exports =  function() {
    34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,56,
    34,435,1,0,7,65,4,830,644,5,7,9,6,44,6,8,5,544,5,7,88,456,6,54,5,77,45624,456,6,5];
    var fs = require('fs');
-    function Database(address) {
+    function Database(address,dataName,callback) {
         
         var self=this;
         
@@ -16,9 +16,12 @@ module.exports =  function() {
         self.mongo.connect("mongodb://"+address, function(err, db) {
           if(!err) {
             console.log("We are connected to the database.");
+            var numCol=4;
             db.collection('THESIS_USERS', function(err, collection) {
                 if(!err) {
                     self.userCollection=collection;
+                    if (--numCol <= 0)
+                        callback(self);
                 } else {
                     console.log('ERROR: conencting to MongoDB colection THESIS_USERS: '+err);
                 }
@@ -27,8 +30,29 @@ module.exports =  function() {
             db.collection('THESIS_ALPHA', function(err, collection) {
                 if(!err) {
                     self.alphaCollection=collection;
+                    if (--numCol <= 0)
+                        callback(self);
                 } else {
                     console.log('ERROR: conencting to MongoDB colection THESIS_ALPHA: '+err);
+                }
+            });
+
+            db.collection('THESIS_SPOTTINGS_'+dataName, function(err, collection) {
+                if(!err) {
+                    self.spottingsCollection=collection;
+                    if (--numCol <= 0)
+                        callback(self);
+                } else {
+                    console.log('ERROR: conencting to MongoDB colection THESIS_SPOTTINGS: '+err);
+                }
+            });
+            db.collection('THESIS_TRANS_'+dataName, function(err, collection) {
+                if(!err) {
+                    self.transCollection=collection;
+                    if (--numCol <= 0)
+                        callback(self);
+                } else {
+                    console.log('ERROR: conencting to MongoDB colection THESIS_TRANS: '+err);
                 }
             });
             
@@ -43,19 +67,21 @@ module.exports =  function() {
         var back = self.revealEmail(enc);
         if (teststr!=back)
             console.log('Email scramble failed');
+
+        
     }
     
     Database.prototype.addUser = function (email,survey,callback)  {
         
         var self=this;
-        
-        self.findUser(email, function(err,item) {
+        var hemail = this.hideEmail(email);
+        self.findUser(hemail, function(err,item) {
             if (err) {
                 callback(err);
             } else if (item!=null){
                 callback("User already exists");
             } else {
-                self.userCollection.insert({id:email, presurvey:survey}, {w:1}, function(err, result) {
+                self.userCollection.insert({id:hemail, presurvey:survey}, {w:1}, function(err, result) {
                     callback(err);
                 });
             }
@@ -68,7 +94,8 @@ module.exports =  function() {
     
     Database.prototype.findUser = function (email,callback) {
         var self=this;
-        self.userCollection.findOne({id:email}, function(err, item) {
+        var hemail = this.hideEmail(email);
+        self.userCollection.findOne({id:hemail}, function(err, item) {
             callback(err,item);
         });
     }
@@ -188,5 +215,42 @@ module.exports =  function() {
         });
     }
     
+    Database.prototype.saveSpotting = function(id,spotting) {
+        this.spottingsCollection.update({_id:id},{$set: spotting},{ upsert: true } );
+    }
+
+    Database.prototype.saveTrans = function(id,trans) {
+        this.transCollection.update({_id:id},{$set: trans},{ upsert: true } );
+    }
+
+    Database.prototype.getLabeledSpottings = function() {
+        var cursor=this.spottingsCollection.find();
+        var ret=[];
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err);
+            } else if (doc!=null) {
+                ret.push(doc);
+            } else {
+                callback(null,ret);
+            }
+        }
+        
+    }
+    Database.prototype.getLabeledTrans = function() {
+        var cursor=this.transCollection.find();
+        var ret=[];
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err);
+            } else if (doc!=null) {
+                ret.push(doc);
+            } else {
+                callback(null,ret);
+            }
+        }
+        
+    }
+
     return Database
 };

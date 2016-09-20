@@ -214,6 +214,20 @@ NAN_METHOD(stopSpotting) {
     AsyncQueueWorker(new MiscWorker(callback,cattss, "stopSpotting"));
 }
 
+NAN_METHOD(loadLabeledSpotting) {
+    assert (info[0]->IsString())
+    v8::String::Utf8Value str0(info[0]->ToString());
+    string ngram = string(*str0);
+    bool label = To<bool>(info[1]).FromJust();
+    int pageId = To<int>(info[2]).FromJust();
+    int x1 = To<int>(info[3]).FromJust();
+    int y1 = To<int>(info[4]).FromJust();
+    int x2 = To<int>(info[5]).FromJust();
+    int y2 = To<int>(info[6]).FromJust();
+    
+    testingInstances->addSpotting(ngram,label,pageId,x1,y1,x2,y2);    
+
+}
 /*NAN_METHOD(getNextTestBatch) {
     //cout<<"request for test batch"<<endl;
     int width = To<int>(info[0]).FromJust();
@@ -302,6 +316,9 @@ NAN_MODULE_INIT(Init) {
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
+
+    Nan::Set(target, New<v8::String>("loadLabeledSpotting").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(loadLabeledSpotting)).ToLocalChecked());
 
     //Nan::Set(target, New<v8::String>("startSpotting").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());

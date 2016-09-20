@@ -15,11 +15,11 @@ void TrainingBatchWraperSpottings::doCallback(Callback *callback)
 
         Location l=locations[index];
         v8::Local<v8::Object> loc = Nan::New<v8::Object>();
-        loc->Set(Nan::New("page").ToLocalChecked(), Nan::New(l.pageId).ToLocalChecked());
-        loc->Set(Nan::New("x1").ToLocalChecked(), Nan::New(l.x1).ToLocalChecked());
-        loc->Set(Nan::New("y1").ToLocalChecked(), Nan::New(l.y1).ToLocalChecked());
-        loc->Set(Nan::New("x2").ToLocalChecked(), Nan::New(l.x2).ToLocalChecked());
-        loc->Set(Nan::New("y2").ToLocalChecked(), Nan::New(l.y2).ToLocalChecked());
+        loc->Set(Nan::New("page").ToLocalChecked(), Nan::New(l.pageId));
+        loc->Set(Nan::New("x1").ToLocalChecked(), Nan::New(l.x1));
+        loc->Set(Nan::New("y1").ToLocalChecked(), Nan::New(l.y1));
+        loc->Set(Nan::New("x2").ToLocalChecked(), Nan::New(l.x2));
+        loc->Set(Nan::New("y2").ToLocalChecked(), Nan::New(l.y2));
 
         Nan::Set(locs, index, loc);
     }

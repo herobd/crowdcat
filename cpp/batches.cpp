@@ -71,7 +71,8 @@ void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, cons
         const Spotting& s = iter.second;
         cv::Point org((int)((min(wordW,(s.brx-tlx))-max(0,(s.tlx-tlx)))*0.2 + max(0,(s.tlx-tlx))) , 33);
         //cv::putText(textImg, s.ngram, org, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255),1);
-        spottingPoints.push_back(SpottingPoint(s.id,org.x,s.ngram,colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255));    
+        spottingPoints.push_back(SpottingPoint(s.id,org.x,s.ngram,colors[colorIndex][0]*255,colors[colorIndex][1]*255,colors[colorIndex][2]*255,
+                s.pageId,s.tlx,s.tly,s.brx,s.bry));    
         for (int r= max(0,s.tly-tly); r<min(wordH,(s.bry-tly)); r++)
             for (int c= max(0,s.tlx-tlx); c<min(wordW,(s.brx-tlx)); c++)
             {

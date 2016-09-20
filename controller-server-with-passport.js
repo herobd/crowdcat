@@ -31,14 +31,17 @@ numberOfTests=2;
 var lexiconFile="/home/brian/intel_index/data/wordsEnWithNames.txt";
 var pageImageDir="/home/brian/intel_index/data/gw_20p_wannot";
 var segmentationFile="/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
-var spottingModelPrefix="model/CATTSS";
+var dataName='GW';
+
+var spottingModelPrefix="model/CATTSS_"+dataName;
 var numThreadsSpotting=4;
 var numThreadsUpdating=3;
 var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
 
-var saveMode=false;
+var saveMode=true;
+var timingTestMode=true;
 /**
  *  Define the application.
  */
@@ -385,20 +388,31 @@ var ControllerApp = function(port) {
                                 if (batchType==='spottings') {
                                     res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
                                     if (saveMode) {
-                                        for (var index=0; index<arg5.spottings.length; index++) {
+                                        for (var index=0; index<arg5.length; index++) {
                                             var spotting = arg5[index];
-                                            self.saveSpottingsQueue[spotting.id] = {ngram:arg3, loc:loc[index], label:null};
+                                            self.saveSpottingsQueue[spotting.id] = {ngram:arg4, loc:loc[index], label:null};
                                         }
                                     }
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {
                                     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
                                     if (saveMode) {
-                                        if (batchType==='transcription') {
-                                            self.saveTransQueue[batchId] = {loc:loc,poss:arg5, ngrams:??}
+                                        //if (batchType==='transcription') {
+                                        self.saveTransQueue[batchId] = {loc:loc,
+                                                                        poss:arg5, 
+                                                                        ngrams:arg4, 
+                                                                        label:correct, 
+                                                                        manual:(batchType==='manual')};
+                                    }
                                 }
                                 else if (batchType==='newExemplars') {
                                     res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
+                                    if (saveMode) {
+                                        for (var index=0; index<arg3.length; index++) {
+                                            var spotting = arg3[index];
+                                            self.saveSpottingsQueue[batchId+':'+index] = {ngram:spotting.ngram, loc:loc[index], label:null};
+                                        }
+                                    }
                                 }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
@@ -462,9 +476,13 @@ var ControllerApp = function(port) {
                         });
                         if (saveMode) {
                             for (var index=0; index<req.body.ids.length; index++) {
-                                self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
-                                database.saveSpotting(self.saveSpottingsQueue[req.body.ids[index]]);
-                                self.saveSpottingsQueue[req.body.ids[index]]=null;
+                                if (req.body.labels[index]!=='$PASS$') {
+                                    if (!self.saveSpottingsQueue[req.body.ids[index]])
+                                        self.saveSpottingsQueue[req.body.ids[index]]={};
+                                    self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
+                                    self.database.saveSpotting(req.body.ids[index],self.saveSpottingsQueue[req.body.ids[index]]);
+                                    self.saveSpottingsQueue[req.body.ids[index]]=null;
+                                }
                             }
                         }
                     }
@@ -472,16 +490,47 @@ var ControllerApp = function(port) {
                         spottingaddon.transcriptionBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
+                        if (saveMode && req.body.label!=='$PASS$') {
+                            /*if (self.saveTransQueue[req.body.batchId].label!=req.body.label) {
+                                console.log('WARNING label dif on trans['+req.body.batchId']: '+self.saveTransQueue[req.body.batchId].label+' != '+req.body.label);
+                            }*/
+                            if (!self.saveTransQueue[req.body.batchId])
+                                self.saveTransQueue[req.body.batchId]={};
+                            self.saveTransQueue[req.body.batchId].label=req.body.label;
+                            self.database.saveTrans(req.body.batchId,self.saveTransQueue[req.body.batchId]);
+                            self.saveTransQueue[req.body.batchId]=null; 
+                        }
                     }
                     else if (req.query.type=='newExemplars') {
                         spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
                             if (err) console.log(err);
                         });
+                        if (saveMode) {
+                            for (var index=0; index<req.body.labels.length; index++) {
+                                if (req.body.labels[index]!=='$PASS$') {
+                                    if (!self.saveSpottingsQueue[req.body.batchId+':'+index])
+                                        self.saveSpottingsQueue[req.body.batchId+':'+index]={};
+                                    self.saveSpottingsQueue[req.body.batchId+':'+index].label = req.body.labels[index];
+                                    self.database.saveSpotting(req.body.batchId+':'+index,self.saveSpottingsQueue[req.body.batchId+':'+index]);
+                                    self.saveSpottingsQueue[req.body.ids[index]]=null;
+                                }
+                            }
+                        }
                     }
                     else if (req.query.type=='transcriptionManual') {
                         spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
+                        if (saveMode && req.body.label!=='$PASS$') {
+                            if (!self.saveTransQueue[req.body.batchId])
+                                self.saveTransQueue[req.body.batchId]={};
+                            else if (self.saveTransQueue[req.body.batchId].label!=req.body.label) {
+                                console.log('WARNING label dif on trans['+req.body.batchId+']: '+self.saveTransQueue[req.body.batchId].label+' != '+req.body.label);
+                            }
+                            self.saveTransQueue[req.body.batchId].label=req.body.label;
+                            self.database.saveTrans(req.body.batchId,self.saveTransQueue[req.body.batchId]);
+                            self.saveTransQueue[req.body.batchId]=null; 
+                        }
                     }
 
                     res.send({done:false});
@@ -548,7 +597,20 @@ var ControllerApp = function(port) {
         self.setupTerminationHandlers();
         
         
-        self.database=new Database('localhost:27017');
+        self.database=new Database('localhost:27017/cattss', dataName, function(database) {
+            if (timingTestMode) {
+                database.getLabeledSpottings(function(err,labeledSpottings){
+                    if (err)
+                        console.log(err);
+                    else
+                    {
+                        labeledSpottings.forEach(function(s) {
+                            spottingaddon.loadLabeledSpotting(s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
+                        });
+                    }
+                });
+                //TODO database.getLabeledTrans();
+        });
         passport.use(new LocalStrategy({
             usernameField: 'email',
             passwordField: 'password'

@@ -22,7 +22,8 @@ using namespace std;
 class SpottingPoint
 {
     public:
-        SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r) : x(x), ngram(ngram)
+        SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r,  
+                int page, int x1, int y1, int x2, int y2) : x(x), ngram(ngram), x1(x1), y1(y1), x2(x2), page(page)
     {
         stringstream stream;
         if (b>255)
@@ -40,6 +41,7 @@ class SpottingPoint
         string getNgram() {return ngram;}
         string getColor() {return color;}
         string getId() {return id;}
+        int page, x1,y1,x2,y2;
     private:
         int x, pad;
         string ngram, color, id;

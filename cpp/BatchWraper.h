@@ -8,13 +8,13 @@ using namespace v8;
 
 struct Location
 {
-    string pageId, x1,y1,x2,y2;
+    int pageId, x1,y1,x2,y2;
     Location() {}
-    Location(int pageId, int x1, int y1, int x2, int y2) : pageId(to_string(pageId)), 
-                                                            x1(to_string(x1)), 
-                                                            y1(to_string(y1)), 
-                                                            x2(to_string(x2)), 
-                                                            y2(to_string(y2)) {}
+    Location(int pageId, int x1, int y1, int x2, int y2) : pageId(pageId), 
+                                                            x1(x1), 
+                                                            y1(y1), 
+                                                            x2(x2), 
+                                                            y2(y2) {}
 };
 
 class BatchWraper
