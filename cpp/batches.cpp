@@ -102,11 +102,16 @@ void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, cons
         {
             highlightPix(wordImg.at<cv::Vec3b>(r,c),wordHighlight);
         }
+
+    cv::imshow("init",wordImg);
+    cv::waitKey();
 }
 
 void TranscribeBatch::setWidth(unsigned int width) 
 {
 
+    cv::imshow("after init",wordImg);
+    cv::waitKey();
     int wordH = wordImg.rows;
     int wordW = wordImg.cols;
     //int textH= textImg.rows;
@@ -144,4 +149,6 @@ void TranscribeBatch::setWidth(unsigned int width)
     //cv::imshow("trans",newWordImg);
     //cv::waitKey(1);
 #endif
+    cv::imshow("setw",newWordImg);
+    cv::waitKey();
 }

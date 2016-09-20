@@ -25,5 +25,6 @@ class Spotter
     virtual vector<SpottingResult> runQuery(SpottingQuery* query) const =0;
     virtual float score(string text, const cv::Mat& image) const =0;
     virtual float score(string text, int wordIndex) const =0;
+    virtual ~Spotter() {}
 };
 #endif

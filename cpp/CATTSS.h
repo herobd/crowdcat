@@ -75,6 +75,7 @@ class CATTSS
     void updateTranscription(string id, string transcription, bool manual);
     void updateNewExemplars(string resultsId,  vector<int> labels, int resent);
     void misc(string task);
+    const Knowledge::Corpus* getCorpus() const {return corpus;}
 
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
     void threadLoop();

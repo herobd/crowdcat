@@ -30,10 +30,12 @@
                     "Spotter.h", "AlmazanSpotter.h", "AlmazanSpotter.cpp",
                     "AlmazanDataset.h", "AlmazanDataset.cpp",
 
+                    "SpecialInstances.h",
+                    "TestingInstances.h", "TestingInstances.cpp",
                     "TrainingInstances.h", "TrainingInstances.cpp",
                     "TrainingBatchWraperSpottings.h", "TrainingBatchWraperSpottings.cpp",
                     "TrainingBatchWraperTranscription.h", "TrainingBatchWraperTranscription.cpp",
-                    "TrainingBatchRetrieveWorker.cpp"
+                    "SpecialBatchRetrieveWorker.cpp"
                 ],
       "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DTEST_MODE"],
       'cflags!': [ '-fno-exceptions' ],

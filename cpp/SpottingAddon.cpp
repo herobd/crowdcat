@@ -12,17 +12,21 @@ using namespace std;
 using namespace v8;
 
 #include "BatchRetrieveWorker.cpp"
-#include "TrainingBatchRetrieveWorker.cpp"
+#include "SpecialBatchRetrieveWorker.cpp"
 #include "SpottingBatchUpdateWorker.cpp"
 #include "NewExemplarsBatchUpdateWorker.cpp"
 #include "TranscriptionBatchUpdateWorker.cpp"
 #include "MiscWorker.cpp"
+
+#include "TrainingInstances.h"
+#include "TestingInstances.h"
 
 //test
 #include "spotting.h"
 
 CATTSS* cattss;
 TrainingInstances* trainingInstances;
+TestingInstances* testingInstances;
 
 NAN_METHOD(getNextBatch) {
     int width = To<int>(info[0]).FromJust();
@@ -48,8 +52,6 @@ NAN_METHOD(getNextBatch) {
 NAN_METHOD(getNextTrainingBatch) {
     int width = To<int>(info[0]).FromJust();
     int color = To<int>(info[1]).FromJust();
-    //string prevNgram = To<string>(info[2]).FromJust();
-    //v8::String::Utf8Value str(args[0]->ToString());
     string prevNgram;
     if (info[2]->IsString())
     {
@@ -57,15 +59,30 @@ NAN_METHOD(getNextTrainingBatch) {
         prevNgram = string(*str);
         
     }
-    
-    //String::Utf8Value str = To<String::Utf8Value>(info[2]).FromJust();
-    
     int num = To<int>(info[3]).FromJust();
     int trainingNum = To<int>(info[4]).FromJust();
     
     Callback *callback = new Callback(info[5].As<Function>());
+    if (trainingInstances==NULL)
+        trainingInstances = new TrainingInstances(); 
+    AsyncQueueWorker(new SpecialBatchRetrieveWorker(callback,trainingInstances, width,color,prevNgram,num,trainingNum));
+}
+NAN_METHOD(getNextTestingBatch) {
+    int width = To<int>(info[0]).FromJust();
+    int color = To<int>(info[1]).FromJust();
+    string prevNgram;
+    if (info[2]->IsString())
+    {
+        v8::String::Utf8Value str(info[2]->ToString());
+        prevNgram = string(*str);
+        
+    }
+    int num = To<int>(info[3]).FromJust();
+    int testingNum = To<int>(info[4]).FromJust();
+    
+    Callback *callback = new Callback(info[5].As<Function>());
 
-    AsyncQueueWorker(new TrainingBatchRetrieveWorker(callback,trainingInstances, width,color,prevNgram,num,trainingNum));
+    AsyncQueueWorker(new SpecialBatchRetrieveWorker(callback,testingInstances, width,color,prevNgram,num,testingNum));
 }
 
 NAN_METHOD(spottingBatchDone) {
@@ -206,7 +223,6 @@ NAN_METHOD(start) {
                         width,
                         milli);
                         
-    trainingInstances = new TrainingInstances(); 
 }
 NAN_METHOD(stopSpotting) {
     Callback *callback = new Callback(info[0].As<Function>());
@@ -215,7 +231,7 @@ NAN_METHOD(stopSpotting) {
 }
 
 NAN_METHOD(loadLabeledSpotting) {
-    assert (info[0]->IsString())
+    assert (info[0]->IsString());
     v8::String::Utf8Value str0(info[0]->ToString());
     string ngram = string(*str0);
     bool label = To<bool>(info[1]).FromJust();
@@ -225,8 +241,80 @@ NAN_METHOD(loadLabeledSpotting) {
     int x2 = To<int>(info[5]).FromJust();
     int y2 = To<int>(info[6]).FromJust();
     
+    if (testingInstances==NULL)
+    {
+        assert(cattss!=NULL);
+        testingInstances=new TestingInstances(cattss->getCorpus());
+    }
     testingInstances->addSpotting(ngram,label,pageId,x1,y1,x2,y2);    
 
+}
+NAN_METHOD(loadLabeledTrans) {
+    assert (info[0]->IsString());
+    v8::String::Utf8Value str0(info[0]->ToString());
+    string label = string(*str0);
+    vector<string> poss;
+    Handle<Value> val;
+    Handle<Value> val2;
+    if (info[1]->IsArray()) {
+      Handle<Array> jsArray = Handle<Array>::Cast(info[1]);
+      for (unsigned int i = 0; i < jsArray->Length(); i++) {
+        val = jsArray->Get(i);
+        poss.push_back(string(*v8::String::Utf8Value(val)));
+      }
+    }
+    vector<string> ngramSpots;
+    if (info[2]->IsArray()) {
+      Handle<Array> jsArray = Handle<Array>::Cast(info[2]);
+      for (unsigned int i = 0; i < jsArray->Length(); i++) {
+        val = jsArray->Get(i);
+        ngramSpots.push_back(string(*v8::String::Utf8Value(val)));
+      }
+    }
+
+
+    multimap<string,Location> spots;//fill
+    if (info[3]->IsArray()) {
+      Handle<Array> jsArray = Handle<Array>::Cast(info[3]);
+      assert(jsArray->Length() == ngramSpots.size());
+      for (unsigned int i = 0; i < jsArray->Length(); i++) {
+        val = jsArray->Get(i);
+        if (val->IsArray()) {
+          Handle<Array> jsArray2 = Handle<Array>::Cast(val);
+          assert(jsArray2->Length()==4);
+          int sx1,sy1,sx2,sy2;
+          val2 = jsArray2->Get(0);
+          sx1=val2->Uint32Value();
+          val2 = jsArray2->Get(1);
+          sy1=val2->Uint32Value();
+          val2 = jsArray2->Get(2);
+          sx2=val2->Uint32Value();
+          val2 = jsArray2->Get(3);
+          sy2=val2->Uint32Value();
+          spots.insert( make_pair(ngramSpots[i],Location(-1,sx1,sy2,sx2,sy2)) );
+        }
+        else assert(false);
+      }
+    }
+        else assert(false);
+
+    int wordIdx = To<int>(info[4]).FromJust();
+    //int x1 = To<int>(info[5]).FromJust();
+    //int y1 = To<int>(info[6]).FromJust();
+    //int x2 = To<int>(info[7]).FromJust();
+    //int y2 = To<int>(info[8]).FromJust();
+    bool manual = To<bool>(info[5]).FromJust();
+    
+    if (testingInstances==NULL)
+    {
+        assert(cattss!=NULL);
+        testingInstances=new TestingInstances(cattss->getCorpus());
+    }
+    testingInstances->addTrans(label,poss,spots,wordIdx,manual);    
+
+}
+NAN_METHOD(testingLabelsAllLoaded) {
+    testingInstances->allLoaded();
 }
 /*NAN_METHOD(getNextTestBatch) {
     //cout<<"request for test batch"<<endl;
@@ -278,6 +366,9 @@ NAN_METHOD(clearTestUsers) {
 
 NAN_MODULE_INIT(Init) {
     signal(SIGPIPE, SIG_IGN);    
+    cattss=NULL;
+    testingInstances=NULL;
+    trainingInstances=NULL;
 //#ifndef TEST_MODE
     //cattss = new CATTSS("/home/brian/intel_index/data/wordsEnWithNames.txt", 
     //                    "/home/brian/intel_index/data/gw_20p_wannot",
@@ -319,6 +410,12 @@ NAN_MODULE_INIT(Init) {
 
     Nan::Set(target, New<v8::String>("loadLabeledSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(loadLabeledSpotting)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("loadLabeledTrans").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(loadLabeledTrans)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("testingLabelsAllLoaded").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(testingLabelsAllLoaded)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("getNextTestingBatch").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(getNextTestingBatch)).ToLocalChecked());
 
     //Nan::Set(target, New<v8::String>("startSpotting").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(startSpotting)).ToLocalChecked());

@@ -218,8 +218,8 @@ public:
     const multimap<int,Spotting>* getSpottingsPointer() {return & spottings;}
     vector<string> getRestrictedLexicon(int max);
 
-    const cv::Mat* getPage() {return pagePnt;}
-    int getPageId() {return pageId;}
+    const cv::Mat* getPage() const {return pagePnt;}
+    int getPageId() const {return pageId;}
     const cv::Mat getImg();// const;
     string getTranscription() 
     {

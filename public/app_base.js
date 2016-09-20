@@ -223,16 +223,17 @@ function batchShiftAndSend(batchId,callback) {
         spinner.hidden=false;
     }
     lastRemovedBatchInfo.push(info);
+
     if (info.type=='s') {
         var ngram = info.ngram;
         var resultsId = info.rid;
         
         
-        
-        
         var query='?type=spottings&resend='+batches[batchId].sent;
         if (trainingMode)
-            query+='&training='+trainingNum;
+            query+='&trainingNum='+trainingNum;
+        else if (timingTestMode)
+            query+='&testingNum='+testingNum;
         var labels = [];
         var ids = [];
         for (var id in batches[batchId].spottings){
@@ -246,11 +247,10 @@ function batchShiftAndSend(batchId,callback) {
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            /*if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else if (!testMode || !allReceived)*/
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
         batches[batchId].sent=true;
@@ -260,16 +260,17 @@ function batchShiftAndSend(batchId,callback) {
             query+='Manual';
         }
         if (trainingMode)
-            query+='&training='+trainingNum;
+            query+='&trainingNum='+trainingNum;
+        else if (timingTestMode)
+            query+='&testingNum='+testingNum;
         httpPostAsync('/app/submitBatch'+query,{batchId:info.id,label:info.transcription,time:new Date().getTime()-startTime},function (res){
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            /*if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else (!testMode || !allReceived)*/
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
 
@@ -277,7 +278,9 @@ function batchShiftAndSend(batchId,callback) {
         
         var query='?type=newExemplars&resend='+batches[batchId].sent;
         if (trainingMode)
-            query+='&training='+trainingNum;
+            query+='&trainingNum='+trainingNum;
+        else if (timingTestMode)
+            query+='&testingNum='+testingNum;
         var labels = [];
         for (var id in batches[batchId].spottings){
             if (batches[batchId].spottings.hasOwnProperty(id)) {
@@ -289,11 +292,10 @@ function batchShiftAndSend(batchId,callback) {
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            /*if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else (!testMode || !allReceived)*/
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
         batches[batchId].sent=true;

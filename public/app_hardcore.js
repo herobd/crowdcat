@@ -28,6 +28,7 @@ function handleTouchStart(evt) {
                                          
 };
 
+var testingNum=0;
 var trainingNum=0;
 var instructions;
 var instructionsText;
@@ -203,8 +204,8 @@ function undo() {
         if (ondeck.batch!=batchQueue[0].type+batchQueue[0].id)
                 console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
         theWindow.appendChild(ondeck);
-        if (trainingMode)
-            trainingNum-=1;
+        //if (trainingMode)
+        //    trainingNum-=1;
     }
     
 }
@@ -246,7 +247,7 @@ function setup() {
     theWindow=windows[0];
     gradient = document.getElementById("overlay");
     icons = document.getElementById("icons");
-    if (testMode) {
+    if (trainingMode) {
        instructions=document.getElementById('instructions'); 
        instructionsText=document.getElementById('instructionsText');
     } 
@@ -320,7 +321,7 @@ function setup() {
     observer.observe(icons, config);
     
     
-    if (testMode) {
+    if (trainingMode) {
         instructions.addEventListener('mouseup', function(e){
             e.preventDefault(); 
             startTime = new Date().getTime();
@@ -525,6 +526,10 @@ function getNextBatch(toload,callback) {
         query+='&trainingNum='+trainingNum;
         trainingNum+=1;
     }
+    else if (timingTestMode) {
+        query+='&testingNum='+testingNum;
+        testingNum+=1;
+    }
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;
@@ -537,6 +542,8 @@ function getNextBatch(toload,callback) {
                 handleNewExemplarsBatch(jres);
             } else if (jres.batchType=='manual') {
                 handleManualBatch(jres);
+            } else if (jres.batchType=='ERROR' && timingTestMode) {
+                allReceived=true;
             }
 
             if (trainingMode) {
@@ -654,7 +661,7 @@ function isBatchDone(batchId) {
         //}
     }
 
-    if (testMode && trainingMode) {
+    if (trainingMode) {
         var right=false;
         if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type=='s') {
             for (spottingId in batches[batchId].spottings) {

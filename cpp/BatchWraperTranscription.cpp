@@ -45,11 +45,11 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	Nan::Set(obj, Nan::New("color").ToLocalChecked(), Nan::New(spottings[index].getColor()).ToLocalChecked());
 
         v8::Local<v8::Object> locNgram = Nan::New<v8::Object>();
-        obj->Set(Nan::New("page").ToLocalChecked(), Nan::New(spottings[index].page));
-        obj->Set(Nan::New("x1").ToLocalChecked(), Nan::New(spottings[index].x1));
-        obj->Set(Nan::New("y1").ToLocalChecked(), Nan::New(spottings[index].y1));
-        obj->Set(Nan::New("x2").ToLocalChecked(), Nan::New(spottings[index].x2));
-        obj->Set(Nan::New("y2").ToLocalChecked(), Nan::New(spottings[index].y2));
+        locNgram->Set(Nan::New("page").ToLocalChecked(), Nan::New(spottings[index].page));
+        locNgram->Set(Nan::New("x1").ToLocalChecked(), Nan::New(spottings[index].x1));
+        locNgram->Set(Nan::New("y1").ToLocalChecked(), Nan::New(spottings[index].y1));
+        locNgram->Set(Nan::New("x2").ToLocalChecked(), Nan::New(spottings[index].x2));
+        locNgram->Set(Nan::New("y2").ToLocalChecked(), Nan::New(spottings[index].y2));
         Nan::Set(obj, Nan::New("loc").ToLocalChecked(), locNgram);
 
 	Nan::Set(spottingsArr, index, obj);

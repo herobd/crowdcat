@@ -40,8 +40,9 @@ var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
 
-var saveMode=true;
+var saveMode=false;
 var timingTestMode=true;
+var trainUsers=false;
 /**
  *  Define the application.
  */
@@ -59,6 +60,10 @@ var ControllerApp = function(port) {
         self.saveSpottingsQueue={};
         self.saveTransQueue={};
     }    
+    if (timingTestMode) {
+        self.testSpottingsLabels={};
+        self.testTransLabels={};
+    }
     /*  ================================================================  */
     /*  Helper functions.                                                 */
     /*  ================================================================  */
@@ -175,7 +180,10 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 var appName = 'app-hardcore';
-                res.render(appName, {app_version:'app-hardcore', testMode:false, message: req.flash('error') });
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                else
+                    res.redirect('/');
             } else {
                 res.redirect('/login');
             }
@@ -186,8 +194,9 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = 'app_tap';
-                res.render(appName, {app_version:'app_tap', testMode:false, message: req.flash('error') });
+                res.redirect('/');
+                //var appName = 'app_tap';
+                //res.render(appName, {app_version:'app_tap', testMode:false, trainingMode:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -199,7 +208,10 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 var appName = 'app_hardcore';
-                res.render(appName, {app_version:'app_hardcore', testMode:false, message: req.flash('error') });
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                else
+                    res.redirect('/');
             } else {
                 res.redirect('/login');
             }
@@ -207,10 +219,20 @@ var ControllerApp = function(port) {
         self.app.get('/app-test', function(req, res) {
             if (req.user || debug) {
                 //console.log('[app] user:'+req.user.id+' hit app');
-                //res.setHeader('Content-Type', 'text/html');
-                //res.send(self.cache_get('app.html') );
                 var appName = 'app_hardcore';
-                res.render(appName, {app_version:'app_hardcore', testMode:true, message: req.flash('error') });
+                res.render(appName, {app_version:'app_hardcore', testMode:timingTestMode, trainMode:trainUsers, message: req.flash('error') });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/app-label', function(req, res) {
+            if (req.user || debug) {
+                //console.log('[app] user:'+req.user.id+' hit app');
+                var appName = 'app_hardcore';
+                if (saveMode)
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                else
+                    res.redirect('/');
             } else {
                 res.redirect('/login');
             }
@@ -348,8 +370,8 @@ var ControllerApp = function(port) {
                 if (req.query.num!==undefined && req.query.num!==null)
                     num=+req.query.num;
                 
-                if (req.query.test) {
-                    /*//console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
+                /*if (req.query.test) {
+                    //console.log('user '+self.userSessionMap[req.sessionID]+' is getting a batch (color '+req.query.color+')');
                     if (+req.query.test == self.userStateMap[self.userSessionMap[req.sessionID]]) {
                         var reset=0;
                         if (req.query.reset)
@@ -363,8 +385,8 @@ var ControllerApp = function(port) {
                         res.send({batchType:"spottings",batchId:"R",resultsId:"X",ngram:"Error, refresh",spottings:[]});
                     }*/
                     
-                } else if(req.query.trainingNum) {
-
+                if (req.query.trainingNum) {
+                    console.log('getting training batch '+req.query.trainingNum);
                     spottingaddon.getNextTrainingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,+req.query.trainingNum,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct,instructions,lastTraining) {
                                 if (batchType==='spottings') {
@@ -378,6 +400,31 @@ var ControllerApp = function(port) {
                                 }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                                else
+                                    res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
+                                
+                            });
+                } else if (req.query.testingNum && timingTestMode) {
+                    spottingaddon.getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,+req.query.testingNum,
+                            function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
+                                if (batchType==='spottings') {
+                                    res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                                    for (var index=0; index<arg5.length; index++) {
+                                        var spotting = arg5[index];
+                                        self.testSpottingsLabels[spotting.id] = correct[index];
+                                    }
+                                }
+                                else if (batchType==='transcription' || batchType==='manual') {
+                                    res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
+                                    self.testTransLabels[batchId] = correct;
+                                }
+                                else if (batchType==='newExemplars') {
+                                    res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
+                                    for (var index=0; index<arg3.length; index++) {
+                                        var spotting = arg3[index];
+                                        self.testSpottingsLabels[batchId+':'+index] = correct[index];
+                                    }
+                                }
                                 else
                                     res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
                                 
@@ -444,9 +491,12 @@ var ControllerApp = function(port) {
                 var resend=0;
                 if(req.query.resend == 'true')
                     resend=1;
-                if (req.query.test) {
+                if (req.query.trainingNum) {
+                    //nothing
+                    res.send({done:false});
+                } else if (req.query.testingNum) {
                     //console.log('user '+self.userSessionMap[req.sessionID]+' is submitting a batch');
-                    var userNum = self.userSessionMap[req.sessionID];
+                    /*var userNum = self.userSessionMap[req.sessionID];
                     
                     spottingaddon.spottingTestBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,userNum,function (err,done,fPos,fNeg) {
                         //console.log('submission complete');
@@ -466,9 +516,8 @@ var ControllerApp = function(port) {
                         } else {
                             res.send({done:false});
                         }
-                    });
-                } else if (req.query.trainingNum) {
-                    //nothing
+                    });*/
+                    res.send({done:false});
                 } else {
                     if (req.query.type=='spottings') {
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
@@ -512,7 +561,7 @@ var ControllerApp = function(port) {
                                         self.saveSpottingsQueue[req.body.batchId+':'+index]={};
                                     self.saveSpottingsQueue[req.body.batchId+':'+index].label = req.body.labels[index];
                                     self.database.saveSpotting(req.body.batchId+':'+index,self.saveSpottingsQueue[req.body.batchId+':'+index]);
-                                    self.saveSpottingsQueue[req.body.ids[index]]=null;
+                                    self.saveSpottingsQueue[req.body.batchId+':'+index]=null;
                                 }
                             }
                         }
@@ -587,7 +636,6 @@ var ControllerApp = function(port) {
         
     };
 
-
     /**
      *  Initializes the sample application.
      */
@@ -596,7 +644,16 @@ var ControllerApp = function(port) {
         self.populateCache();
         self.setupTerminationHandlers();
         
-        
+        spottingaddon.start(lexiconFile,
+                            pageImageDir,
+                            segmentationFile,
+                            spottingModelPrefix,
+                            numThreadsSpotting,
+                            numThreadsUpdating,
+                            showHeight,
+                            showWidth,
+                            showMilli);
+
         self.database=new Database('localhost:27017/cattss', dataName, function(database) {
             if (timingTestMode) {
                 database.getLabeledSpottings(function(err,labeledSpottings){
@@ -607,9 +664,27 @@ var ControllerApp = function(port) {
                         labeledSpottings.forEach(function(s) {
                             spottingaddon.loadLabeledSpotting(s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
                         });
+                        database.getLabeledTrans(function(err,labeledTrans){
+                            if (err)
+                                console.log(err);
+                            else
+                            {
+                                labeledTrans.forEach(function(t) {
+                                    var ngrams=[];
+                                    var ngramLocs=[];
+                                    t.ngrams.forEach(function (n) {
+                                        ngrams.push(n.ngram);
+                                        ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2]);
+                                    });
+                                    spottingaddon.loadLabeledTrans(t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
+                                });
+                                spottingaddon.testingLabelsAllLoaded();
+                                console.log('Loaded all labels for testing');
+                            }
+                        });
                     }
                 });
-                //TODO database.getLabeledTrans();
+            }
         });
         passport.use(new LocalStrategy({
             usernameField: 'email',
@@ -649,15 +724,6 @@ var ControllerApp = function(port) {
         self.userStateMap={};
         self.initializeServer();
 
-        spottingaddon.start(lexiconFile,
-                            pageImageDir,
-                            segmentationFile,
-                            spottingModelPrefix,
-                            numThreadsSpotting,
-                            numThreadsUpdating,
-                            showHeight,
-                            showWidth,
-                            showMilli);
     };
 
 

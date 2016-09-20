@@ -236,7 +236,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
             if (batch!=NULL)
                 ret = new BatchWraperNewExemplars(batch);
         }
-        if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
+        if (ret==NULL && (ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD))// || transcribeBatchQueue.size()>TRANS_READY_THRESH)
         {
             TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
             if (batch!=NULL) {

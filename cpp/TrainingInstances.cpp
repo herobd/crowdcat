@@ -26,18 +26,12 @@ TrainingInstances::TrainingInstances()
 }
 
 
-BatchWraper* TrainingInstances::getBatch(int num, int width, int color, int trainingNum)
+BatchWraper* TrainingInstances::getBatch(int width, int color, string prevNgram, int trainingNum)
 {
 #ifndef TEST_MODE
     try
     {
 #endif
-        bool hard=true;
-        if (num==-1) {
-            num=5;
-            hard=false;
-
-        }
         BatchWraper* ret= makeInstance(trainingNum,width,color);
         if (ret!=NULL)
             return ret;
@@ -264,7 +258,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->setWidth(width);
         string correct="[start]";
         string instructions ="";
-        return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
+        return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,true));
     }
     return NULL;
 }

@@ -10,12 +10,13 @@
 #include "spotting.h"
 #include "batches.h"
 #include "Knowledge.h"
+#include "SpecialInstances.h"
 
-class TrainingInstances
+class TrainingInstances : public SpecialInstances
 {
     public:
         TrainingInstances();
-        BatchWraper* getBatch(int num, int width, int color, int trainingNum);
+        BatchWraper* getBatch(int width, int color, string prevNgram, int trainingNum);
 
     private:
         BatchWraper* makeInstance(int trainingNum, int width,int color);

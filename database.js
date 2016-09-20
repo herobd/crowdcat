@@ -213,17 +213,17 @@ module.exports =  function() {
                 callback(err,ret);
             }
         });
-    }
+    };
     
     Database.prototype.saveSpotting = function(id,spotting) {
         this.spottingsCollection.update({_id:id},{$set: spotting},{ upsert: true } );
-    }
+    };
 
     Database.prototype.saveTrans = function(id,trans) {
         this.transCollection.update({_id:id},{$set: trans},{ upsert: true } );
-    }
+    };
 
-    Database.prototype.getLabeledSpottings = function() {
+    Database.prototype.getLabeledSpottings = function(callback) {
         var cursor=this.spottingsCollection.find();
         var ret=[];
         cursor.each(function(err, doc) {
@@ -234,10 +234,10 @@ module.exports =  function() {
             } else {
                 callback(null,ret);
             }
-        }
+        });
         
-    }
-    Database.prototype.getLabeledTrans = function() {
+    };
+    Database.prototype.getLabeledTrans = function(callback) {
         var cursor=this.transCollection.find();
         var ret=[];
         cursor.each(function(err, doc) {
@@ -248,9 +248,9 @@ module.exports =  function() {
             } else {
                 callback(null,ret);
             }
-        }
+        });
         
-    }
+    };
 
     return Database
 };
