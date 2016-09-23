@@ -23,7 +23,7 @@ class SpottingPoint
 {
     public:
         SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r,  
-                int page, int x1, int y1, int x2, int y2) : x(x), ngram(ngram), x1(x1), y1(y1), x2(x2), page(page)
+                int page, int x1, int y1, int x2, int y2) : x(x), ngram(ngram), x1(x1), y1(y1), x2(x2), y2(y2), page(page)
     {
         stringstream stream;
         if (b>255)

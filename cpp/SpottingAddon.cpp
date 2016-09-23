@@ -179,6 +179,12 @@ NAN_METHOD(manualBatchDone) {
     AsyncQueueWorker(new TranscriptionBatchUpdateWorker(callback,cattss,id,transcription,true));
 }
 
+NAN_METHOD(manualFinish) {
+    //bool restrictWords = To<bool>(info[0]).FromJust();
+    Callback *callback = new Callback(info[0].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "manualFinish"));
+}
 NAN_METHOD(showCorpus) {
     Callback *callback = new Callback(info[0].As<Function>());
 
@@ -231,6 +237,7 @@ NAN_METHOD(stopSpotting) {
 }
 
 NAN_METHOD(loadLabeledSpotting) {
+    //TODO datanum
     assert (info[0]->IsString());
     v8::String::Utf8Value str0(info[0]->ToString());
     string ngram = string(*str0);
@@ -291,7 +298,7 @@ NAN_METHOD(loadLabeledTrans) {
           sx2=val2->Uint32Value();
           val2 = jsArray2->Get(3);
           sy2=val2->Uint32Value();
-          spots.insert( make_pair(ngramSpots[i],Location(-1,sx1,sy2,sx2,sy2)) );
+          spots.insert( make_pair(ngramSpots[i],Location(-1,sx1,sy1,sx2,sy2)) );
         }
         else assert(false);
       }
@@ -403,6 +410,8 @@ NAN_MODULE_INIT(Init) {
     Nan::Set(target, New<v8::String>("manualBatchDone").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(manualBatchDone)).ToLocalChecked());
     
+    Nan::Set(target, New<v8::String>("manualFinish").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(manualFinish)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),

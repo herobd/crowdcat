@@ -63,7 +63,7 @@ private:
     map<unsigned long, int> test_numFalsePos;
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
     int done;
-    bool finish;
+    atomic_bool finish;
     int numCTrue, numCFalse;
     void updateSpottingsMix(const vector<SpottingExemplar*>* spottings);
 public:
@@ -106,6 +106,7 @@ public:
     }
     void checkIncomplete();
     atomic_bool kill;
+    void setFinish(bool v) {finish.store(v);}
 
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);

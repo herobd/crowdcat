@@ -530,6 +530,8 @@ function getNextBatch(toload,callback) {
         query+='&testingNum='+testingNum;
         testingNum+=1;
     }
+    if (save)
+        query+='&save=1'
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;

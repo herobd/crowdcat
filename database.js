@@ -6,7 +6,7 @@ module.exports =  function() {
    34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,56,
    34,435,1,0,7,65,4,830,644,5,7,9,6,44,6,8,5,544,5,7,88,456,6,54,5,77,45624,456,6,5];
    var fs = require('fs');
-    function Database(address,dataName,callback) {
+    function Database(address,dataNames,callback) {
         
         var self=this;
         
@@ -16,7 +16,7 @@ module.exports =  function() {
         self.mongo.connect("mongodb://"+address, function(err, db) {
           if(!err) {
             console.log("We are connected to the database.");
-            var numCol=4;
+            var numCol=3+dataNames.length*2;
             db.collection('THESIS_USERS', function(err, collection) {
                 if(!err) {
                     self.userCollection=collection;
@@ -36,24 +36,37 @@ module.exports =  function() {
                     console.log('ERROR: conencting to MongoDB colection THESIS_ALPHA: '+err);
                 }
             });
-
-            db.collection('THESIS_SPOTTINGS_'+dataName, function(err, collection) {
+            db.collection('THESIS_TIMING', function(err, collection) {
                 if(!err) {
-                    self.spottingsCollection=collection;
+                    self.timingTestCollection=collection;
                     if (--numCol <= 0)
                         callback(self);
                 } else {
-                    console.log('ERROR: conencting to MongoDB colection THESIS_SPOTTINGS: '+err);
+                    console.log('ERROR: conencting to MongoDB colection THESIS_TIMING: '+err);
                 }
             });
-            db.collection('THESIS_TRANS_'+dataName, function(err, collection) {
-                if(!err) {
-                    self.transCollection=collection;
-                    if (--numCol <= 0)
-                        callback(self);
-                } else {
-                    console.log('ERROR: conencting to MongoDB colection THESIS_TRANS: '+err);
-                }
+            
+            self.spottingsCollection={};
+            self.transCollection={};
+            dataNames.forEach( function(dataName) {
+                db.collection('THESIS_SPOTTINGS_'+dataName, function(err, collection) {
+                    if(!err) {
+                        self.spottingsCollection[dataName]=collection;
+                        if (--numCol <= 0)
+                            callback(self);
+                    } else {
+                        console.log('ERROR: conencting to MongoDB colection THESIS_SPOTTINGS: '+err);
+                    }
+                });
+                db.collection('THESIS_TRANS_'+dataName, function(err, collection) {
+                    if(!err) {
+                        self.transCollection[dataName]=collection;
+                        if (--numCol <= 0)
+                            callback(self);
+                    } else {
+                        console.log('ERROR: conencting to MongoDB colection THESIS_TRANS: '+err);
+                    }
+                });
             });
             
           } else {
@@ -74,14 +87,14 @@ module.exports =  function() {
     Database.prototype.addUser = function (email,survey,callback)  {
         
         var self=this;
-        var hemail = this.hideEmail(email);
-        self.findUser(hemail, function(err,item) {
+        //var hemail = this.hideEmail(email);
+        self.findUser(email, function(err,item) {
             if (err) {
                 callback(err);
             } else if (item!=null){
                 callback("User already exists");
             } else {
-                self.userCollection.insert({id:hemail, presurvey:survey}, {w:1}, function(err, result) {
+                self.userCollection.insert({id:email, presurvey:survey}, {w:1}, function(err, result) {
                     callback(err);
                 });
             }
@@ -94,8 +107,8 @@ module.exports =  function() {
     
     Database.prototype.findUser = function (email,callback) {
         var self=this;
-        var hemail = this.hideEmail(email);
-        self.userCollection.findOne({id:hemail}, function(err, item) {
+        //var hemail = this.hideEmail(email);
+        self.userCollection.findOne({id:email}, function(err, item) {
             callback(err,item);
         });
     }
@@ -215,16 +228,16 @@ module.exports =  function() {
         });
     };
     
-    Database.prototype.saveSpotting = function(id,spotting) {
-        this.spottingsCollection.update({_id:id},{$set: spotting},{ upsert: true } );
+    Database.prototype.saveSpotting = function(dataName,id,spotting) {
+        this.spottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );
     };
 
-    Database.prototype.saveTrans = function(id,trans) {
-        this.transCollection.update({_id:id},{$set: trans},{ upsert: true } );
+    Database.prototype.saveTrans = function(dataName,id,trans) {
+        this.transCollection[dataName].update({_id:id},{$set: trans},{ upsert: true } );
     };
 
-    Database.prototype.getLabeledSpottings = function(callback) {
-        var cursor=this.spottingsCollection.find();
+    Database.prototype.getLabeledSpottings = function(dataName,callback) {
+        var cursor=this.spottingsCollection[dataName].find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {
@@ -237,8 +250,8 @@ module.exports =  function() {
         });
         
     };
-    Database.prototype.getLabeledTrans = function(callback) {
-        var cursor=this.transCollection.find();
+    Database.prototype.getLabeledTrans = function(dataName,callback) {
+        var cursor=this.transCollection[dataName].find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {

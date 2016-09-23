@@ -18,6 +18,11 @@
     <% } else { %>
     trainingMode=false;
     <% } %>
+    <% if (save) { %>
+    save=true;
+    <% } else { %>
+    save=false;
+    <% } %>
 </script>
 </head>
 <body onload="setup()">
@@ -33,7 +38,7 @@
     </div>-->
     <button type="button" id="undoButton" onclick="undo()">undo</button>
     <button type="button" id="menuButton" onclick="menu()">menu</button>
-    <button type="button" id="passButton" onclick="pass()">pass</button>
+    <button type="button" id="passButton" onclick="pass()">skip</button>
     <div id="menu" class="hidden">
         <button class="menuItem" id="exitButton" onclick="exit()">EXIT</button>
     </div>

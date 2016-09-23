@@ -24,14 +24,21 @@ var passport = require('passport')
 var spottingaddon = require("./cpp/build/Debug/spottingaddon")
 //var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
-var debug=true;
+var debug=false;
 numberOfTests=2;
 
 //SYSTEM PARAMS
-var lexiconFile="/home/brian/intel_index/data/wordsEnWithNames.txt";
-var pageImageDir="/home/brian/intel_index/data/gw_20p_wannot";
-var segmentationFile="/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
-var dataName='GW';
+var lexiconFiles=["/home/brian/intel_index/data/wordsEnWithNames.txt"];
+var pageImageDirs=["/home/brian/intel_index/data/gw_20p_wannot"];
+var segmentationFiles=["/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"];
+var dataNames=['GW'];
+
+
+var dataset=0;
+var lexiconFile=lexiconFiles[dataset];
+var pageImageDir=pageImageDirs[dataset];
+var segmentationFile=segmentationFiles[dataset];
+var dataName=dataNames[dataset];
 
 var spottingModelPrefix="model/CATTSS_"+dataName;
 var numThreadsSpotting=4;
@@ -40,8 +47,8 @@ var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
 
-var saveMode=false;
-var timingTestMode=true;
+var saveMode=true;
+var timingTestMode=false;
 var trainUsers=false;
 /**
  *  Define the application.
@@ -181,7 +188,7 @@ var ControllerApp = function(port) {
                 //res.send(self.cache_get('app.html') );
                 var appName = 'app-hardcore';
                 if (!saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -209,7 +216,7 @@ var ControllerApp = function(port) {
                 //res.send(self.cache_get('app.html') );
                 var appName = 'app_hardcore';
                 if (!saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:false, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -217,10 +224,10 @@ var ControllerApp = function(port) {
             }
         });
         self.app.get('/app-test', function(req, res) {
-            if (req.user || debug) {
+            if ((req.user && req.user.dataset) || debug) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 var appName = 'app_hardcore';
-                res.render(appName, {app_version:'app_hardcore', testMode:timingTestMode, trainMode:trainUsers, message: req.flash('error') });
+                res.render(appName, {app_version:'app_hardcore', testMode:timingTestMode, trainMode:trainUsers, save:false, message: req.flash('error') });
             } else {
                 res.redirect('/login');
             }
@@ -230,7 +237,19 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 var appName = 'app_hardcore';
                 if (saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:true, message: req.flash('error') });
+                else
+                    res.redirect('/');
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/app-false-label', function(req, res) {
+            if (req.user || debug) {
+                //console.log('[app] user:'+req.user.id+' hit app');
+                var appName = 'app_hardcore';
+                if (saveMode)
+                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:false, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -242,6 +261,12 @@ var ControllerApp = function(port) {
             if (req.user) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
+                if (timingTestMode) {
+                    req.user.dataset=req.user.num%numDatasets;
+                    req.user.timingTest=true;
+                    self.database.updateUser(req.user);
+                }
+                //console.log(req.user);
                 res.render('home', { message: self.getTestInstructions(req.user) });
             } else {
                 res.redirect('/login');
@@ -325,10 +350,21 @@ var ControllerApp = function(port) {
             }
         });
         
+        self.app.get('/xxx/manual*inish', function(req, res) {
+            if (req.user || debug) {
+                spottingaddon.manualFinish(function (err) {
+                    if (err) console.log(err);
+                    res.send('ok');
+                });
+            } else {
+                res.redirect('/login');
+            }
+        });
         self.app.get('/xxx/show_results', function(req, res) {
             if (req.user || debug) {
                 spottingaddon.showCorpus(function (err) {
                     if (err) console.log(err);
+                    res.send('ok');
                 });
             } else {
                 res.redirect('/login');
@@ -342,6 +378,7 @@ var ControllerApp = function(port) {
                     self.showing=true;
                     self.showProgress();
                 }
+                res.send('ok');
             } else {
                 res.redirect('/login');
             }
@@ -404,8 +441,10 @@ var ControllerApp = function(port) {
                                     res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
                                 
                             });
-                } else if (req.query.testingNum && timingTestMode) {
-                    spottingaddon.getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,+req.query.testingNum,
+                } else if (req.query.testingNum && timingTestMode && req.user.dataset) {
+                    spottingaddon.getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
+                            +req.query.testingNum,
+                            req.user.dataset,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
                                 if (batchType==='spottings') {
                                     res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
@@ -434,7 +473,7 @@ var ControllerApp = function(port) {
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
                                 if (batchType==='spottings') {
                                     res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
-                                    if (saveMode) {
+                                    if (saveMode && req.query.save) {
                                         for (var index=0; index<arg5.length; index++) {
                                             var spotting = arg5[index];
                                             self.saveSpottingsQueue[spotting.id] = {ngram:arg4, loc:loc[index], label:null};
@@ -443,7 +482,7 @@ var ControllerApp = function(port) {
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {
                                     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5});
-                                    if (saveMode) {
+                                    if (saveMode && req.query.save) {
                                         //if (batchType==='transcription') {
                                         self.saveTransQueue[batchId] = {loc:loc,
                                                                         poss:arg5, 
@@ -454,7 +493,7 @@ var ControllerApp = function(port) {
                                 }
                                 else if (batchType==='newExemplars') {
                                     res.send({batchType:batchType,batchId:batchId,exemplars:arg3});
-                                    if (saveMode) {
+                                    if (saveMode && req.query.save) {
                                         for (var index=0; index<arg3.length; index++) {
                                             var spotting = arg3[index];
                                             self.saveSpottingsQueue[batchId+':'+index] = {ngram:spotting.ngram, loc:loc[index], label:null};
@@ -517,19 +556,95 @@ var ControllerApp = function(port) {
                             res.send({done:false});
                         }
                     });*/
-                    res.send({done:false});
-                } else {
+                    if (timingTestMode && req.user.dataset) {
+                        if (req.query.type=='spottings') {
+                            //spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
+                            var accuracy=0;
+                            var trueRatio=0;
+                            var skipRatio=0;
+                            for (var index=0; index<req.body.ids.length; index++) {
+                                if (req.body.labels[index]!=='$PASS$') {
+                                    if (self.testSpottingsLabels[req.body.ids[index]] == req.body.labels[index])
+                                        accuracy+=1;
+                                    if (self.testSpottingsLabels[req.body.ids[index]])
+                                        trueRatio+=1;
+
+                                } else {
+                                    skipRatio+=1;
+                                }
+                            }
+                            accuracy /= (0.0+req.body.ids.length);
+                            trueRatio /= (0.0+req.body.ids.length);
+                            skipRatio /= (0.0+req.body.ids.length);
+                            var undoRatio = req.body.undos/(0.0+req.body.ids.length);
+
+                            var info = {dataset:req.user.dataset, 
+                                        ngram:req.body.ngram, 
+                                        prevNgramSame:req.body.prevNgramSame,
+                                        accuracy:accuracy, 
+                                        undoRatio:undoRatio,
+                                        skipRatio:skipRatio,
+                                        trueRatio:trueRatio, 
+                                        batchTime:req.body.batchTime};
+                            self.database.saveTimingTestSpotting(req.user.id,info,function(err){if (err) console.log(err);});
+                        }
+                        else if (req.query.type=='transcription') {
+                            //spottingaddon.transcriptionBatchDone(req.body.batchId,req.body.label,function (err) {
+                            var accuracy = ( self.testTransLabels[req.body.batchId].toLower()==req.body.label.toLower() )?1:0;
+                            var wasBagNgram=false;
+                            var wasError=false;
+                            var skipped=false;
+                            if (self.testTransLabels[req.body.batchId].includes('$REMOVE'))
+                                wasBadNgram=true;
+                            else if (self.testTransLabels[req.body.batchId].includes('$ERROR'))
+                                wasError=true;
+                            else if (self.testTransLabels[req.body.batchId].includes('$PASS'))
+                                skipped=true;
+
+                            var info = {dataset:req.user.dataset, 
+                                        prevWasTrans:req.body.prevWasTrans,
+                                        numPossible:req.body.numPossible, 
+                                        positionCorrect:req.body.positionCorrect,
+                                        accuracy:accuracy, 
+                                        wasBadNgram:wasBadNgram,
+                                        wasError:wasError,
+                                        skipped:skipped,
+                                        batchTime:req.body.batchTime};
+                            self.database.saveTimingTestTrans(req.user.id,info,function(err){if (err) console.log(err);});
+                        }
+                        else if (req.query.type=='newExemplars') {
+                        //spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
+                            console.log('ERROR: newExemplars batch recived during TimingTest');
+                        }
+                        else if (req.query.type=='transcriptionManual') {
+                        //spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
+                            var accuracy = ( self.testTransLabels[req.body.batchId].toLower()==req.body.label.toLower() )?1:0;
+                            var info = {dataset:req.user.dataset, 
+                                        prevWasManual:req.body.prevWasManual,
+                                        numChar:req.body.label.length, 
+                                        accuracy:accuracy, 
+                                        skipped:skipped,
+                                        batchTime:req.body.batchTime};
+                            self.database.saveTimingTestManual(req.user.id,info,function(err){if (err) console.log(err);});
+                        }
+                        res.send({done:false});
+                    }
+                    else
+                        res.send({done:false, err:'timingTest not running'});
+
+                } else { //Normal behavior
+
                     if (req.query.type=='spottings') {
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,function (err) {
                            if (err) console.log(err); 
                         });
-                        if (saveMode) {
+                        if (saveMode && req.query.save) {
                             for (var index=0; index<req.body.ids.length; index++) {
                                 if (req.body.labels[index]!=='$PASS$') {
                                     if (!self.saveSpottingsQueue[req.body.ids[index]])
                                         self.saveSpottingsQueue[req.body.ids[index]]={};
                                     self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
-                                    self.database.saveSpotting(req.body.ids[index],self.saveSpottingsQueue[req.body.ids[index]]);
+                                    self.database.saveSpotting(dataName,req.body.ids[index],self.saveSpottingsQueue[req.body.ids[index]]);
                                     self.saveSpottingsQueue[req.body.ids[index]]=null;
                                 }
                             }
@@ -539,14 +654,14 @@ var ControllerApp = function(port) {
                         spottingaddon.transcriptionBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
-                        if (saveMode && req.body.label!=='$PASS$') {
+                        if (saveMode && req.query.save && req.body.label!=='$PASS$') {
                             /*if (self.saveTransQueue[req.body.batchId].label!=req.body.label) {
                                 console.log('WARNING label dif on trans['+req.body.batchId']: '+self.saveTransQueue[req.body.batchId].label+' != '+req.body.label);
                             }*/
                             if (!self.saveTransQueue[req.body.batchId])
                                 self.saveTransQueue[req.body.batchId]={};
                             self.saveTransQueue[req.body.batchId].label=req.body.label;
-                            self.database.saveTrans(req.body.batchId,self.saveTransQueue[req.body.batchId]);
+                            self.database.saveTrans(dataName,req.body.batchId,self.saveTransQueue[req.body.batchId]);
                             self.saveTransQueue[req.body.batchId]=null; 
                         }
                     }
@@ -554,13 +669,13 @@ var ControllerApp = function(port) {
                         spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,function (err) {
                             if (err) console.log(err);
                         });
-                        if (saveMode) {
+                        if (saveMode && req.query.save) {
                             for (var index=0; index<req.body.labels.length; index++) {
                                 if (req.body.labels[index]!=='$PASS$') {
                                     if (!self.saveSpottingsQueue[req.body.batchId+':'+index])
                                         self.saveSpottingsQueue[req.body.batchId+':'+index]={};
                                     self.saveSpottingsQueue[req.body.batchId+':'+index].label = req.body.labels[index];
-                                    self.database.saveSpotting(req.body.batchId+':'+index,self.saveSpottingsQueue[req.body.batchId+':'+index]);
+                                    self.database.saveSpotting(dataName,req.body.batchId+':'+index,self.saveSpottingsQueue[req.body.batchId+':'+index]);
                                     self.saveSpottingsQueue[req.body.batchId+':'+index]=null;
                                 }
                             }
@@ -570,14 +685,14 @@ var ControllerApp = function(port) {
                         spottingaddon.manualBatchDone(req.body.batchId,req.body.label,function (err) {
                             if (err) console.log(err);
                         });
-                        if (saveMode && req.body.label!=='$PASS$') {
+                        if (saveMode && req.query.save && req.body.label!=='$PASS$') {
                             if (!self.saveTransQueue[req.body.batchId])
                                 self.saveTransQueue[req.body.batchId]={};
                             else if (self.saveTransQueue[req.body.batchId].label!=req.body.label) {
                                 console.log('WARNING label dif on trans['+req.body.batchId+']: '+self.saveTransQueue[req.body.batchId].label+' != '+req.body.label);
                             }
                             self.saveTransQueue[req.body.batchId].label=req.body.label;
-                            self.database.saveTrans(req.body.batchId,self.saveTransQueue[req.body.batchId]);
+                            self.database.saveTrans(dataName,req.body.batchId,self.saveTransQueue[req.body.batchId]);
                             self.saveTransQueue[req.body.batchId]=null; 
                         }
                     }
@@ -654,36 +769,39 @@ var ControllerApp = function(port) {
                             showWidth,
                             showMilli);
 
-        self.database=new Database('localhost:27017/cattss', dataName, function(database) {
+        self.database=new Database('localhost:27017/cattss', dataNames, function(database) {
             if (timingTestMode) {
-                database.getLabeledSpottings(function(err,labeledSpottings){
-                    if (err)
-                        console.log(err);
-                    else
-                    {
-                        labeledSpottings.forEach(function(s) {
-                            spottingaddon.loadLabeledSpotting(s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
-                        });
-                        database.getLabeledTrans(function(err,labeledTrans){
-                            if (err)
-                                console.log(err);
-                            else
-                            {
-                                labeledTrans.forEach(function(t) {
-                                    var ngrams=[];
-                                    var ngramLocs=[];
-                                    t.ngrams.forEach(function (n) {
-                                        ngrams.push(n.ngram);
-                                        ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2]);
+                for (var i=0; i<dataNames.length; i++) {
+                    var dataN=dataNames[i];
+                    database.getLabeledSpottings(dataN,function(err,labeledSpottings){
+                        if (err)
+                            console.log(err);
+                        else
+                        {
+                            labeledSpottings.forEach(function(s) {
+                                spottingaddon.loadLabeledSpotting(i,s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
+                            });
+                            database.getLabeledTrans(dataN,function(err,labeledTrans){
+                                if (err)
+                                    console.log(err);
+                                else
+                                {
+                                    labeledTrans.forEach(function(t) {
+                                        var ngrams=[];
+                                        var ngramLocs=[];
+                                        t.ngrams.forEach(function (n) {
+                                            ngrams.push(n.ngram);
+                                            ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2]);
+                                        });
+                                        spottingaddon.loadLabeledTrans(i,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
                                     });
-                                    spottingaddon.loadLabeledTrans(t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
-                                });
-                                spottingaddon.testingLabelsAllLoaded();
-                                console.log('Loaded all labels for testing');
-                            }
-                        });
-                    }
-                });
+                                    spottingaddon.testingLabelsAllLoaded();
+                                    console.log('Loaded all labels for testing');
+                                }
+                            });
+                        }
+                    });
+                }
             }
         });
         passport.use(new LocalStrategy({
@@ -706,12 +824,12 @@ var ControllerApp = function(port) {
           }
         ));
         passport.serializeUser(function(user, done) {
-          console.log('serializeUser: '+user.id);
+          //console.log('serializeUser: '+user.id);
           done(null, user.id);
         });
 
         passport.deserializeUser(function(id, done) {
-          console.log('deserializeUser: '+id);
+          //console.log('deserializeUser: '+id);
           self.database.findUser(id, function(err, user) {
             if (user==null)
                 console.log('Failed to find user: '+id);

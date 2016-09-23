@@ -28,7 +28,7 @@ void MasterQueue::checkIncomplete()
 }
 
 MasterQueue::MasterQueue() {
-    finish=false;
+    finish.store(false);
     //sem_init(&semResultsQueue,false,1);
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
@@ -221,7 +221,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     pthread_rwlock_unlock(&semResultsQueue);
 
     BatchWraper* ret=NULL;
-    if (finish)
+    if (finish.load())
     {
         TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
         if (batch!=NULL) 

@@ -414,6 +414,7 @@ private:
     map<int,Page*> pages;
     Spotter* spotter;
     TranscribeBatchQueue manQueue;
+    TranscribeBatch* makeManualBatch(int maxWidth, bool noSpottings);
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 

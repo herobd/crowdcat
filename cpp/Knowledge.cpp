@@ -2076,34 +2076,40 @@ const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
     return page->getImg();
 }
 
-TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)//TODO, should keep reference to batch for timeout, etc
+TranscribeBatch* Knowledge::Corpus::makeManualBatch(int maxWidth, bool noSpottings)
+{
+    TranscribeBatch* ret=NULL;
+    for (Word* word : _words)
+    {
+        int tlx,tly,brx,bry;
+        bool done;
+        bool sent;
+        word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
+        //cout << "at word, "<<done<<", "<<sent<<endl;
+        if (!done && !sent && (!noSpottings || word->getSpottings().size()==0))
+        {
+            vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
+            if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
+                prunedDictionary.clear();
+            ret = new TranscribeBatch(word,prunedDictionary,word->getPage(),word->getSpottingsPointer(),tlx,tly,brx,bry);
+            word->sent(ret->getId());
+            //enqueue and dequeue to keep the queue's state good.
+            vector<TranscribeBatch*> theBatch = {ret};
+            manQueue.enqueueAll(theBatch);
+            ret=manQueue.dequeue(maxWidth);
+            break;
+        }
+    }
+    return ret;
+}
+
+TranscribeBatch* Knowledge::Corpus::getManualBatch(int maxWidth)
 {
     TranscribeBatch* ret=manQueue.dequeue(maxWidth);
     if (ret==NULL)
-    {
-
-        for (Word* word : _words)
-        {
-            int tlx,tly,brx,bry;
-            bool done;
-            bool sent;
-            word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
-            //cout << "at word, "<<done<<", "<<sent<<endl;
-            if (!done && !sent)
-            {
-                vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
-                if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
-                    prunedDictionary.clear();
-                ret = new TranscribeBatch(word,prunedDictionary,word->getPage(),word->getSpottingsPointer(),tlx,tly,brx,bry);
-                word->sent(ret->getId());
-                //enqueue and dequeue to keep the queue's state good.
-                vector<TranscribeBatch*> theBatch = {ret};
-                manQueue.enqueueAll(theBatch);
-                ret=manQueue.dequeue(maxWidth);
-                break;
-            }
-        }
-    }
+        ret=makeManualBatch(maxWidth,true);
+    if (ret==NULL)
+        ret=makeManualBatch(maxWidth,false);
     return ret;
 }
 

@@ -232,6 +232,10 @@ void CATTSS::misc(string task)
             spottingQueue->stop();
             stop();
         }
+        else if (task.compare("manualFinish")==0)
+        {
+            masterQueue->setFinish(true);
+        }
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));
