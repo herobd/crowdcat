@@ -223,7 +223,10 @@ function batchShiftAndSend(batchId,callback) {
     }
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
-        
+        if (timingTestMode) {
+            //This time preserves even if the user undos, thus giving a total time for completion
+            batchQueue[0].timeStart=new Date().getTime();
+        }   
         var next = document.getElementById('s'+batchQueue[0].id);
         if (next)
             next.hidden=false;
@@ -250,7 +253,16 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        var toSend = {batchId:info.id,resultsId:resultsId,labels:labels,ids:ids}; //,undos:countUndos};
+        if (timingTestMode) {
+            toSend.ngram=ngram;
+            toSend.prevNgramSame=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].ngram==ngram)
+                toSend.prevNgramSame=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
             //console.log(jres);
@@ -267,7 +279,23 @@ function batchShiftAndSend(batchId,callback) {
             query+='Manual';
         }
         query+=standardQuery();
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,label:info.transcription,time:new Date().getTime()-startTime},function (res){
+        var toSend = {batchId:info.id,label:info.transcription};
+        if (timingTestMode && info.type=='t') {
+            toSend.prevWasTrans=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='t')
+                toSend.prevWasTrans=true;
+            toSend.numPossible=info.numPossible;
+            toSend.positionCorrect=info.positionCorrect;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        } else if (timingTestMode && info.type=='m') {
+            toSend.prevWasManual=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='m')
+                toSend.prevWasManual=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
             //console.log(jres);
@@ -289,7 +317,8 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,labels:labels,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        var toSend = {batchId:info.id,labels:labels};
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
             //console.log(jres);

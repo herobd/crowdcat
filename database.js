@@ -16,7 +16,9 @@ module.exports =  function() {
         self.mongo.connect("mongodb://"+address, function(err, db) {
           if(!err) {
             console.log("We are connected to the database.");
-            var numCol=3+dataNames.length*2;
+            var numCol=2+dataNames.length*5;
+
+            //Connect to all the collections
             db.collection('THESIS_USERS', function(err, collection) {
                 if(!err) {
                     self.userCollection=collection;
@@ -36,35 +38,56 @@ module.exports =  function() {
                     console.log('ERROR: conencting to MongoDB colection THESIS_ALPHA: '+err);
                 }
             });
-            db.collection('THESIS_TIMING', function(err, collection) {
-                if(!err) {
-                    self.timingTestCollection=collection;
-                    if (--numCol <= 0)
-                        callback(self);
-                } else {
-                    console.log('ERROR: conencting to MongoDB colection THESIS_TIMING: '+err);
-                }
-            });
             
-            self.spottingsCollection={};
-            self.transCollection={};
+            self.savedSpottingsCollection={};
+            self.savedTransCollection={};
+            self.timingSpottingsCollection={};
+            self.timingTransCollection={};
+            self.timingManualCollection={};
             dataNames.forEach( function(dataName) {
-                db.collection('THESIS_SPOTTINGS_'+dataName, function(err, collection) {
+                db.collection('SAVED_SPOTTINGS_'+dataName, function(err, collection) {
                     if(!err) {
-                        self.spottingsCollection[dataName]=collection;
+                        self.savedSpottingsCollection[dataName]=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
-                        console.log('ERROR: conencting to MongoDB colection THESIS_SPOTTINGS: '+err);
+                        console.log('ERROR: conencting to MongoDB colection SAVED_SPOTTINGS: '+err);
                     }
                 });
-                db.collection('THESIS_TRANS_'+dataName, function(err, collection) {
+                db.collection('SAVED_TRANS_'+dataName, function(err, collection) {
                     if(!err) {
-                        self.transCollection[dataName]=collection;
+                        self.savedTransCollection[dataName]=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
-                        console.log('ERROR: conencting to MongoDB colection THESIS_TRANS: '+err);
+                        console.log('ERROR: conencting to MongoDB colection SAVED_TRANS: '+err);
+                    }
+                });
+                db.collection('TIMING_SPOTTINGS_'+dataName, function(err, collection) {
+                    if(!err) {
+                        self.timingSpottingsCollection[dataName]=collection;
+                        if (--numCol <= 0)
+                            callback(self);
+                    } else {
+                        console.log('ERROR: conencting to MongoDB colection TIMING_SPOTTINGS: '+err);
+                    }
+                });
+                db.collection('TIMING_TRANS_'+dataName, function(err, collection) {
+                    if(!err) {
+                        self.timingTransCollection[dataName]=collection;
+                        if (--numCol <= 0)
+                            callback(self);
+                    } else {
+                        console.log('ERROR: conencting to MongoDB colection TIMING_TRANS: '+err);
+                    }
+                });
+                db.collection('TIMING_MANUAL_'+dataName, function(err, collection) {
+                    if(!err) {
+                        self.timingManualCollection[dataName]=collection;
+                        if (--numCol <= 0)
+                            callback(self);
+                    } else {
+                        console.log('ERROR: conencting to MongoDB colection TIMING_MANUAL: '+err);
                     }
                 });
             });
@@ -103,6 +126,11 @@ module.exports =  function() {
         
         
     };
+
+    Database.prototype.updateUser = function (userInfo,callback)  {
+        this.userCollection.update({id:userInfo.id},userInfo, {upsert:1, w:1}, callback);
+    }
+
     
     
     Database.prototype.findUser = function (email,callback) {
@@ -229,15 +257,15 @@ module.exports =  function() {
     };
     
     Database.prototype.saveSpotting = function(dataName,id,spotting) {
-        this.spottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );
+        this.savedSpottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );
     };
 
     Database.prototype.saveTrans = function(dataName,id,trans) {
-        this.transCollection[dataName].update({_id:id},{$set: trans},{ upsert: true } );
+        this.savedTransCollection[dataName].update({_id:id},{$set: trans},{ upsert: true } );
     };
 
     Database.prototype.getLabeledSpottings = function(dataName,callback) {
-        var cursor=this.spottingsCollection[dataName].find();
+        var cursor=this.savedSpottingsCollection[dataName].find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {
@@ -251,7 +279,7 @@ module.exports =  function() {
         
     };
     Database.prototype.getLabeledTrans = function(dataName,callback) {
-        var cursor=this.transCollection[dataName].find();
+        var cursor=this.savedTransCollection[dataName].find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {
@@ -264,6 +292,48 @@ module.exports =  function() {
         });
         
     };
+
+    
+    Database.prototype.saveTimingTestSpotting = function(dataName,info,callback) {
+        var self=this;
+                    //self.timingSpottingsCollection[dataName].insert(info, {w:1}, callback);
+        //self.timingSpottingsCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{upsert:1, w:1}, callback);
+        self.timingSpottingsCollection[dataName].findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
+            if (err) {
+                callback(err);
+            } else if (item==null) {
+                self.timingSpottingsCollection[dataName].insert(info, {w:1}, callback);
+            } else {
+                self.timingSpottingsCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
+            }
+        });
+    }
+    Database.prototype.saveTimingTestTrans = function(dataName,info,callback) {
+        var self=this;
+        //self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, multi:false, w:1}, callback);
+        self.timingTransCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+            if (err) {
+                callback(err);
+            } else if (item==null) {
+                self.timingTransCollection[dataName].insert(info, {w:1}, callback);
+            } else {
+                self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+            }
+        });
+    }
+    Database.prototype.saveTimingTestManual = function(dataName,info,callback) {
+        var self=this;
+        //self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, w:1}, callback);
+        self.timingManualCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+            if (err) {
+                callback(err);
+            } else if (item==null) {
+                self.timingManualCollection[dataName].insert(info, {w:1}, callback);
+            } else {
+                self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+            }
+        });
+    }
 
     return Database
 };

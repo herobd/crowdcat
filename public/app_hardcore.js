@@ -161,7 +161,7 @@ function createInlineLabel(label) {
 
 function undo() {
     if (lastRemovedEle.length>0) {
-        countUndos++;
+        //countUndos++;
         ondeck.classList.toggle('ondeck');
         if (batchQueue[0].type=='s') {
             var ondeckHeader = document.getElementById('s'+batchQueue[0].id)
@@ -184,6 +184,7 @@ function undo() {
             }
             
         }   
+        batchQueue[0].countUndos++;
         //var _lastRemovedParent=lastRemovedParent.pop();
         //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         if (ondeck.childNodes.length<2) {
@@ -376,6 +377,7 @@ var batchQueue=[]
 function handleSpottingsBatch(jres) {
     //console.log("got batch "+jres.batchId);
     batches['s'+jres.batchId]={sent:false, ngram:jres.ngram, spottings:{}};
+
     
     var lastBatch = batchQueue[batchQueue.length-1]; 
     if (batchQueue.length>0 && jres.ngram == lastBatch.ngram) {// || 
@@ -436,6 +438,12 @@ function handleTranscriptionBatch(jres) {
         
     if (jres.batchId!=='R' && jres.batchId!=='X') {
         batchQueue.push({type:'t', id:jres.batchId, transcription:'#'});
+        if (timingTestMode) {
+            batchQueue[batchQueue.length-1].numPossible=jres.possibilities.length;
+            batchQueue[batchQueue.length-1].positionCorrect=jres.possibilities.indexOf(jres.correct.toLowerCase());
+            console.log('correct: '+self.timingManualCollection);
+            console.log(jres.possibilities);
+        }
         //console.log("got "+jres.resultsId)
     } else if (jres.batchId=='R') {
         location.reload(true);
@@ -555,6 +563,11 @@ function getNextBatch(toload,callback) {
 
                 if (fromEmpty)
                     instructionsText.innerHTML=jres.instructions;
+            } else if (timingTestMode) {
+                batchQueue[batchQueue.length-1].countUndos=0;
+                batchQueue[batchQueue.length-1].startTime=null;
+                if (fromEmpty)
+                    batchQueue[batchQueue.length-1].startTime=new Date().getTime();
             }
             /*if (colorIndex==1)
                 colorIndex=-1;

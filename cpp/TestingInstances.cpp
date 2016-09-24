@@ -32,7 +32,7 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     'm',
                     'm',
      };
-    dummyWord = new Knowledge::Word(0,0,0,0,NULL,NULL,NULL,NULL,0);
+    //dummyWord = new Knowledge::Word(0,0,0,0,NULL,NULL,NULL,NULL,0);
 }
 
 
@@ -83,14 +83,14 @@ void TestingInstances::addTrans(string label, vector<string> poss, multimap<stri
     }
     if (manual)
     {
-        manTrans.push_back(new TranscribeBatch(dummyWord,poss,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
+        manTrans.push_back(new TranscribeBatch(w,poss,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
     }
     else
     {
         multimap<float,string> scored;
         for (int i=0; i< poss.size(); i++)
             scored.insert( make_pair(i,poss[i]) );
-        trans.push_back(new TranscribeBatch(dummyWord,scored,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
+        trans.push_back(new TranscribeBatch(w,scored,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
     }
 
 }
@@ -137,9 +137,9 @@ int TestingInstances::getNextIndex(vector<bool>& setUsed, mutex& mutLock)
 }
 
 
-BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int color, string prevNgram)
+BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int color, string prevNgram, int testingNum)
 {
-    SpottingsBatch* batch = new SpottingsBatch(ngram,0);
+    SpottingsBatch* batch = new SpottingsBatch(ngram,testingNum);
     for (int i=0; i<5; i++)
     {
         int idx = getNextIndex(spottingsUsed[ngram], spottingsMut[ngram]);
@@ -168,9 +168,9 @@ BatchWraper* TestingInstances::makeInstance(int testingNum, int width,int color,
 {
     if (testNumType[testingNum] == 'n') {
         string ngram = ngramList[ getNextIndex(ngramsUsed[testingNum],ngramsMut[testingNum]) ];
-        return getSpottingsBatch(ngram,width,color,prevNgram);
+        return getSpottingsBatch(ngram,width,color,prevNgram,testingNum);
     } else if (testNumType[testingNum] == 's') {
-        return getSpottingsBatch(prevNgram,width,color,prevNgram);
+        return getSpottingsBatch(prevNgram,width,color,prevNgram,testingNum);
     } else if (testNumType[testingNum] == 't') {
         return getTransBatch(width);
     } else if (testNumType[testingNum] == 'm') {

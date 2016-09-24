@@ -33,7 +33,7 @@ class TestingInstances: public SpecialInstances
 
         
     private:
-        Knowledge::Word* dummyWord;
+        //Knowledge::Word* dummyWord;
         vector<char> testNumType;
 
         vector<string> ngramList;
@@ -56,7 +56,7 @@ class TestingInstances: public SpecialInstances
         const Knowledge::Corpus* corpus;
 
         int getNextIndex(vector<bool>& setUsed, mutex& mutLock);
-        BatchWraper* getSpottingsBatch(string ngram, int width, int color, string prevNgram);
+        BatchWraper* getSpottingsBatch(string ngram, int width, int color, string prevNgram, int testingNum);
         BatchWraper* getManTransBatch(int width);
         BatchWraper* getTransBatch(int width);
         BatchWraper* makeInstance(int testingNum, int width,int color, string prevNgram);
