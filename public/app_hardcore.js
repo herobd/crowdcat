@@ -203,7 +203,7 @@ function undo() {
             batches[ondeck.batch].spottings[ondeck.id]=null;
         //console.log(batches[ondeck.batch].spottings);
         if (ondeck.batch!=batchQueue[0].type+batchQueue[0].id)
-                console.log('ERROR, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
+                console.log('WARNING, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
         theWindow.appendChild(ondeck);
         //if (trainingMode)
         //    trainingNum-=1;
@@ -441,8 +441,8 @@ function handleTranscriptionBatch(jres) {
         if (timingTestMode) {
             batchQueue[batchQueue.length-1].numPossible=jres.possibilities.length;
             batchQueue[batchQueue.length-1].positionCorrect=jres.possibilities.indexOf(jres.correct.toLowerCase());
-            console.log('correct: '+self.timingManualCollection);
-            console.log(jres.possibilities);
+            //console.log('correct: '+jres.correct.toLowerCase());
+            //console.log(jres.possibilities);
         }
         //console.log("got "+jres.resultsId)
     } else if (jres.batchId=='R') {
@@ -552,8 +552,11 @@ function getNextBatch(toload,callback) {
                 handleNewExemplarsBatch(jres);
             } else if (jres.batchType=='manual') {
                 handleManualBatch(jres);
-            } else if (jres.batchType=='ERROR' && timingTestMode) {
+            } else if (jres.batchType=='EMPTY' && timingTestMode) {
                 allReceived=true;
+            }
+            else {
+                console.log('bad batch '+jres.batchType);
             }
 
             if (trainingMode) {
@@ -566,8 +569,9 @@ function getNextBatch(toload,callback) {
             } else if (timingTestMode) {
                 batchQueue[batchQueue.length-1].countUndos=0;
                 batchQueue[batchQueue.length-1].startTime=null;
-                if (fromEmpty)
+                if (fromEmpty) {
                     batchQueue[batchQueue.length-1].startTime=new Date().getTime();
+                }
             }
             /*if (colorIndex==1)
                 colorIndex=-1;
@@ -581,6 +585,8 @@ function getNextBatch(toload,callback) {
                 highlightLast();
             
             
+        } else {
+            console.log('nextBatch ERROR: '+jres.err);
         }
         
         

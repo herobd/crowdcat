@@ -14,13 +14,13 @@ void TranscribeBatch::highlightPix(cv::Vec3b &p, cv::Vec3f color)
     p[2] = min(255.f,p[2]*color[2]);
 }
 
-TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id) : manual(false)
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id) : manual(false)
 {
     for (auto p : scored)
     {
         possibilities.push_back(p.second);
     }
-    init(origin, origImg, spottings, tlx, tly, brx, bry, id);
+    init(origin, origImg, spottings, tlx, tly, brx, bry, gt, id);
 }
 
 bool icompare(const string& a, const string& b)
@@ -34,13 +34,13 @@ bool icompare(const string& a, const string& b)
     //They are the same up to this point
     return a.length() < b.length();
 }
-TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id) : manual(true)
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id) : manual(true)
 {
     possibilities=prunedDictionary;
     sort(possibilities.begin(), possibilities.end(), icompare);
-    init(origin, origImg, spottings, tlx, tly, brx, bry, id);
+    init(origin, origImg, spottings, tlx, tly, brx, bry, gt, id);
 }
-void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id)
+void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id)
 {
     this->origin=origin;
     if (id!=0)
@@ -53,6 +53,7 @@ void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, cons
     this->tly=tly;
     this->brx=brx;
     this->bry=bry;
+    this->gt=gt;
 
 
     int wordH = bry-tly+1;

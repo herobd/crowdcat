@@ -50,7 +50,7 @@ var showMilli=4000;
 
 var saveMode=false;
 var timingTestMode=true;
-var trainUsers=false;
+var trainUsers=true;
 var debug=false;
 /**
  *  Define the application.
@@ -444,8 +444,10 @@ var ControllerApp = function(port) {
                                 }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                                else if (err==null)
+                                    res.send({batchType:'EMPTY',batchId:-1});
                                 else
-                                    res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
+                                    res.send({batchType:'ERROR',batchId:-1,err:err});
                                 
                             });
                 } else if (req.query.testingNum && timingTestMode && req.user.datasetTiming) {
@@ -461,6 +463,7 @@ var ControllerApp = function(port) {
                                     }
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {
+                                    //console.log('trans correct: '+correct);
                                     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,possibilities:arg5,correct:correct});
                                     self.testTransLabels[batchId] = correct;
                                 }
@@ -471,8 +474,10 @@ var ControllerApp = function(port) {
                                         self.testSpottingsLabels[batchId+':'+index] = correct[index];
                                     }
                                 }
+                                else if (err==null)
+                                    res.send({batchType:'EMPTY',batchId:-1});
                                 else
-                                    res.send({batchType:'ERROR',batchId:-1,err:'Empty batch.'});
+                                    res.send({batchType:'ERROR',batchId:-1,err:err});
                                 
                             });
                 } else {
@@ -509,8 +514,10 @@ var ControllerApp = function(port) {
                                 }
                                 //else if (batchType==='manual')
                                //     res.send({batchType:batchType,batchId:batchId,wordImg:arg3,ngrams:arg4,estNumChars:arg5});
+                                else if (err==null)
+                                    res.send({batchType:'EMPTY',batchId:-1});
                                 else
-                                    res.send({batchType:'ERROR',batchId:-1});
+                                    res.send({batchType:'ERROR',batchId:-1,err:err});
                             });
                 }
                 
@@ -532,7 +539,7 @@ var ControllerApp = function(port) {
                     //nothing
                     res.send({done:false});
                 } else if (req.query.testingNum) {
-                    //TEST/////////////////////////////////////////////////////////////
+                    //TIMING TEST/////////////////////////////////////////////////////////////
                     if (timingTestMode && req.user.datasetTiming) {
                         if (req.query.type=='spottings') {
                             var accuracy=0;
@@ -540,15 +547,15 @@ var ControllerApp = function(port) {
                             var trueRatioFull=0;
                             var did=0;
                             for (var index=0; index<req.body.ids.length; index++) {
-                                if (req.body.labels[index]!=='$PASS$') {
-                                    if (self.testSpottingsLabels[req.body.ids[index]] == req.body.labels[index])
+                                if (req.body.labels[index]!==-1) {
+                                    if (+self.testSpottingsLabels[req.body.ids[index]] == req.body.labels[index])
                                         accuracy+=1;
-                                    if (self.testSpottingsLabels[req.body.ids[index]])
+                                    if (+self.testSpottingsLabels[req.body.ids[index]])
                                         trueRatioDid+=1;
 
                                     did+=1;
                                 }
-                                if (self.testSpottingsLabels[req.body.ids[index]])
+                                if (+self.testSpottingsLabels[req.body.ids[index]])
                                     trueRatioFull+=1;
                                 
                             }
@@ -582,7 +589,7 @@ var ControllerApp = function(port) {
                                 wasBadNgram=true;
                             else if (self.testTransLabels[req.body.batchId]=='$ERROR$')
                                 wasError=true;
-                            else if (self.testTransLabels[req.body.batchId]=='$PASS$') {
+                            else if (req.body.label=='$PASS$') {
                                 skipped=true;
                                 accuracy=null;
                             }
@@ -605,7 +612,7 @@ var ControllerApp = function(port) {
                             console.log('WARNING: newExemplars batch recived during TimingTest');
                         }
                         else if (req.query.type=='transcriptionManual') {
-                            var skipped = self.testTransLabels[req.body.batchId]=='$PASS$';
+                            var skipped = req.body.label=='$PASS$';
                             var accuracy = ( self.testTransLabels[req.body.batchId].toLowerCase()==req.body.label.toLowerCase() )?1:0;
                             if (skipped)
                                 accuracy=null;
@@ -631,7 +638,7 @@ var ControllerApp = function(port) {
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,printErr);
                         if (saveMode && req.query.save) {
                             for (var index=0; index<req.body.ids.length; index++) {
-                                if (req.body.labels[index]!=='$PASS$') {
+                                if (req.body.labels[index]!==-1) {
                                     if (!self.saveSpottingsQueue[req.body.ids[index]])
                                         self.saveSpottingsQueue[req.body.ids[index]]={};
                                     self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
@@ -658,7 +665,7 @@ var ControllerApp = function(port) {
                         spottingaddon.newExemplarsBatchDone(req.body.batchId,req.body.labels,resend,printErr);
                         if (saveMode && req.query.save) {
                             for (var index=0; index<req.body.labels.length; index++) {
-                                if (req.body.labels[index]!=='$PASS$') {
+                                if (req.body.labels[index]!==-1) {
                                     if (!self.saveSpottingsQueue[req.body.batchId+':'+index])
                                         self.saveSpottingsQueue[req.body.batchId+':'+index]={};
                                     self.saveSpottingsQueue[req.body.batchId+':'+index].label = req.body.labels[index];
@@ -754,10 +761,10 @@ var ControllerApp = function(port) {
                             showWidth,
                             showMilli);
 
-        self.database=new Database('localhost:27017/cattss', [datasetName], function(database) {
+        self.database=new Database('localhost:27017/cattss', datasetName, function(database) {
             if (timingTestMode) {
                 //for (var i=0; i<datasetNames.length; i++) {
-                    var dataN=dataName; //datasetNames[i];
+                    var dataN=datasetName; //datasetNames[i];
                     database.getLabeledSpottings(dataN,function(err,labeledSpottings){
                         if (err)
                             console.log(err);
@@ -776,7 +783,7 @@ var ControllerApp = function(port) {
                                         var ngramLocs=[];
                                         t.ngrams.forEach(function (n) {
                                             ngrams.push(n.ngram);
-                                            ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2]);
+                                            ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2, n.id]);
                                         });
                                         spottingaddon.loadLabeledTrans(dataN,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
                                     });

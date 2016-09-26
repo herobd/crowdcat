@@ -181,6 +181,18 @@ public:
         *gt=this->gt;
         pthread_rwlock_unlock(&lock);
     }
+    void getBoundsAndDoneAndSentAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent, string* gt)
+    {
+        pthread_rwlock_rdlock(&lock);
+        *word_tlx=tlx;
+        *word_tly=tly;
+        *word_brx=brx;
+        *word_bry=bry;
+	*isDone=done;
+        *isSent=sentBatchId!=0;
+        *gt=this->gt;
+        pthread_rwlock_unlock(&lock);
+    }
 
     vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
 
@@ -231,7 +243,7 @@ public:
         if (done) 
             ret= transcription; 
         else 
-            ret = "[ERROR]"; 
+            ret = "$ERROR_NONE$"; 
         pthread_rwlock_unlock(&lock);
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getTranscription"<<endl;

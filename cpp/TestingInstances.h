@@ -28,7 +28,7 @@ class TestingInstances: public SpecialInstances
         }
         BatchWraper* getBatch(int width, int color, string prevNgram, int testingNum);
         void addSpotting(string ngram, bool label, int pageId, int tlx, int tly, int brx, int bry);
-        void addTrans(string label, vector<string> poss, multimap<string,Location> spots, int wordIdx, bool manual);
+        void addTrans(string label, vector<string> poss, vector<Spotting> spots, int wordIdx, bool manual);
         void allLoaded();
 
         

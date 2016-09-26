@@ -225,7 +225,7 @@ function batchShiftAndSend(batchId,callback) {
     if (batchQueue.length>0) {
         if (timingTestMode) {
             //This time preserves even if the user undos, thus giving a total time for completion
-            batchQueue[0].timeStart=new Date().getTime();
+            batchQueue[0].startTime=new Date().getTime();
         }   
         var next = document.getElementById('s'+batchQueue[0].id);
         if (next)

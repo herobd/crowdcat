@@ -240,7 +240,6 @@ NAN_METHOD(stopSpotting) {
 }
 
 NAN_METHOD(loadLabeledSpotting) {
-    //TODO datanum
     if (info[0]->IsString() && info[1]->IsString())
     {
         v8::String::Utf8Value str0(info[0]->ToString());
@@ -289,7 +288,8 @@ NAN_METHOD(loadLabeledTrans) {
         }
 
 
-        multimap<string,Location> spots;//fill
+        //multimap<string,Location> spots;//fill
+        vector<Spotting> spots;//fill
         if (info[4]->IsArray()) {
           Handle<Array> jsArray = Handle<Array>::Cast(info[4]);
           assert(jsArray->Length() == ngramSpots.size());
@@ -297,8 +297,8 @@ NAN_METHOD(loadLabeledTrans) {
             val = jsArray->Get(i);
             if (val->IsArray()) {
               Handle<Array> jsArray2 = Handle<Array>::Cast(val);
-              assert(jsArray2->Length()==4);
-              int sx1,sy1,sx2,sy2;
+              assert(jsArray2->Length()==5);
+              int sx1,sy1,sx2,sy2,sid;
               val2 = jsArray2->Get(0);
               sx1=val2->Uint32Value();
               val2 = jsArray2->Get(1);
@@ -307,7 +307,12 @@ NAN_METHOD(loadLabeledTrans) {
               sx2=val2->Uint32Value();
               val2 = jsArray2->Get(3);
               sy2=val2->Uint32Value();
-              spots.insert( make_pair(ngramSpots[i],Location(-1,sx1,sy1,sx2,sy2)) );
+              val2 = jsArray2->Get(4);
+              sid=val2->Uint32Value();
+              //spots.insert( make_pair(ngramSpots[i],Location(-1,sx1,sy1,sx2,sy2)) );
+              Spotting spotting (sx1,sy1,sx2,sy2,-1,NULL,ngramSpots[i],0);
+              spotting.id=sid;
+              spots.push_back(spotting);
             }
             else assert(false);
           }

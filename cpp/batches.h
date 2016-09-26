@@ -96,6 +96,7 @@ private:
     unsigned long id;
     int tlx, tly, brx, bry;
     vector<SpottingPoint> spottingPoints;
+    string gt;
     bool manual;
     static vector< cv::Vec3f > colors;
     static cv::Vec3f wordHighlight;
@@ -106,11 +107,11 @@ public:
     //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
     
     //A normal transcription batch
-    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
+    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKOWN$", unsigned long batchId=0);
     //A manual transcription batch
-    TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long batchId=0);
+    TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKNOWN$", unsigned long batchId=0);
     
-    void init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, unsigned long id);
+    void init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id);
 
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}
@@ -120,6 +121,7 @@ public:
     void setWidth(unsigned int width);
     vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
     bool isManual() {return manual;}
+    string getGT() {return gt;}
 };
 
 

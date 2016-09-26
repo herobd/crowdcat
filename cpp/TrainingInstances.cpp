@@ -127,7 +127,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         scored.insert( make_pair(2,"thee") );
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(507,spotting_8a) );
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,511,12,563,54,0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,511,12,563,54,"the",0);
         batch->setWidth(width);
         string correct="the";
         string instructions =
@@ -142,7 +142,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(398,spotting_0) );
         spottings.insert( make_pair(429,spotting_9b) );//id:10
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,383,5,465,59, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,383,5,465,59, "there",0);
         batch->setWidth(width);
         string correct="$REMOVE:10$";
         string instructions =
@@ -157,7 +157,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(120,spotting_3) );
         spottings.insert( make_pair(150,spotting_10b) );
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,85,2,252,56, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,85,2,252,56, "Theadore",0);
         batch->setWidth(width);
         string correct="$ERROR$";
         string instructions =
@@ -173,7 +173,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(275,spotting_11a) );//oi
         spottings.insert( make_pair(301,spotting_7) );//in
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,261,13,368,65, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,261,13,368,65, "joined",0);
         batch->setWidth(width);
         string correct="joined";
         string instructions =
@@ -192,7 +192,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(572,spotting_12a) );//mo
         spottings.insert( make_pair(655,spotting_12b) );//ng
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,570,19,691,65, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,570,19,691,65, "morning",0);
         batch->setWidth(width);
         string correct="morning";
         string instructions ="";
@@ -202,7 +202,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(120,spotting_3) );//he
         spottings.insert( make_pair(150,spotting_10b) );//ea
-        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,85,2,252,56, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,85,2,252,56, "Theadore",0);
         batch->setWidth(width);
         string correct="Theadore";
         string instructions =
@@ -229,7 +229,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         };
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(398,spotting_0) );
-        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,383,5,465,59, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,383,5,465,59, "there",0);
         batch->setWidth(width);
         string correct="there";
         string instructions =
@@ -239,7 +239,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
     } else if (trainingNum==15) {//?p manual (auto complete, but no help) 
         vector<string> prunedDictionary;
         multimap<int,Spotting> spottings;
-        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,7,8,73,59, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,7,8,73,59, "he",0);
         batch->setWidth(width);
         string correct="he";
         string instructions ="";
@@ -254,7 +254,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<float,string> scored;
         scored.insert( make_pair(-1,"[start]") );
         multimap<int,Spotting> spottings;
-        TranscribeBatch* batch = new TranscribeBatch(word,scored,&letsgo,&spottings,11,6,211,63, 0);
+        TranscribeBatch* batch = new TranscribeBatch(word,scored,&letsgo,&spottings,11,6,211,63, "[start]",0);
         batch->setWidth(width);
         string correct="[start]";
         string instructions ="";

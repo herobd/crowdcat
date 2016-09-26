@@ -20,6 +20,7 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     'n',
                     's',
                     's',
+                    's',
                     'n',
                     't',
                     't',
@@ -69,7 +70,7 @@ void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx
     //    ngramList.push_back(ngram);
 
 }
-void TestingInstances::addTrans(string label, vector<string> poss, multimap<string,Location> spots, int wordIdx, bool manual)
+void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotting> spots, int wordIdx, bool manual)
 {
     Knowledge::Word* w = corpus->getWord(wordIdx);
     bool toss;
@@ -79,18 +80,21 @@ void TestingInstances::addTrans(string label, vector<string> poss, multimap<stri
     multimap<int,Spotting> spottings;
     for (auto s : spots)
     {
-        spottings.insert( make_pair(s.second.x1,Spotting(s.second.x1,s.second.y1,s.second.x2,s.second.y2,pageId,corpus->imgForPageId(pageId),s.first,0)) );
+        //spottings.insert( make_pair(s.second.x1,Spotting(s.second.x1,s.second.y1,s.second.x2,s.second.y2,pageId,corpus->imgForPageId(pageId),s.first,0)) );
+        s.pageId=pageId;
+        s.pagePnt=corpus->imgForPageId(pageId);
+        spottings.insert( make_pair(s.tlx,s) );
     }
     if (manual)
     {
-        manTrans.push_back(new TranscribeBatch(w,poss,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
+        manTrans.push_back(new TranscribeBatch(w,poss,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry,label));
     }
     else
     {
         multimap<float,string> scored;
         for (int i=0; i< poss.size(); i++)
             scored.insert( make_pair(i,poss[i]) );
-        trans.push_back(new TranscribeBatch(w,scored,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry));
+        trans.push_back(new TranscribeBatch(w,scored,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry,label));
     }
 
 }

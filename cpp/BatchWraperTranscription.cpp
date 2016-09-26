@@ -27,7 +27,7 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     spottings = batch->getSpottingPoints();
     //delete batch;
     wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
-    gt=batch->getBackPointer()->getGT();
+    gt=batch->getGT();
 }
 void BatchWraperTranscription::doCallback(Callback *callback)
 {

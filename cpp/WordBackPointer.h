@@ -18,7 +18,7 @@ class WordBackPointer
 
         //This functions may not really belong here, but it was convenient to include them
         virtual int getSpottingIndex() =0;
-        virtual string getGT() =0;
+        //virtual string getGT() =0;
 };
 
 #endif

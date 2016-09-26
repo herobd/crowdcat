@@ -367,7 +367,7 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
             if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
-                ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+                ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
             }
         }
         else if (matches.size()==0)
@@ -2084,14 +2084,15 @@ TranscribeBatch* Knowledge::Corpus::makeManualBatch(int maxWidth, bool noSpottin
         int tlx,tly,brx,bry;
         bool done;
         bool sent;
-        word->getBoundsAndDoneAndSent(&tlx, &tly, &brx, &bry, &done, &sent);
+        string gt;
+        word->getBoundsAndDoneAndSentAndGT(&tlx, &tly, &brx, &bry, &done, &sent, &gt);
         //cout << "at word, "<<done<<", "<<sent<<endl;
         if (!done && !sent && (!noSpottings || word->getSpottings().size()==0))
         {
             vector<string> prunedDictionary = word->getRestrictedLexicon(PRUNED_LEXICON_MAX_SIZE);
             if (prunedDictionary.size()>PRUNED_LEXICON_MAX_SIZE)
                 prunedDictionary.clear();
-            ret = new TranscribeBatch(word,prunedDictionary,word->getPage(),word->getSpottingsPointer(),tlx,tly,brx,bry);
+            ret = new TranscribeBatch(word,prunedDictionary,word->getPage(),word->getSpottingsPointer(),tlx,tly,brx,bry,gt);
             word->sent(ret->getId());
             //enqueue and dequeue to keep the queue's state good.
             vector<TranscribeBatch*> theBatch = {ret};
