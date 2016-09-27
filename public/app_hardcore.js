@@ -11,6 +11,7 @@ var ondeck;
 var theWindow;
 var gradient;
 var icons;
+var showX, showCheck;
 
 var toBeInQueue=3;
 var swipeOn=true;
@@ -26,6 +27,9 @@ function handleTouchStart(evt) {
     else
            this.xDown = evt.clientX;                                 
                                          
+    theWindow.classList.remove('fadeGray');
+    showX.classList.remove('fadeOut');
+    showCheck.classList.remove('fadeOut');
 };
 
 var testingNum=0;
@@ -56,13 +60,20 @@ function handleTouchMove(evt) {
     
     if (this.xDiff<BAD_THRESH) {
         theWindow.style.background='hsl(350,100%,40%)';
+        showX.style.opacity='1';
+        showCheck.style.opacity='0';
     } else if (this.xDiff<0) {
         theWindow.style.background='hsl(350,'+(60*(this.xDiff/(0.0+BAD_THRESH)))+'%,40%)';
-        
+        showX.style.opacity=''+.7*(this.xDiff/(0.0+BAD_THRESH));
+        showCheck.style.opacity='0';
     } else if (this.xDiff>OK_THRESH) {
         theWindow.style.background='hsl(130,100%,30%)';
+        showCheck.style.opacity='1';
+        showX.style.opacity='0';
     } else if (this.xDiff>0) {
         theWindow.style.background='hsl(130,'+(60*(this.xDiff/(0.0+OK_THRESH)))+'%,30%)';
+        showCheck.style.opacity=''+.7*(this.xDiff/(0.0+OK_THRESH));
+        showX.style.opacity='0';
     }                           
 };
 
@@ -93,7 +104,7 @@ function removeSpotting(OK) {
 
     if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
         lastUndo = ondeck.classList.contains('redo');
-        sparks(OK);
+        //sparks(OK);
 
     }
     else
@@ -120,9 +131,10 @@ function removeSpotting(OK) {
 }*/
 function remover(rek) {return function() {icons.removeChild(rek);};}
 
+/*
 function sparks(right) {
 
-    for (var i=0; i<29; i++) {
+    for (var i=0; i<49; i++) {
         var spark = document.createElement("DIV");
         spark.classList.toggle('spark');
         if (right)
@@ -132,15 +144,6 @@ function sparks(right) {
 
         if  (lastUndo)
             spark.style.bottom='90px';
-        /*spark.addEventListener("load", function(event) {
-        if (right) {
-            spark.style.bottom='100px';
-            spark.style.right='100px';
-        } else {
-            spark.style.bottom='100px';
-            spark.style.left='100px';
-        }
-        });*/
         //TODO webkit
         //spark.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
         //spark.addEventListener("transitionend", function(e){if(e.propertyName=='bottom') icons.removeChild(this);}, false);
@@ -149,7 +152,7 @@ function sparks(right) {
         icons.appendChild(spark);
     }
 
-}
+}*/
 
 
 function createInlineLabel(label) {
@@ -216,6 +219,12 @@ function handleTouchEnd(evt) {
         return;
     //var xUp = evt.touches[0].clientX;    
     //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
+    theWindow.classList.add('fadeGray');
+    showX.classList.add('fadeOut');
+    showCheck.classList.add('fadeOut');
+    theWindow.style.background='hsl(350,0%,35%)';
+    showX.style.opacity='0';
+    showCheck.style.opacity='0';
     
     this.xDown=null;
     ondeck.style.left = '0px';
@@ -248,6 +257,8 @@ function setup() {
     theWindow=windows[0];
     gradient = document.getElementById("overlay");
     icons = document.getElementById("icons");
+    showX = document.getElementById("showX");
+    showCheck = document.getElementById("showCheck");
     if (trainingMode) {
        instructions=document.getElementById('instructions'); 
        instructionsText=document.getElementById('instructionsText');
@@ -286,7 +297,7 @@ function setup() {
             selectionsDiv.style.height = selectionsDiv.height+'px';
         }
     };
-    getNextBatch(toBeInQueue,highlightLast);
+    getNextBatch();//highlightLast);
         //var headers = theWindow.getElementsByClassName('batchHeader');
         //if (headers.length>0)
         //    headers[headers.length-1].classList.toggle('ondeck');
@@ -515,7 +526,7 @@ function handleNewExemplarsBatch(jres) {
     }
 }
 
-function getNextBatch(toload,callback) {
+function getNextBatch() { //callback) {
     //console.log('getting '+allReceived);
     if (allReceived) {
         console.log('ERROR allrecieved, but sending for more')
@@ -544,14 +555,19 @@ function getNextBatch(toload,callback) {
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;
         if (jres.err==null) {
+            var cont = false;
             if (jres.batchType=='spottings') {
                 handleSpottingsBatch(jres);                
+                cont=true;
             } else if (jres.batchType=='transcription') {
                 handleTranscriptionBatch(jres);
+                cont=true;
             } else if (jres.batchType=='newExemplars') {
                 handleNewExemplarsBatch(jres);
+                cont=true;
             } else if (jres.batchType=='manual') {
                 handleManualBatch(jres);
+                cont=true;
             } else if (jres.batchType=='EMPTY' && timingTestMode) {
                 allReceived=true;
             }
@@ -559,29 +575,35 @@ function getNextBatch(toload,callback) {
                 console.log('bad batch '+jres.batchType);
             }
 
-            if (trainingMode) {
-                batchQueue[batchQueue.length-1].instructions=jres.instructions;
-                batchQueue[batchQueue.length-1].lastTraining=jres.lastTraining;
-                batchQueue[batchQueue.length-1].correct=jres.correct.toLowerCase();
+            if (jres.batchType!='EMPTY') {
+                if (trainingMode) {
+                    batchQueue[batchQueue.length-1].instructions=jres.instructions;
+                    batchQueue[batchQueue.length-1].lastTraining=jres.lastTraining;
+                    batchQueue[batchQueue.length-1].correct=jres.correct.toLowerCase();
 
-                if (fromEmpty)
-                    instructionsText.innerHTML=jres.instructions;
-            } else if (timingTestMode) {
-                batchQueue[batchQueue.length-1].countUndos=0;
-                batchQueue[batchQueue.length-1].startTime=null;
-                if (fromEmpty) {
-                    batchQueue[batchQueue.length-1].startTime=new Date().getTime();
+                    if (fromEmpty)
+                        instructionsText.innerHTML=jres.instructions;
+                    if (jres.lastTraining)
+                        theWindow.children[0].classList.add('starter');
+                } else if (timingTestMode) {
+                    batchQueue[batchQueue.length-1].countUndos=0;
+                    batchQueue[batchQueue.length-1].startTime=null;
+                    if (fromEmpty) {
+                        batchQueue[batchQueue.length-1].startTime=new Date().getTime();
+                    }
                 }
             }
             /*if (colorIndex==1)
                 colorIndex=-1;
             else
                 colorIndex=2;*/
-            if (toload!==undefined && --toload>0)
-                getNextBatch(toload,callback);
-            else if (callback!==undefined)
-                callback();
-            else if (fromEmpty)
+            //if (toload!==undefined && --toload>0)
+            if (batchQueue.length<toBeInQueue && cont)
+                getNextBatch(); //callback);
+            //else if (callback!==undefined)
+            //    callback();
+
+            if (fromEmpty)
                 highlightLast();
             
             
@@ -638,7 +660,7 @@ function isBatchDone(batchId) {
                 return;
     
     //base
-    batchShiftAndSend(batchId,function(){if (batchQueue.length<toBeInQueue) getNextBatch();});
+    batchShiftAndSend(batchId,getNextBatch);
     //base
     /*var nextElement=null;
     if (batchQueue.length>0) {
@@ -696,11 +718,13 @@ function isBatchDone(batchId) {
         
         if (batchQueue[0].lastTraining) {
             trainingMode=false;
-            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on real instances. Work fast and accurately.</p><p>Good luck!</p>";
+            allReceived=false;
+            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on real instances. Work fast and accurately. If an instance is particularly challenging, feel free to use the <b>skip</b> button in the top-right.</p><p>Good luck!</p>";
 
             instructions.hidden=false;
             instructions.style.display='flex';
-
+            //getNextBatch(2);
+            batchQueue[0].type='x';
         } else if (right) {
             instructionsText.innerHTML=batchQueue[0].instructions;
             if (batchQueue[0].instructions.length>0) {
@@ -817,6 +841,8 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
     return genDiv;
 }
 
+
+//autocomplete
 //assumes possibilities is sorted lexigraphically, case-insensitive
 function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
     var limit = 20;
@@ -825,11 +851,12 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
         lcPossibilities.push(possibilities[i].toLowerCase());
     }
     var ret = function(event) {
+        //console.log(event.keyCode);
         if (event.keyCode == 13) {
             event.preventDefault();
             onEnter();
         }
-        else if ((event.keyCode>=65 && event.keyCode<=90) || event.keyCode==8 || event.keyCode==46 || event.keyCode==32)
+        else if ((event.keyCode>=65 && event.keyCode<=90) || event.keyCode==8 || event.keyCode==46 || event.keyCode==32 || event.keyCode==229 || event.keyCode==0)
         {
             var cur = self.value.toLowerCase();
             if (cur.length>0) {
@@ -877,6 +904,8 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                             break; //because its sorted
                     }
                 }
+                //console.log('matchList:');
+                //console.log(matchList);
                 if (matchList.length<limit) {
                     //console.log('adding:')
                     //console.log(matchList)

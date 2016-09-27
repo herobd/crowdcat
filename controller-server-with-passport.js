@@ -21,7 +21,7 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Debug/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon");
 //var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 numberOfTests=2;
@@ -29,10 +29,22 @@ numberOfTests=2;
 function printErr(err){if (err) console.log(err);}
 
 //SYSTEM PARAMS
-var lexiconFiles=["/home/brian/intel_index/data/wordsEnWithNames.txt"];
-var pageImageDirs=["/home/brian/intel_index/data/gw_20p_wannot"];
-var segmentationFiles=["/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"];
-var datasetNames=['GW'];
+var lexiconFiles=[  "/home/brian/intel_index/data/wordsEnWithNames.txt",
+                    "/home/brian/intel_index/data/wordsEnWithNames.txt",
+                    "/home/brian/intel_index/data/wordsEnWithNames.txt"
+                 ];
+var pageImageDirs=[ "/home/brian/intel_index/data/gw_20p_wannot",
+                    "/home/brian/intel_index/data/gw_20p_wannot",
+                    "/home/brian/intel_index/data/gw_20p_wannot"
+                  ];
+var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
+                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
+                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
+                      ];
+var datasetNames=[  'GW',
+                    'test1',
+                    'test2'
+                 ];
 
 
 var datasetNum=0;
@@ -41,7 +53,7 @@ var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 
-var spottingModelPrefix="model/CATTSS_"+datasetName;
+var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
 var numThreadsSpotting=4;
 var numThreadsUpdating=3;
 var showWidth=2500;
@@ -50,8 +62,14 @@ var showMilli=4000;
 
 var saveMode=false;
 var timingTestMode=true;
-var trainUsers=true;
+var trainUsers=false;
 var debug=false;
+
+if (timingTestMode)
+{
+    numThreadsSpotting=0;
+    numThreadsUpdating=0;
+}
 /**
  *  Define the application.
  */
@@ -270,7 +288,7 @@ var ControllerApp = function(port) {
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
                 if (timingTestMode && !req.user.timingTest) {
-                    req.user.datasetTiming=datasetNames[(self.datasetAssignCounter++)%datasetNames.length];
+                    req.user.datasetTiming=datasetNames[1+(self.datasetAssignCounter++)%(datasetNames.length-1)];
                     req.user.timingTest=true;
                     self.database.updateUser(req.user,printErr);
                 }
@@ -451,7 +469,7 @@ var ControllerApp = function(port) {
                                 
                             });
                 } else if (req.query.testingNum && timingTestMode && req.user.datasetTiming) {
-                    spottingaddon.getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
+                    self.spottingaddons[req.user.datasetTiming].getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
                             +req.query.testingNum,
                             req.user.datasetTiming,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
@@ -577,7 +595,6 @@ var ControllerApp = function(port) {
                                         trueRatioFull:trueRatioFull, 
                                         resend:resend,
                                         batchTime:req.body.batchTime};
-                            console.log('##saving spottings res '+req.body.resultsId);
                             self.database.saveTimingTestSpotting(req.user.datasetTiming,info,printErr);
                         }
                         else if (req.query.type=='transcription') {
@@ -743,6 +760,43 @@ var ControllerApp = function(port) {
         
     };
 
+    //recursively load saved spottings/transcriptions for testing.
+    //Recursive to prevent variable overwriting with async.
+    self.loadLabeled = function(database,i) {
+        if (i>=datasetNames.length)
+            return;
+        var dataN=datasetNames[i];
+        database.getLabeledSpottings(dataN,function(err,labeledSpottings){
+            if (err)
+                console.log(err);
+            else
+            {
+                labeledSpottings.forEach(function(s) {
+                    self.spottingaddons[dataN].loadLabeledSpotting(dataN,s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
+                });
+                database.getLabeledTrans(dataN,function(err,labeledTrans){
+                    if (err)
+                        console.log(err);
+                    else
+                    {
+                        labeledTrans.forEach(function(t) {
+                            var ngrams=[];
+                            var ngramLocs=[];
+                            t.ngrams.forEach(function (n) {
+                                ngrams.push(n.ngram);
+                                ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2, n.id]);
+                            });
+                            self.spottingaddons[dataN].loadLabeledTrans(dataN,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
+                        });
+                        self.spottingaddons[dataN].testingLabelsAllLoaded(dataN);
+                        console.log('Loaded all labels for testing: '+dataN);
+                        self.loadLabeled(database,i+1);
+                    }
+                });
+            }
+        });
+    }
+
     /**
      *  Initializes the sample application.
      */
@@ -750,49 +804,39 @@ var ControllerApp = function(port) {
         //self.setupVariables();
         self.populateCache();
         self.setupTerminationHandlers();
-        
-        spottingaddon.start(lexiconFile,
-                            pageImageDir,
-                            segmentationFile,
-                            spottingModelPrefix,
-                            numThreadsSpotting,
-                            numThreadsUpdating,
-                            showHeight,
-                            showWidth,
-                            showMilli);
+        if (timingTestMode) {
+            self.spottingaddons={};
+            for (var i=1; i<datasetNames.length; i++)
+            {
+                self.spottingaddons[datasetNames[i]]=require("./cpp/build/Debug/spottingaddon");
+                self.spottingaddons[datasetNames[i]].start(
+                                    lexiconFiles[i],
+                                    pageImageDirs[i],
+                                    segmentationFiles[i],
+                                    spottingModelPrefix+'GW', //datasetNames[i],
+                                    numThreadsSpotting,
+                                    numThreadsUpdating,
+                                    showHeight,
+                                    showWidth,
+                                    showMilli);
+            }
 
-        self.database=new Database('localhost:27017/cattss', datasetName, function(database) {
+        } else { 
+            spottingaddon.start(lexiconFile,
+                                pageImageDir,
+                                segmentationFile,
+                                spottingModelPrefix+datasetName,
+                                numThreadsSpotting,
+                                numThreadsUpdating,
+                                showHeight,
+                                showWidth,
+                                showMilli);
+        }
+
+        self.database=new Database('localhost:27017/cattss', datasetNames, function(database) {
             if (timingTestMode) {
-                //for (var i=0; i<datasetNames.length; i++) {
-                    var dataN=datasetName; //datasetNames[i];
-                    database.getLabeledSpottings(dataN,function(err,labeledSpottings){
-                        if (err)
-                            console.log(err);
-                        else
-                        {
-                            labeledSpottings.forEach(function(s) {
-                                spottingaddon.loadLabeledSpotting(dataN,s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
-                            });
-                            database.getLabeledTrans(dataN,function(err,labeledTrans){
-                                if (err)
-                                    console.log(err);
-                                else
-                                {
-                                    labeledTrans.forEach(function(t) {
-                                        var ngrams=[];
-                                        var ngramLocs=[];
-                                        t.ngrams.forEach(function (n) {
-                                            ngrams.push(n.ngram);
-                                            ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2, n.id]);
-                                        });
-                                        spottingaddon.loadLabeledTrans(dataN,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
-                                    });
-                                    spottingaddon.testingLabelsAllLoaded(dataN);
-                                    console.log('Loaded all labels for testing');
-                                }
-                            });
-                        }
-                    });
+                //for (var i=1; i<datasetNames.length; i++) {
+                self.loadLabeled(database,1);
                 //}
             }
         });
@@ -916,8 +960,8 @@ var ControllerApp = function(port) {
     }
     
     self.getTestInstructions = function(user) {
-        //TODO
-        return 'This is filler for instructions currently.';
+        
+        return 'You have been assigned data from the '+user.datasetTiming+' dataset.';
     }
     
 };   /*  END Controller Application.  */

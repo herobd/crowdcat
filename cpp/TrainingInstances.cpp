@@ -144,10 +144,10 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(429,spotting_9b) );//id:10
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,383,5,465,59, "there",0);
         batch->setWidth(width);
-        string correct="$REMOVE:10$";
+        string correct="$REMOVE:"+to_string(spotting_9b.id)+"$";
         string instructions =
                 "<p>Sometimes a subword will have been classified incorrectly, meaning the correct transcription won't be shown.</p>"
-                "<p>Tap the small <b>x</b> below the 'ir' to indicate this is an incorrect spotting.</p>";
+                "<p>Tap the <b>X</b> below the '<b>ir</b>' to indicate this is an incorrect spotting.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==10) {//transcribe (all error) Theadore
         multimap<float,string> scored;

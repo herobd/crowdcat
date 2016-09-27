@@ -6,7 +6,7 @@ module.exports =  function() {
    34,435,1,0,7,65,4,80,644,5,7,9,6,44,6,8,7,544,5,7,88,456,6,54,5,77,45624,456,6,56,
    34,435,1,0,7,65,4,830,644,5,7,9,6,44,6,8,5,544,5,7,88,456,6,54,5,77,45624,456,6,5];
    var fs = require('fs');
-    function Database(address,dataName,callback) {
+    function Database(address,dataNames,callback) {
         
         var self=this;
         
@@ -16,7 +16,7 @@ module.exports =  function() {
         self.mongo.connect("mongodb://"+address, function(err, db) {
           if(!err) {
             console.log("We are connected to the database.");
-            var numCol=1+5;
+            var numCol=1+5*dataNames.length;
 
             //Connect to all the collections
             db.collection('THESIS_USERS', function(err, collection) {
@@ -39,12 +39,12 @@ module.exports =  function() {
                 }
             });*/
             
-            /*self.savedSpottingsCollection={};
+            self.savedSpottingsCollection={};
             self.savedTransCollection={};
             self.timingSpottingsCollection={};
             self.timingTransCollection={};
-            self.timingManualCollection={};*/
-            //dataNames.forEach( function(dataName) {
+            self.timingManualCollection={};
+            dataNames.forEach( function(dataName) {
                 var savedSpottings='SAVED_SPOTTINGS_'+dataName;
                 var savedTrans = 'SAVED_TRANS_'+dataName;
                 var timingSpottings = 'TIMING_SPOTTINGS_'+dataName;
@@ -52,8 +52,8 @@ module.exports =  function() {
                 var timingTrans = 'TIMING_TRANS_'+dataName;
                 db.collection(savedSpottings, function(err, collection) {
                     if(!err) {
-                        //self.savedSpottingsCollection[dataName]=collection;
-                        self.savedSpottingsCollection=collection;
+                        self.savedSpottingsCollection[dataName]=collection;
+                        //self.savedSpottingsCollection=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
@@ -62,8 +62,8 @@ module.exports =  function() {
                 });
                 db.collection(savedTrans , function(err, collection) {
                     if(!err) {
-                        //self.savedTransCollection[dataName]=collection;
-                        self.savedTransCollection=collection;
+                        self.savedTransCollection[dataName]=collection;
+                        //self.savedTransCollection=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
@@ -72,8 +72,8 @@ module.exports =  function() {
                 });
                 db.collection(timingSpottings , function(err, collection) {
                     if(!err) {
-                        //self.timingSpottingsCollection[dataName]=collection;
-                        self.timingSpottingsCollection=collection;
+                        self.timingSpottingsCollection[dataName]=collection;
+                        //self.timingSpottingsCollection=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
@@ -82,8 +82,8 @@ module.exports =  function() {
                 });
                 db.collection(timingTrans , function(err, collection) {
                     if(!err) {
-                        //self.timingTransCollection[dataName]=collection;
-                        self.timingTransCollection=collection;
+                        self.timingTransCollection[dataName]=collection;
+                        //self.timingTransCollection=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
@@ -92,15 +92,15 @@ module.exports =  function() {
                 });
                 db.collection(timingManual , function(err, collection) {
                     if(!err) {
-                        //self.timingManualCollection[dataName]=collection;
-                        self.timingManualCollection=collection;
+                        self.timingManualCollection[dataName]=collection;
+                        //self.timingManualCollection=collection;
                         if (--numCol <= 0)
                             callback(self);
                     } else {
                         console.log('ERROR: conencting to MongoDB colection TIMING_MANUAL_'+dataName+': '+err);
                     }
                 });
-            //});
+            });
             
           } else {
             console.log('ERROR: conencting to MongoDB: '+err);
@@ -267,18 +267,18 @@ module.exports =  function() {
     };*/
     
     Database.prototype.saveSpotting = function(dataName,id,spotting) {
-        //this.savedSpottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );
-        this.savedSpottingsCollection.update({_id:id},{$set: spotting},{ upsert: true } );
+        this.savedSpottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );
+        //this.savedSpottingsCollection.update({_id:id},{$set: spotting},{ upsert: true } );
     };
 
     Database.prototype.saveTrans = function(dataName,id,trans) {
-        //this.savedTransCollection[dataName].update({_id:id},{$set: trans},{ upsert: true } );
-        this.savedTransCollection.update({_id:id},{$set: trans},{ upsert: true } );
+        this.savedTransCollection[dataName].update({_id:id},{$set: trans},{ upsert: true } );
+        //this.savedTransCollection.update({_id:id},{$set: trans},{ upsert: true } );
     };
 
     Database.prototype.getLabeledSpottings = function(dataName,callback) {
-        //var cursor=this.savedSpottingsCollection[dataName].find();
-        var cursor=this.savedSpottingsCollection.find();
+        var cursor=this.savedSpottingsCollection[dataName].find();
+        //var cursor=this.savedSpottingsCollection.find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {
@@ -292,8 +292,8 @@ module.exports =  function() {
         
     };
     Database.prototype.getLabeledTrans = function(dataName,callback) {
-        //var cursor=this.savedTransCollection[dataName].find();
-        var cursor=this.savedTransCollection.find();
+        var cursor=this.savedTransCollection[dataName].find();
+        //var cursor=this.savedTransCollection.find();
         var ret=[];
         cursor.each(function(err, doc) {
             if (err) {
@@ -312,48 +312,50 @@ module.exports =  function() {
         var self=this;
                     //self.timingSpottingsCollection[dataName].insert(info, {w:1}, callback);
         //self.timingSpottingsCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{upsert:1, w:1}, callback);
-        //self.timingSpottingsCollection[dataName].findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
-        self.timingSpottingsCollection.findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
+        self.timingSpottingsCollection[dataName].findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
+        //self.timingSpottingsCollection.findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
             if (err) {
                 callback(err);
             } else if (item==null) {
-                //self.timingSpottingsCollection[dataName].insert(info, {w:1}, callback);
-                self.timingSpottingsCollection.insert(info, {w:1}, callback);
+                self.timingSpottingsCollection[dataName].insert(info, {w:1}, callback);
+                //self.timingSpottingsCollection.insert(info, {w:1}, callback);
             } else {
-                //self.timingSpottingsCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
-                self.timingSpottingsCollection.update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
+                self.timingSpottingsCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
+                //self.timingSpottingsCollection.update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
             }
         });
     }
     Database.prototype.saveTimingTestTrans = function(dataName,info,callback) {
         var self=this;
         //self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, multi:false, w:1}, callback);
-        //self.timingTransCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
-        self.timingTransCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        //console.log('saveTimingTrans '+dataName);
+        //console.log(self.timingTransCollection);
+        self.timingTransCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        //self.timingTransCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
             if (err) {
                 callback(err);
             } else if (item==null) {
-                //self.timingTransCollection[dataName].insert(info, {w:1}, callback);
-                self.timingTransCollection.insert(info, {w:1}, callback);
+                self.timingTransCollection[dataName].insert(info, {w:1}, callback);
+                //self.timingTransCollection.insert(info, {w:1}, callback);
             } else {
-                //self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
-                self.timingTransCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                //self.timingTransCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
             }
         });
     }
     Database.prototype.saveTimingTestManual = function(dataName,info,callback) {
         var self=this;
         //self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, w:1}, callback);
-        //self.timingManualCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
-        self.timingManualCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        self.timingManualCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        //self.timingManualCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
             if (err) {
                 callback(err);
             } else if (item==null) {
-                //self.timingManualCollection[dataName].insert(info, {w:1}, callback);
-                self.timingManualCollection.insert(info, {w:1}, callback);
+                self.timingManualCollection[dataName].insert(info, {w:1}, callback);
+                //self.timingManualCollection.insert(info, {w:1}, callback);
             } else {
-                //self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
-                self.timingManualCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                //self.timingManualCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
             }
         });
     }

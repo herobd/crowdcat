@@ -190,8 +190,8 @@ function httpGetAsync(theUrl, callback)
     xmlHttp.onreadystatechange = function() { 
         if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
             callback(xmlHttp.responseText);
-        else if (xmlHttp.readyState == 4)
-            callback(xmlHttp.status);
+        //else if (xmlHttp.readyState == 4)
+        //    callback(xmlHttp.status);
             
     }
     xmlHttp.open("GET", theUrl, true); // true for asynchronous 
