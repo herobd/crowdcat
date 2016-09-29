@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <atomic>
 #include "maxflow/graph.h"
+#include <regex>
 #include <assert.h>
 
 #include "spotting.h"
@@ -32,7 +33,7 @@ typedef Graph<float,float,float> GraphType;
 
 #define NGRAM_GRAPH_BIAS 0.001f
 
-#define OVERLAP_LINE_THRESH 0.45
+#define OVERLAP_LINE_THRESH 0.9
 #define OVERLAP_WORD_THRESH 0.45
 #define THRESH_UNKNOWN_EST 0.3
 #define THRESH_LEXICON_LOOKUP_COUNT 50
@@ -424,6 +425,7 @@ private:
     
     map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
+    map<string,int> pageIdMap;
     Spotter* spotter;
     TranscribeBatchQueue manQueue;
     TranscribeBatch* makeManualBatch(int maxWidth, bool noSpottings);

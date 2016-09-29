@@ -34,15 +34,15 @@ var lexiconFiles=[  "/home/brian/intel_index/data/wordsEnWithNames.txt",
                     "/home/brian/intel_index/data/wordsEnWithNames.txt"
                  ];
 var pageImageDirs=[ "/home/brian/intel_index/data/gw_20p_wannot",
-                    "/home/brian/intel_index/data/gw_20p_wannot",
+                    "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
                     "/home/brian/intel_index/data/gw_20p_wannot"
                   ];
 var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
-                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
+                        "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
                         "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
                       ];
 var datasetNames=[  'GW',
-                    'test1',
+                    'BENTHAM',
                     'test2'
                  ];
 
@@ -61,7 +61,7 @@ var showHeight=1000;
 var showMilli=4000;
 
 var saveMode=false;
-var timingTestMode=true;
+var timingTestMode=false;
 var trainUsers=false;
 var debug=false;
 
@@ -93,6 +93,7 @@ var ControllerApp = function(port) {
     }
 
     self.datasetAssignCounter=0;
+    //self.sourceCounter={};
     /*  ================================================================  */
     /*  Helper functions.                                                 */
     /*  ================================================================  */
@@ -130,6 +131,7 @@ var ControllerApp = function(port) {
      *  @param {string} sig  Signal to terminate on.
      */
     self.terminator = function(sig){
+        //console.log(self.sourceCounter);
         spottingaddon.stopSpotting(function(){console.log("told spotter to stop");}); 
         if (typeof sig === "string") {
            console.log('%s: Received %s - terminating control app ...',
@@ -145,6 +147,7 @@ var ControllerApp = function(port) {
      *  Setup termination handlers (for exit and a list of signals).
      */
     self.setupTerminationHandlers = function(){
+        //console.log(self.sourceCounter);
         //  Process on exit and signals.
         process.on('exit', function() { self.terminator(); });
 
@@ -191,8 +194,19 @@ var ControllerApp = function(port) {
         
         
         self.app.get('/', function(req, res) {
+            //console.log('hit');
+            //console.log(self.sourceCounter);
             res.setHeader('Content-Type', 'text/html');
             res.send(self.cache_get('index.html') );
+            /*if (req.query.source) {
+                if (self.sourceCounter.hasOwnProperty(req.query.source)) {
+                    if (self.sourceCounter[req.query.source]++ % 10==0) {
+                        console.log('source counter');
+                        console.log(self.sourceCounter);
+                    }
+                } else
+                    self.sourceCounter[req.query.source]=1;
+            }*/
         });
         
         
@@ -208,9 +222,9 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = 'app-hardcore';
+                var appName = 'app_full';
                 if (!saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -236,9 +250,9 @@ var ControllerApp = function(port) {
                 //console.log('[app] user:'+req.user.id+' hit app');
                 //res.setHeader('Content-Type', 'text/html');
                 //res.send(self.cache_get('app.html') );
-                var appName = 'app_hardcore';
+                var appName = 'app_full';
                 if (!saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:false, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:false, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -249,8 +263,8 @@ var ControllerApp = function(port) {
             if (req.user || debug) {
                 if (req.user.datasetTiming) {
                     //console.log('[app] user:'+req.user.id+' hit app');
-                    var appName = 'app_hardcore';
-                    res.render(appName, {app_version:'app_hardcore', testMode:timingTestMode, trainMode:trainUsers, save:false, message: req.flash('error') });
+                    var appName = 'app_full';
+                    res.render(appName, {app_version:'app_full', testMode:timingTestMode, trainMode:trainUsers, save:false, message: req.flash('error') });
                 } else {
                     res.redirect('/home');
                 }
@@ -261,9 +275,9 @@ var ControllerApp = function(port) {
         self.app.get('/app-label', function(req, res) {
             if (req.user || debug) {
                 //console.log('[app] user:'+req.user.id+' hit app');
-                var appName = 'app_hardcore';
+                var appName = 'app_full';
                 if (saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:true, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:true, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -273,9 +287,9 @@ var ControllerApp = function(port) {
         self.app.get('/app-false-label', function(req, res) {
             if (req.user || debug) {
                 //console.log('[app] user:'+req.user.id+' hit app');
-                var appName = 'app_hardcore';
+                var appName = 'app_full';
                 if (saveMode)
-                    res.render(appName, {app_version:'app_hardcore', testMode:false, trainMode:false, save:false, message: req.flash('error') });
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:false, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -729,7 +743,7 @@ var ControllerApp = function(port) {
         });
         
         self.app.post('/create_account', function (req, res) {
-            self.database.addUser(req.body.email,{age:req.body.age,experiece:req.body.experience}, function (err) {
+            self.database.addUser(req.body.email,{age:req.body.age,experiece:req.body.experience,contactInFuture:req.body.contactInFuture}, function (err) {
                 if (err) {
                     req.flash('error', err);
                     req.flash('was', 'create_account');
@@ -813,7 +827,7 @@ var ControllerApp = function(port) {
                                     lexiconFiles[i],
                                     pageImageDirs[i],
                                     segmentationFiles[i],
-                                    spottingModelPrefix+'GW', //datasetNames[i],
+                                    spottingModelPrefix+datasetNames[i],
                                     numThreadsSpotting,
                                     numThreadsUpdating,
                                     showHeight,
@@ -954,7 +968,7 @@ var ControllerApp = function(port) {
     
     self.getTestApp = function(userNum,testNum) {
         if ((userNum+testNum)%2==0)
-            return 'app_hardcore';
+            return 'app_full';
         else
             return 'app_tap';
     }

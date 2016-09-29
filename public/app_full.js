@@ -1,25 +1,211 @@
 
-
+var menuHeaderHeight=50;
+var removeNgramButtonWidth=40;
+var maxImgWidth=700;
 var OK_THRESH=85;
 var BAD_THRESH=-85;
 
+var toBeInQueue=3;
 
+var batches={};
+var batchQueue=[]
+var lastRemovedBatchInfo=[];
 var lastRemovedEle=[];
-var spinner;
 
+var spinner;
 var ondeck;
 var theWindow;
 var gradient;
 var icons;
 var showX, showCheck;
+var instructions;
+var instructionsText;
 
-var toBeInQueue=3;
 var swipeOn=true;
-var screenHeight;
 
+var screenHeight;
+var imgWidth=null;
+
+var countUndos=0;
 var lastUndo=false;
-var menuHeaderHeight=50;
-var removeNgramButtonWidth=40;
+var allReceived=false;
+var startTime = new Date().getTime();
+
+var testingNum=0;
+var trainingNum=0;
+
+//pink,green, orange, pink, blue
+var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
+var spottingColors = ['#f3e5fb','#cad6bb','#eedece','#e7d6d5','#d7e6ec'];
+var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
+var colorIndex=0;
+
+function menu() {
+    var m = document.getElementById('menu');
+    m.classList.toggle('hidden');
+    m.classList.toggle('show');
+}
+
+function standardQuery() {
+    var query='';
+    if (trainingMode)
+        query+='&trainingNum='+trainingNum;
+    else if (timingTestMode)
+        query+='&testingNum='+testingNum;
+    if (save)
+        query+='&save=1';
+    return query;
+}
+
+
+function httpGetAsync(theUrl, callback)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+        //else if (xmlHttp.readyState == 4)
+        //    callback(xmlHttp.status);
+            
+    }
+    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+    xmlHttp.send(null);
+}
+function httpPostAsync(theUrl, theData, callback)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+        else if (xmlHttp.readyState == 4)
+            callback(xmlHttp.status);
+            
+    }
+    xmlHttp.open("POST", theUrl, true); // true for asynchronous 
+    xmlHttp.setRequestHeader("Content-type", 'application/json');
+    xmlHttp.send(JSON.stringify(theData));
+}
+
+
+function batchShiftAndSend(batchId,callback) {
+    
+    var info = batchQueue[0];
+    if (info.type+info.id != batchId) {// && info.id != batchId.substr(1)) {
+        console.log("ERROR, not matching ids: "+info.type+info.id+" "+batchId);
+        console.log(batchQueue);
+    }
+    batchQueue=batchQueue.slice(1)
+    if (batchQueue.length>0) {
+        if (timingTestMode) {
+            //This time preserves even if the user undos, thus giving a total time for completion
+            batchQueue[0].startTime=new Date().getTime();
+        }   
+        var next = document.getElementById('s'+batchQueue[0].id);
+        if (next)
+            next.hidden=false;
+            //document.getElementById('b'+batchQueue[0].id).classList.toggle('show');
+    } else {
+        
+        spinner.hidden=false;
+    }
+    lastRemovedBatchInfo.push(info);
+
+    if (info.type=='s') {
+        var ngram = info.ngram;
+        var resultsId = info.rid;
+        
+        
+        var query='?type=spottings&resend='+batches[batchId].sent;
+        query+=standardQuery();
+        var labels = [];
+        var ids = [];
+        for (var id in batches[batchId].spottings){
+            if (batches[batchId].spottings.hasOwnProperty(id)) {
+                var label=batches[batchId].spottings[id];
+                ids.push(id);
+                labels.push(label);
+            }
+        }
+        var toSend = {batchId:info.id,resultsId:resultsId,labels:labels,ids:ids}; //,undos:countUndos};
+        if (timingTestMode) {
+            toSend.ngram=ngram;
+            toSend.prevNgramSame=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].ngram==ngram)
+                toSend.prevNgramSame=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
+            
+            var jres=JSON.parse(res);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
+                if (batchQueue.length==0)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
+                callback();
+        });
+        batches[batchId].sent=true;
+    } else if (info.type=='t' || info.type=='m') {
+        var query='?type=transcription';
+        if (info.type=='m') {
+            query+='Manual';
+        }
+        query+=standardQuery();
+        var toSend = {batchId:info.id,label:info.transcription};
+        if (timingTestMode && info.type=='t') {
+            toSend.prevWasTrans=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='t')
+                toSend.prevWasTrans=true;
+            toSend.numPossible=info.numPossible;
+            toSend.positionCorrect=info.positionCorrect;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        } else if (timingTestMode && info.type=='m') {
+            toSend.prevWasManual=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='m')
+                toSend.prevWasManual=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
+            
+            var jres=JSON.parse(res);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
+                if (batchQueue.length==0)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
+                callback();
+        });
+
+    } else if (info.type=='e') {
+        
+        var query='?type=newExemplars&resend='+batches[batchId].sent;
+        query+=standardQuery();
+        var labels = [];
+        for (var id in batches[batchId].spottings){
+            if (batches[batchId].spottings.hasOwnProperty(id)) {
+                var label=batches[batchId].spottings[id];
+                labels.push(label);
+            }
+        }
+        var toSend = {batchId:info.id,labels:labels};
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
+            
+            var jres=JSON.parse(res);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
+                if (batchQueue.length==0)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
+                callback();
+        });
+        batches[batchId].sent=true;
+    }
+}
+
+
 
 function handleTouchStart(evt) {
     if (evt.touches)                                     
@@ -32,10 +218,6 @@ function handleTouchStart(evt) {
     showCheck.classList.remove('fadeOut');
 };
 
-var testingNum=0;
-var trainingNum=0;
-var instructions;
-var instructionsText;
 
 function handleTouchMove(evt) {
     if ( ! this.xDown || !swipeOn) {
@@ -104,7 +286,6 @@ function removeSpotting(OK) {
 
     if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
         lastUndo = ondeck.classList.contains('redo');
-        //sparks(OK);
 
     }
     else
@@ -117,42 +298,8 @@ function removeSpotting(OK) {
     highlightLast();
 }
 
-/*function Spark(right) {
-
-        this.spark = document.createElement("DIV");
-        spark.classList.toggle('spark');
-        if (right)
-            spark.classList.toggle('green');
-        else
-            spark.classList.toggle('red');
-        var remove = function(){icons.removeChild(this.spark);}
-        setTimeout(remove,getRandomTime());
-        icons.appendChild(spark);
-}*/
 function remover(rek) {return function() {icons.removeChild(rek);};}
 
-/*
-function sparks(right) {
-
-    for (var i=0; i<49; i++) {
-        var spark = document.createElement("DIV");
-        spark.classList.toggle('spark');
-        if (right)
-            spark.classList.toggle('green');
-        else
-            spark.classList.toggle('red');
-
-        if  (lastUndo)
-            spark.style.bottom='90px';
-        //TODO webkit
-        //spark.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
-        //spark.addEventListener("transitionend", function(e){if(e.propertyName=='bottom') icons.removeChild(this);}, false);
-        
-        setTimeout(remover(spark),getRandomTime());
-        icons.appendChild(spark);
-    }
-
-}*/
 
 
 function createInlineLabel(label) {
@@ -188,8 +335,6 @@ function undo() {
             
         }   
         batchQueue[0].countUndos++;
-        //var _lastRemovedParent=lastRemovedParent.pop();
-        //_lastRemovedParent.insertBefore(lastRemoved.pop(),_lastRemovedParent.getElementsByClassName("spottings")[0]);
         if (ondeck.childNodes.length<2) {
             if (batchQueue[0].type=='s')
                 ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngram),ondeck.childNodes[0]);
@@ -208,8 +353,6 @@ function undo() {
         if (ondeck.batch!=batchQueue[0].type+batchQueue[0].id)
                 console.log('WARNING, batchQueue head not mathcing ondeck: '+ondeck.batch+' '+batchQueue[0].type+batchQueue[0].id)
         theWindow.appendChild(ondeck);
-        //if (trainingMode)
-        //    trainingNum-=1;
     }
     
 }
@@ -266,9 +409,7 @@ function setup() {
     
     var containers = document.getElementsByClassName('container');
     initSlider(containers[0]);
-    /*containers[0].addEventListener('touchstart', function(e){ e.preventDefault(); });
-    containers[0].addEventListener('mousedown', function(e){ e.preventDefault(); });
-    */
+
     var w = window,
     d = document,
     e = d.documentElement,
@@ -297,11 +438,7 @@ function setup() {
             selectionsDiv.style.height = selectionsDiv.height+'px';
         }
     };
-    getNextBatch();//highlightLast);
-        //var headers = theWindow.getElementsByClassName('batchHeader');
-        //if (headers.length>0)
-        //    headers[headers.length-1].classList.toggle('ondeck');
-    //});
+    getNextBatch();
 
 
     // create an observer instance
@@ -411,14 +548,10 @@ function handleSpottingsBatch(jres) {
         batchHeader.style.background=headerColors[colorIndex];
         theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
     }
-        /*if (lastNgram!=jres.ngram) {
-            colorIndex = (++colorIndex)%headerColors.length;
-            lastNgram=jres.ngram;
-    }*/
         
-        if (jres.resultsId!=='X') {
-            batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
-            //console.log("got "+jres.resultsId)
+    if (jres.resultsId!=='X') {
+        batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+        //console.log("got "+jres.resultsId)
     } else if (jres.batchId=='R') {
         location.reload(true);
     } else {
@@ -431,11 +564,6 @@ function handleSpottingsBatch(jres) {
         var i=jres.spottings[index];
         var im = new Image();
         im.src='data:image/png;base64,'+i.data;
-        //var widget = document.createElement("div");
-        //widget.classList.toggle('spotting');
-        //widget.appendChild(im);
-        //widget.id=i.id;
-        //widget.batch=jres.batchId;
         var widget = createSlider(im,i.id,'s'+jres.batchId);
         theWindow.insertBefore(widget,theWindow.childNodes[0]);
         //initSlider(widget);
@@ -462,8 +590,7 @@ function handleTranscriptionBatch(jres) {
     
     var wordImg = new Image();
     wordImg.src='data:image/png;base64,'+jres.wordImg;
-    //var ngramImg = new Image();
-    //ngramImg.src='data:image/png;base64,'+jres.ngramImg;
+
     theWindow.insertBefore(createTranscriptionSelector('t'+jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
     spinner.hidden=true;
 }
@@ -491,11 +618,8 @@ function handleNewExemplarsBatch(jres) {
     } else if (jres.batchId!=='R' && jres.batchId!=='X') {
         batchQueue.push({type:'e', id:jres.batchId });
         batches['e'+jres.batchId]={sent:false, spottings:{}, ngrams:{}};
-        //colorIndex = (++colorIndex)%headerColors.length;
-        //batchHeader.style.background=headerColors[colorIndex];
         
         
-        //theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
         for (var index=0; index<jres.exemplars.length; index++) {
             var i=jres.exemplars[index];
             var id = index+'e'+jres.batchId;
@@ -511,14 +635,8 @@ function handleNewExemplarsBatch(jres) {
             
             var im = new Image();
             im.src='data:image/png;base64,'+i.data;
-            //var widget = document.createElement("div");
-            //widget.classList.toggle('spotting');
-            //widget.appendChild(im);
-            //widget.id=i.id;
-            //widget.batch=jres.batchId;
             var widget = createSlider(im,id,'e'+jres.batchId);
             theWindow.insertBefore(widget,theWindow.childNodes[0]);
-            //initSlider(widget);
             batches['e'+jres.batchId].spottings[id]=null;
             batches['e'+jres.batchId].ngrams[id]=i.ngram;
         }
@@ -526,7 +644,7 @@ function handleNewExemplarsBatch(jres) {
     }
 }
 
-function getNextBatch() { //callback) {
+function getNextBatch() { 
     //console.log('getting '+allReceived);
     if (allReceived) {
         console.log('ERROR allrecieved, but sending for more')
@@ -536,11 +654,7 @@ function getNextBatch() { //callback) {
     var prevNgram='.';
     if (batchQueue.length>0)
         prevNgram=batchQueue[batchQueue.length-1].ngram;
-    /*if (testMode) {
-        query+='&test='+testNum;
-        if (toload==toBeInQueue)
-            query+='&reset=true';
-    }*/
+
     if (trainingMode) {
         query+='&trainingNum='+trainingNum;
         trainingNum+=1;
@@ -549,8 +663,10 @@ function getNextBatch() { //callback) {
         query+='&testingNum='+testingNum;
         testingNum+=1;
     }
+
     if (save)
-        query+='&save=1'
+        query+='&save=1';
+
     httpGetAsync('/app/nextBatch?width='+imgWidth+'&color='+colorIndex+'&prevNgram='+prevNgram+query,function (res){
         var jres=JSON.parse(res);
         var fromEmpty = batchQueue.length==0;
@@ -593,15 +709,8 @@ function getNextBatch() { //callback) {
                     }
                 }
             }
-            /*if (colorIndex==1)
-                colorIndex=-1;
-            else
-                colorIndex=2;*/
-            //if (toload!==undefined && --toload>0)
-            if (batchQueue.length<toBeInQueue && cont && !allRecieved)
+            if (batchQueue.length<toBeInQueue && cont && !allReceived)
                 getNextBatch(); //callback);
-            //else if (callback!==undefined)
-            //    callback();
 
             if (fromEmpty)
                 highlightLast();
@@ -662,46 +771,12 @@ function isBatchDone(batchId) {
     //base
     batchShiftAndSend(batchId,getNextBatch);
     //base
-    /*var nextElement=null;
-    if (batchQueue.length>0) {
-        if (batchQueue[0].type=='s') {
-            nextElement=document.getElementById('s'+batchQueue[0].id);
-        }
-    }*/
-    /*
-    if (nextElement) {
-        nextElement.classList.toggle('ondeck');
-        //if (batchQueue[0].ngram=='#') {
-            //TODO hide gradient
-            //gradient.hidden=true;
-        //}
-    }*/
-    //highlightLast();
     var oldElement = document.getElementById(batchId);
     if (oldElement) {
-        //var typeLastRemoved = lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type;
-        //if (typeLastRemoved!='t' && typeLastRemoved!='m') {
-        //    if (batchQueue.length > 0 && typeLastRemoved.ngram == batchQueue[0].ngram) {
-        //        theWindow.removeChild(oldElement);
-                
-                //we shift the header past the collapsing element to provide the illusion of a smooth transition
-        //        if (nextElement) {
-        //            theWindow.removeChild(nextElement);
-        //            theWindow.appendChild(nextElement);
-        //        }
-        //    } else {
-                oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
-                oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
-                oldElement.classList.toggle('batchHeader');
-                oldElement.classList.toggle('collapserH');
-         //   }
-        //} else {
-            //TODO fix gradient
-            //gradient.hidden=false;
-            /*oldElement.addEventListener("webkitAnimationEnd", function(e){theWindow.removeChild(this);}, false);
-            oldElement.addEventListener("animationend", function(e){theWindow.removeChild(this);}, false);
-            oldElement.classList.toggle('collapser');*/
-        //}
+        oldElement.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+        oldElement.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+        oldElement.classList.toggle('batchHeader');
+        oldElement.classList.toggle('collapserH');
     }
 
     if (trainingMode) {
@@ -791,8 +866,6 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
     genDiv.appendChild(wordImg);
-    //ngramImg.classList.toggle('meat');
-    //genDiv.appendChild(ngramImg);
     if (ngrams.length>0) {
         for (var i=0; i<ngrams.length; i++) {
             ngrams[i].x=parseInt(ngrams[i].x);

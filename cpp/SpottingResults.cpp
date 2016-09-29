@@ -35,6 +35,8 @@ SpottingResults::SpottingResults(string ngram) :
     //pullFromScore=splitThreshold;
     delta=0;
     //haveRe
+    momentum=0.8;
+    lastDifPullFromScore=0;
 }
 
 void SpottingResults::add(Spotting spotting) {
@@ -114,9 +116,11 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if (!need && numLeftInRange<12 && starts.size()>1)
         return NULL;
 
-    //cout <<"getBatch, from:"<<pullFromScore<<endl;
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
+#ifdef TEST_MODE
+    cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
+#endif
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     
@@ -224,7 +228,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     cout<<endl;*/
     
     vector<Spotting>* ret = new vector<Spotting>();
-    
+    int swing=0;
     for (unsigned int i=0; i< ids.size(); i++)
     {
         unsigned long id = stoul(ids[i]);
@@ -255,6 +259,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         // adjust threshs
         if (userClassifications[i]>0)
         {
+            swing++;
             numberClassifiedTrue++;
             if (!resent || !iterClass->second)
             {
@@ -264,6 +269,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         }
         else if (userClassifications[i]==0)
         {
+            swing--;
             numberClassifiedFalse++;
             if (resent && (retRemove && iterClass->second))
             {
@@ -284,7 +290,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         return ret;
     }
     bool allWereSent = allBatchesSent; 
-    EMThresholds();
+    EMThresholds(swing);
   
 
 
@@ -343,7 +349,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
    
     
 
-bool SpottingResults::EMThresholds()
+bool SpottingResults::EMThresholds(int swing)
 {
     assert(instancesById.size()>1);
     assert(maxScore!=-999999);
@@ -499,6 +505,8 @@ bool SpottingResults::EMThresholds()
         float rejectThreshold1 = trueMean+numStdDevs*sqrt(trueVariance);
         float acceptThreshold2 = trueMean-numStdDevs*sqrt(trueVariance);
         float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
+        //float prevAcceptThreshold=acceptThreshold;
+        //float prevRejectThreshold=rejectThreshold;
         if (falseVariance!=0 && trueVariance!=0)
         {
             acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
@@ -514,6 +522,25 @@ bool SpottingResults::EMThresholds()
             rejectThreshold = rejectThreshold2;
             acceptThreshold = falseMean-2*numStdDevs*sqrt(falseVariance);
         }
+
+        /*if (!init)
+        {
+            float difAcceptThreshold = acceptThreshold-prevAcceptThreshold;
+            if ( (difAcceptThreshold>0 && lastDifAcceptThreshold>0) || (difAcceptThreshold<0 && lastDifAcceptThreshold<0) )
+            {
+                acceptThreshold+=momentum*lastDifAcceptThreshold;
+                difAcceptThreshold = acceptThreshold-prevAcceptThreshold;
+            }
+            lastDifAcceptThreshold=difAcceptThreshold;
+
+            float difRejectThreshold = rejectThreshold-prevRejectThreshold;
+            if ( (difRejectThreshold>0 && lastDifRejectThreshold>0) || (difRejectThreshold<0 && lastDifRejectThreshold<0) )
+            {
+                rejectThreshold+=momentum*lastDifRejectThreshold;
+                difRejectThreshold = rejectThreshold-prevRejectThreshold;
+            }
+            lastDifRejectThreshold=difRejectThreshold;
+        }*/
 #ifdef TEST_MODE
         cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std devs of: f:"<<sqrt(falseVariance)<<", t:"<<sqrt(trueVariance)<<endl;
 #endif        
@@ -526,32 +553,60 @@ bool SpottingResults::EMThresholds()
             initV=false;
         pullFromScore = trueMean;*/
     //}
+    float prevPullFromScore = pullFromScore;
     pullFromScore = trueMean-sqrt(trueVariance);
-    
-    //cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
-    //cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
-    
-    
-    //cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
-    /*//a historgram visualization
-    
-    int falseMeanBin=(displayLen-1)*(falseMean-minScore)/(maxScore-minScore);
-    int falseVarianceBin1=(displayLen-1)*(falseMean-sqrt(falseVariance)-minScore)/(maxScore-minScore);
-    int falseVarianceBin2=(displayLen-1)*(falseMean+sqrt(falseVariance)-minScore)/(maxScore-minScore);
-    int trueMeanBin=(displayLen-1)*(trueMean-minScore)/(maxScore-minScore);
-    int trueVarianceBin1=(displayLen-1)*(trueMean-sqrt(trueVariance)-minScore)/(maxScore-minScore);
-    int trueVarianceBin2=(displayLen-1)*(trueMean+sqrt(trueVariance)-minScore)/(maxScore-minScore);
-    int acceptThresholdBin=(displayLen-1)*(acceptThreshold-minScore)/(maxScore-minScore);
-    int rejectThresholdBin=(displayLen-1)*(rejectThreshold-minScore)/(maxScore-minScore);
-    int pullFromScoreBin=(displayLen-1)*(pullFromScore-minScore)/(maxScore-minScore);
-    for (int bin=0; bin<displayLen; bin++)
+    if (!init)
     {
-        if (falseMeanBin==bin)
-            cout <<"F";
-        else
-            cout <<" ";
-        if (falseVarianceBin1==bin || falseVarianceBin2==bin)
-            cout <<"f";
+        float difPullFromScore = pullFromScore-prevPullFromScore;
+#ifdef TEST_MODE
+        cout<<"orig pull dif="<<difPullFromScore<<",  ";
+#endif
+        //if ( (pull>0 && lastDifPullFromScore>0) || (difPullFromScore<0 && lastDifPullFromScore<0) )
+        //{
+        //    pullFromScore+=momentum*lastDifPullFromScore;
+        //    difPullFromScore = pullFromScore-prevPullFromScore;
+        //}
+        if ((swing>0 && difPullFromScore<0) || (swing<0 && difPullFromScore>0))
+            pullFromScore=prevPullFromScore;
+        if ((swing>0 && lastDifPullFromScore>0) || (swing<0 && lastDifPullFromScore<0))
+        {
+            pullFromScore+=momentum*lastDifPullFromScore;
+        }
+        else 
+        {  ???
+            pullFromScore= (swing/10.0)*fabs(difPullFromScore+lastDifPullFromScore);
+        }
+        difPullFromScore = pullFromScore-prevPullFromScore;
+#ifdef TEST_MODE
+        cout<<"final pull dif="<<difPullFromScore<<",  swing="<<swing<<",  lastDif="<<lastDifPullFromScore<<endl;
+#endif
+        lastDifPullFromScore=difPullFromScore;
+    }
+
+//cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
+//cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
+
+
+//cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
+/*//a historgram visualization
+
+int falseMeanBin=(displayLen-1)*(falseMean-minScore)/(maxScore-minScore);
+int falseVarianceBin1=(displayLen-1)*(falseMean-sqrt(falseVariance)-minScore)/(maxScore-minScore);
+int falseVarianceBin2=(displayLen-1)*(falseMean+sqrt(falseVariance)-minScore)/(maxScore-minScore);
+int trueMeanBin=(displayLen-1)*(trueMean-minScore)/(maxScore-minScore);
+int trueVarianceBin1=(displayLen-1)*(trueMean-sqrt(trueVariance)-minScore)/(maxScore-minScore);
+int trueVarianceBin2=(displayLen-1)*(trueMean+sqrt(trueVariance)-minScore)/(maxScore-minScore);
+int acceptThresholdBin=(displayLen-1)*(acceptThreshold-minScore)/(maxScore-minScore);
+int rejectThresholdBin=(displayLen-1)*(rejectThreshold-minScore)/(maxScore-minScore);
+int pullFromScoreBin=(displayLen-1)*(pullFromScore-minScore)/(maxScore-minScore);
+for (int bin=0; bin<displayLen; bin++)
+{
+    if (falseMeanBin==bin)
+        cout <<"F";
+    else
+        cout <<" ";
+    if (falseVarianceBin1==bin || falseVarianceBin2==bin)
+        cout <<"f";
         else
             cout <<" ";
         if (trueMeanBin==bin)

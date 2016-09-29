@@ -1968,7 +1968,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     
     //std::getline(in,line);
     //float initSplit=0;//stof(line);//-0.52284769;
-    
+    //regex nonNum ("[^\\d]");
     pthread_rwlock_wrlock(&pagesLock);
     while(std::getline(in,line))
     {
@@ -1985,14 +1985,18 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         
         
         string imageFile = strV[0];
-        int pageId = stoi(strV[0]);
+        string pageName = (strV[0]);
         string gt = strV[5];
         int tlx=stoi(strV[1]);
         int tly=stoi(strV[2]);
         int brx=stoi(strV[3]);
         int bry=stoi(strV[4]);
         
-
+        //pageName = regex_replace (pageName,nonNum,"");
+        //int pageId = stoi(pageName);
+        if (pageIdMap.find(pageName)==pageIdMap.end())
+            pageIdMap[pageName]=pageIdMap.size();
+        int pageId = pageIdMap.at(pageName);
         Page* page;
         if (pages.find(pageId)==pages.end())
         {
@@ -2017,21 +2021,36 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             brx=page->getImg()->cols-1;
         if (bry >= page->getImg()->rows)
             bry=page->getImg()->rows-1;
+        if (tlx>brx || tly>bry)
+        {
+            cout<<"ERROR, fliped box: "+line<<endl;
+            exit(1);
+        }
         vector<Line*> lines = page->lines();
         bool oneLine=false;
+        float bestOverlap=0;
+        Line* bestLine=NULL;
         for (Line* line : lines)
         {
             int line_ty, line_by;
             line->wordsAndBounds(&line_ty,&line_by);
             int overlap = min(bry,line_by) - max(tly,line_ty);
             float overlapPortion = overlap/(0.0+bry-tly);
+            //cout <<"overlap: "<<overlapPortion<<endl;
             if (overlapPortion > OVERLAP_LINE_THRESH)
             {
                 oneLine=true;
-                line->addWord(tlx,tly,brx,bry,gt);
+                //line->addWord(tlx,tly,brx,bry,gt);
+                if (overlapPortion>bestOverlap)
+                {
+                    bestOverlap=overlapPortion;
+                    bestLine=line;
+                }
                 
             }
         }
+        if (oneLine)
+            bestLine->addWord(tlx,tly,brx,bry,gt);
         if (!oneLine)
         {
             page->addWord(tlx,tly,brx,bry,gt);

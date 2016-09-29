@@ -11,12 +11,15 @@
 <body onload="setup()">
 <h1>CATTSS</h1>
 <h2>Computer Assisted Transcription Through Subword Spotting</h2>
-<p>This is the crowd-source transcription app I've created for my Master's thesis at BYU. Please give it a try and <a href="mailto:briandavis@byu.net?Subject=CATTSS" target="_top">let me know</a> your thoughts.</p>
-<p>It is designed for a smartphone screen, but should be usable in any modern browser.</p>
+<p>This is the crowd-source transcription app I've created for my Master's thesis at BYU. It is designed for a smartphone screen, but should be usable in any modern browser.</p>
+<p>I'm running a short expirement which should only take 5 minutes of your time.</p>
 <div id='apps'>
-    <a href="/app-hardcore">Go to app</a> <br><br>
+    <a href="/login">I'll help!</a> <br><br>
 
 </div>
+<br>
+<p>Contact me here: <a href="mailto:briandavis@byu.net?Subject=CATTSS" target="_top">briandavis@byu,net</a></p>
+<br>
 <h2>How CATTSS works</h2>
 <p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself. It passes the results it has meduim confidence for to the users. Based on their feedback it increases in its descriminative power, eventually reaching a point it can make a decision about the rest of them.</p>
 <p>The subwords form a partail transcription of words. Comparing these to a lexicon, the system determines the possible transcriptions for a partail transcribed word. If this list is reasonibly small the system passes the list to a user to select the correct one.</p>

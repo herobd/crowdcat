@@ -30,7 +30,7 @@ void SpottingQueue::stop()
 
 void* spottingThreadTask(void* queue)
 {
-    signal(SIGPIPE, SIG_IGN);
+    //signal(SIGPIPE, SIG_IGN);
     nice(2);
     ((SpottingQueue*)queue)->spottingLoop();
     //pthread_exit(NULL);

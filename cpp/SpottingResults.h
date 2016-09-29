@@ -124,6 +124,11 @@ private:
     float trueVariance;
     float falseMean;
     float falseVariance;
+
+    //float lastDifAcceptThreshold;
+    //float lastDifRejectThreshold;
+    float lastDifPullFromScore;
+    float momentum;
     
     float pullFromScore;
     float delta;
@@ -155,7 +160,7 @@ private:
     //This uses expectation maximization (one iteration each call) to produce new appect/reject thresholds. It assumes a bimodal gaussian distribution, one for positive spottings and one for negative.
     //returns (and sets allBatchesSent) whether we are now done (all spottings lie outside the thresholds)
     //It uses an Otsu threshold to be used to estimate some initail parameters on the first run.
-    bool EMThresholds();
+    bool EMThresholds(int swing=0);
 
     //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
     //It returns instancesByLocation.end() if none is found.

@@ -30,7 +30,7 @@ function hide_create() {
 <% if (message && message.length>0) { %>
 <p class="flash"><%= message %></p>
 <% } %>
-<div id=login_form  class="slider">
+<div id=login_form  class="slider closed">
     <h2>Returning tester</h2>
     <form action="/login" method="post" autocomplete="on">
         <div>
@@ -45,42 +45,83 @@ function hide_create() {
         </div>
     </form>
     <br>
-    <button type="button" onclick="show_create()" id="show_create_button">New tester?</button><br>
+    <button type="button" onclick="show_create()" id="show_create_button">New tester</button><br>
 </div>
 
 
-<div id=create_account_form class="slider closed">
+<div id=create_account_form class="slider">
+    <button type="button" onclick="hide_create()" id="show_create_button">Returning tester</button><br>
     <h2>New tester</h2>
     <form action="/create_account" method="post" autocomplete="on" >
         <div>
             <label>Email:</label>
-            <input type="text" name="email"/>
+            <input type="email" name="email" autocapitalize=off autocorrect=off />
         </div>
+        <br>
         <div>
             <input type="password" name="password" value="none" hidden=true/>
         </div>
-        <div>
-            <label>Age:</label><br>
-            <input type="radio" name="age" value="<10" > less than 10<br>
-            <input type="radio" name="age" value="10-13" > 10-13<br>
-            <input type="radio" name="age" value="14-18"> 14-18<br>
-            <input type="radio" name="age" value="19-28"> 19-28<br>
-            <input type="radio" name="age" value="29-49"> 29-49<br>
-            <input type="radio" name="age" value="50+"> 50+<br>
+        <p>If you're willing, please provide a little information about yourself to help in analyzing the results.</p>
+        <br>
+        <label>Age:</label>
+        <div class='listmenu'>
+            <label for="<10">
+                <input type="radio" name="age" id="<10" value="<10" ><span> less than 10 </span><br>
+            </label>
+            <label for="10-13">
+                <input type="radio" name="age" id="10-13" value="10-13" ><span> 10-13 </span><br>
+            </label>
+            <label for="14-18">
+                <input type="radio" name="age" id="14-18" value="14-18"><span> 14-18 </span><br>
+            </label>
+            <label for="19-30">
+                <input type="radio" name="age" id="19-30" value="19-30"><span> 19-30 </span><br>
+            </label>
+            <label for="31-45">
+                <input type="radio" name="age" id="31-45" value="31-45"><span> 31-45 </span><br>
+            </label>
+            <label for="46-65">
+                <input type="radio" name="age" id="46-65" value="46-65"><span> 46-65 </span><br>
+            </label>
+            <label for="66+">
+                <input type="radio" name="age" id="66+" value="66+"><span> 66+ </span><br>
+            </label>
         </div>
-        <div>
-            <label>Previous experience with transcription/indexing:</label><br>
-            <input type="radio" name="experience" value="None" > None<br>
-            <input type="radio" name="experience" value="A little" > A little<br>
-            <input type="radio" name="experience" value="Some"> Some<br>
-            <input type="radio" name="experience" value="A fair amount"> A fair amount<br>
-            <input type="radio" name="experience" value="Very experienced"> Very experienced<br>
+        <br>
+        <label>Previous experience with transcription/indexing:</label><br>
+        <div class='listmenu'>
+            <label for="None">
+                <input type="radio" name="experience" id="None" value="None" ><span> None </span><br>
+            </label>
+            <label for="A little">
+                <input type="radio" name="experience" id="A little" value="A little" ><span> A little </span><br>
+            </label>
+            <label for="Some">
+                <input type="radio" name="experience" id="Some" value="Some"><span> Some </span><br>
+            </label>
+            <label for="A fair amount">
+                <input type="radio" name="experience" id="A fair amount" value="A fair amount"><span> A fair amount </span><br>
+            </label>
+            <label for="Very experienced">
+                <input type="radio" name="experience" id="Very experienced" value="Very experienced"><span> Very experienced </span><br>
+            </label>
         </div>
+        <br>
+        <label>Would you be willing to participate in the final testing of the system in the future?</label><br>
+        <div class='listmenu'>
+            <label for="No">
+                <input type="radio" name="contactInFuture" id="No" value="No" ><span> No </span><br>
+            </label>
+            <label for="Yes">
+                <input type="radio" name="contactInFuture" id="Yes" value="Yes" ><span> Yes </span><span id='rock'>   <i>You rock!</i></span><br>
+            </label>
+        </div>
+        <br>
         <div>
-            <input type="submit" value="Create account"/>
+            <input type="submit" value="Create"/>
         </div>
     </form>
-    <button type="button" onclick="hide_create()" id="show_create_button">Cancel</button><br>
+    <br>
 </div>
 
 
