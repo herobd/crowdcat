@@ -31,23 +31,23 @@ function printErr(err){if (err) console.log(err);}
 //SYSTEM PARAMS
 var lexiconFiles=[  "/home/brian/intel_index/data/wordsEnWithNames.txt",
                     "/home/brian/intel_index/data/wordsEnWithNames.txt",
-                    "/home/brian/intel_index/data/wordsEnWithNames.txt"
+                    "/home/brian/intel_index/data/names_only_f300.txt"
                  ];
 var pageImageDirs=[ "/home/brian/intel_index/data/gw_20p_wannot",
                     "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
-                    "/home/brian/intel_index/data/gw_20p_wannot"
+                    "/home/brian/intel_index/data/us1930_census/names_only"
                   ];
 var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
                         "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
-                        "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp"
+                        "/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
                       ];
 var datasetNames=[  'GW',
                     'BENTHAM',
-                    'test2'
+                    'NAMES'
                  ];
 
 
-var datasetNum=0;
+var datasetNum=1;
 var lexiconFile=lexiconFiles[datasetNum];
 var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
@@ -60,9 +60,9 @@ var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
 
-var saveMode=false;
+var saveMode=true;
 var timingTestMode=false;
-var trainUsers=false;
+var trainUsers=true;
 var debug=false;
 
 if (timingTestMode)
@@ -261,7 +261,7 @@ var ControllerApp = function(port) {
         });
         self.app.get('/app-test', function(req, res) {
             if (req.user || debug) {
-                if (req.user.datasetTiming) {
+                if (req.user.datasetTiming && !saveMode) {
                     //console.log('[app] user:'+req.user.id+' hit app');
                     var appName = 'app_full';
                     res.render(appName, {app_version:'app_full', testMode:timingTestMode, trainMode:trainUsers, save:false, message: req.flash('error') });
@@ -279,7 +279,7 @@ var ControllerApp = function(port) {
                 if (saveMode)
                     res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:true, message: req.flash('error') });
                 else
-                    res.redirect('/');
+                    res.redirect('/home');
             } else {
                 res.redirect('/login');
             }
@@ -291,7 +291,7 @@ var ControllerApp = function(port) {
                 if (saveMode)
                     res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:false, message: req.flash('error') });
                 else
-                    res.redirect('/');
+                    res.redirect('/home');
             } else {
                 res.redirect('/login');
             }
@@ -307,7 +307,7 @@ var ControllerApp = function(port) {
                     self.database.updateUser(req.user,printErr);
                 }
                 //console.log(req.user);
-                res.render('home', { message: self.getTestInstructions(req.user) });
+                res.render('home', { message: self.getTestInstructions(req.user), id:req.user.id});
             } else {
                 res.redirect('/login');
             }

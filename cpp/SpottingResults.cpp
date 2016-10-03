@@ -35,7 +35,7 @@ SpottingResults::SpottingResults(string ngram) :
     //pullFromScore=splitThreshold;
     delta=0;
     //haveRe
-    momentum=0.8;
+    momentum=1.2;
     lastDifPullFromScore=0;
 }
 
@@ -573,8 +573,8 @@ bool SpottingResults::EMThresholds(int swing)
             pullFromScore+=momentum*lastDifPullFromScore;
         }
         else 
-        {  ???
-            pullFromScore= (swing/10.0)*fabs(difPullFromScore+lastDifPullFromScore);
+        {
+            pullFromScore+= (swing/10.0)*fabs(difPullFromScore+lastDifPullFromScore);
         }
         difPullFromScore = pullFromScore-prevPullFromScore;
 #ifdef TEST_MODE
@@ -582,6 +582,12 @@ bool SpottingResults::EMThresholds(int swing)
 #endif
         lastDifPullFromScore=difPullFromScore;
     }
+
+    //safe gaurd
+    if (pullFromScore>rejectThreshold)
+        pullFromScore=rejectThreshold;
+    else if (pullFromScore<acceptThreshold)
+        pullFromScore=acceptThreshold;
 
 //cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
 //cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;

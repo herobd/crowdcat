@@ -360,6 +360,9 @@ public:
     Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth, int id) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
+        if (pageImg.cols*pageImg.rows<=1)
+            cout<<"ERROR: could not open image: "<<imageLoc<<endl;
+        assert(pageImg.cols*pageImg.rows > 1);
         this->id = id;
         _id = id;
         pthread_rwlock_init(&lock,NULL);

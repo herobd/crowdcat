@@ -26,7 +26,7 @@
 
 using namespace std;
 
-#define ROTATE 0 //this is for testing, forcing it to feed up batches from different spotting results.
+#define ROTATE 1 //this is for testing, forcing it to feed up batches from different spotting results.
 
 #define NGRAM_Q_COUNT_THRESH_NEW 100//4
 #define NGRAM_Q_COUNT_THRESH_WORD 100//6

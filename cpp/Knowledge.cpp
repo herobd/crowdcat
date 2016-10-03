@@ -14,6 +14,9 @@ Knowledge::Corpus::Corpus()
 void Knowledge::Corpus::loadSpotter(string modelPrefix)
 {
     spotter = new AlmazanSpotter(this,modelPrefix);
+
+    //This is bad, it shouldn't be coming from here, but it prevents code dup.
+    averageCharWidth = spotter->getAverageCharWidth();
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
@@ -1859,16 +1862,19 @@ void Knowledge::Corpus::show()
                     }
                     cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
                 }
-                else
-                    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
+                //else
+                //    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
             }
         }
     }
     for (auto p : draw)
     {
+        int w=(1100.0/p.second.rows)*p.second.cols;
+        cv::resize(p.second, p.second, cv::Size(w,1100));
         cv::imshow("a page",p.second);
         cv::waitKey();
     }
+    cout<<"All pages."<<endl;
     cv::waitKey();
 
     pthread_rwlock_unlock(&pagesLock);
@@ -2057,7 +2063,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         }
     }
     
-    double heightAvg=0;
+    /*double heightAvg=0;
     int count=0;
 
     for (auto pp : pages)
@@ -2080,7 +2086,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
 #ifdef TEST_MODE
     cout<<"avg char height: "<<heightAvg<<endl;
     cout<<"avg char width : "<<averageCharWidth<<endl;
-#endif
+#endif*/
     recreateDatasetVectors(false);
     pthread_rwlock_unlock(&pagesLock);
 

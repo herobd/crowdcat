@@ -9,12 +9,16 @@
 </head>
 <body>
 <div class="container">
-    <div id="title"><h1>Welcome</h1></div>
+    <div id="title"><h1>Welcome</h1> <%= id %></div>
     <p>Thank you for voluteering your time. This is an expirement to characterize how fast and accurate people are at using the CATTSS app. It should only take about 5 minutes.</p>
     <p>You will begin by being briefly trained on using the app before completing a series of tasks.</p>
     <p id=user_specific_message"><%= message %></p>
     <div id='apps'>
         <a href="/app-test">Go to app</a> <br><br>
+        <% if (id=='herobd@gmail.com') { %>
+        <a href="/app-label">Labeling</a> <br><br>
+        <a href="/app-false-label">Don't (false) label</a> <br><br>
+        <% } %>
     </div>
     
 </div>
