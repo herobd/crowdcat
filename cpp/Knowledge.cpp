@@ -278,27 +278,34 @@ void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<uns
         //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
     pthread_rwlock_wrlock(&lock);
-    if (resend)
+    if (!loose)
     {
-        //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
-        auto s = removedSpottings.find(batchId);
-        if (s != removedSpottings.end())
+        loose=true;
+    }
+    else
+    {
+        if (resend)
         {
-            for (Spotting& spotting : s->second)
-                spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
-            removedSpottings.erase(s);
-        }
+            //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
+            auto s = removedSpottings.find(batchId);
+            if (s != removedSpottings.end())
+            {
+                for (Spotting& spotting : s->second)
+                    spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
+                removedSpottings.erase(s);
+            }
 
+        }
+        vector<Spotting> removed;
+        for (auto p : spottings)
+        {
+            removed.push_back(p.second);
+        }
+        removedSpottings[batchId]=removed;
+        spottings.clear();
+        toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+        harvested.clear();
     }
-    vector<Spotting> removed;
-    for (auto p : spottings)
-    {
-        removed.push_back(p.second);
-    }
-    removedSpottings[batchId]=removed;
-    spottings.clear();
-    toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
-    harvested.clear();
     pthread_rwlock_unlock(&lock);
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
@@ -507,7 +514,7 @@ string Knowledge::Word::generateQuery()
         //cout <<"num chars: "<<numChars<<endl;
         
         
-        if (numChars>0)
+        if (numChars>0) //There are probably chars between the spottings
         {
             int least = floor(numChars);
             int most = ceil(numChars);
@@ -517,23 +524,36 @@ string Knowledge::Word::generateQuery()
             if (most-numChars < THRESH_UNKNOWN_EST)
                 most+=1;
 
-            if (spot==spottings.begin()) //This characters (particularly capitol) are often larger
+            if (spot==spottings.begin()) //This character (particularly capitol) is often larger
                 least-=1;
+            if (loose)
+            {
+                least-=1;
+                most+=1;
+            }
+
             least = max(0,least);
             ret += "[a-zA-Z0-9]{"+to_string(least)+","+to_string(most)+"}";
         }
         else
         {
+            //There may be doubles or overlap
             if (spot->second.ngram.length()>1 && ret[ret.length()-2] == spot->second.ngram[0] && ret[ret.length()-1] == spot->second.ngram[1])
             {
                 ret = ret.substr(0,ret.length()-2) + "(" + ret.substr(ret.length()-2,2) + ")?";
             }
             else if (ret[ret.length()-1] == spot->second.ngram[0])
                 ret+="?";
-            //if (-1*numChars<THRESH_UNKNOWN_EST/2)
-            //    ret += "[a-zA-Z0-9]?";
+
+            //Because spottings often are large, we allow a character to occur between overlaping ones
+            if (-1*numChars<THRESH_UNKNOWN_EST/2.0 || loose)
+                ret += "[a-zA-Z0-9]?";
         }
+
+        //Add the spotting
         ret += spot->second.ngram;
+
+        //Move the currrent position to the end of the spotting
         pos = spot->second.brx;
         spot++;
     }
@@ -671,7 +691,7 @@ vector<Spotting*> Knowledge::Word::harvest()
                 if (isNew)
                 {
 #ifdef TEST_MODE
-                    cout<<"New ngram: "<<ngram<<", at "<<i<<endl;
+                    //cout<<"New ngram: "<<ngram<<", at "<<i<<endl;
 #endif
                     int rank = GlobalK::knowledge()->getNgramRank(ngram);
                     if ( rank<=MAX_NGRAM_RANK )
@@ -776,24 +796,27 @@ vector<Spotting*> Knowledge::Word::harvest()
                         if (wordImg.cols==0)
                             getWordImgAndBin(wordImg,b);
                         SpottingExemplar* toRet = extractExemplar(leftLeftBound,rightLeftBound,leftRightBound,rightRightBound,ngram,wordImg,b);
-                        //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
-                        //toRet.type=SPOTTING_TYPE_EXEMPLAR;
-                        toRet->ngramRank=rank;
-                        //toRet.setHarvested();
-                        ret.push_back(toRet);
-                        //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
+                        if (toRet != NULL)
+                        {
+                            //Spotting toRet(etlx,tly,ebrx,bry,pageId,pagePnt,ngram,0.0);
+                            //toRet.type=SPOTTING_TYPE_EXEMPLAR;
+                            toRet->ngramRank=rank;
+                            //toRet.setHarvested();
+                            ret.push_back(toRet);
+                            //ret.emplace(ngram,(*pagePnt)(cv::Rect(etlx,etly,ebrx-etlx+1,bry-tly+1));
 #ifdef TEST_MODE
 #if SHOW
-                        cout <<"EXAMINE harvested: "<<ngram<<endl;
-                        cv::imshow("harvested",toRet->ngramImg());
-                        cv::imshow("boundary image",toRet->img());
+                            cout <<"EXAMINE harvested: "<<ngram<<endl;
+                            cv::imshow("harvested",toRet->ngramImg());
+                            cv::imshow("boundary image",toRet->img());
 #ifdef TEST_MODE_LONG
-                        cv::waitKey(100);
+                            cv::waitKey(100);
 #else
-                        cv::waitKey();
+                            cv::waitKey();
 #endif
 #endif
 #endif
+                        }
                     }
                 }
             }
@@ -1138,7 +1161,20 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
         ebrx+=pad;
     if (ebry+pad<height)
         ebry+=pad;
-    
+
+    //Saftey
+    if (
+            (etlx<0 || etlx>=width) ||
+            (etly<0 || etly>=height) ||
+            (ebrx<0 || ebrx>=width) ||
+            (ebry<0 || ebry>=height)
+       )
+    {
+        delete g;
+        return NULL;
+    }
+
+     
     cv::Mat exe = inpainting(wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)),mask(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)));
     SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,NAN,exe);
 #ifdef TEST_MODE
@@ -2280,3 +2316,5 @@ void Knowledge::Word::preapproveSpotting(Spotting* spotting)
 
     pthread_rwlock_unlock(&lock);
 }
+
+//void Knowledge::

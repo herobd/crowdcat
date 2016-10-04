@@ -31,19 +31,19 @@ function printErr(err){if (err) console.log(err);}
 //SYSTEM PARAMS
 var lexiconFiles=[  "/home/brian/intel_index/data/wordsEnWithNames.txt",
                     "/home/brian/intel_index/data/wordsEnWithNames.txt",
-                    "/home/brian/intel_index/data/names_only_f300.txt"
+                    //"/home/brian/intel_index/data/names_only_f300.txt"
                  ];
 var pageImageDirs=[ "/home/brian/intel_index/data/gw_20p_wannot",
                     "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
-                    "/home/brian/intel_index/data/us1930_census/names_only"
+                    //"/home/brian/intel_index/data/us1930_census/names_only"
                   ];
 var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
                         "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
-                        "/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
+                        //"/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
                       ];
 var datasetNames=[  'GW',
                     'BENTHAM',
-                    'NAMES'
+                    //'NAMES'
                  ];
 
 

@@ -96,6 +96,7 @@ private:
     unsigned long id;
     int tlx, tly, brx, bry;
     vector<SpottingPoint> spottingPoints;
+    double scale;
     string gt;
     bool manual;
     static vector< cv::Vec3f > colors;
@@ -122,6 +123,7 @@ public:
     vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
     bool isManual() {return manual;}
     string getGT() {return gt;}
+    double getScale() {return scale;}
 };
 
 

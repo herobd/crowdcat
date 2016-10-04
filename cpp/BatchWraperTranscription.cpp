@@ -28,6 +28,7 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     //delete batch;
     wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
     gt=batch->getGT();
+    scale=batch->getScale();
 }
 void BatchWraperTranscription::doCallback(Callback *callback)
 {
@@ -41,6 +42,7 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	v8::Local<v8::Object> obj = Nan::New<v8::Object>();
 	Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New(spottings[index].getId()).ToLocalChecked());
 	Nan::Set(obj, Nan::New("x").ToLocalChecked(), Nan::New(spottings[index].getX()).ToLocalChecked());
+	Nan::Set(obj, Nan::New("scale").ToLocalChecked(), Nan::New(scale)); //for convienence this is here
 	Nan::Set(obj, Nan::New("ngram").ToLocalChecked(), Nan::New(spottings[index].getNgram()).ToLocalChecked());
 	Nan::Set(obj, Nan::New("color").ToLocalChecked(), Nan::New(spottings[index].getColor()).ToLocalChecked());
 

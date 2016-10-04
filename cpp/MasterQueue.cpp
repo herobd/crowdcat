@@ -289,7 +289,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     for (auto ele : resultsQueue)
     {
 #if ROTATE
-        if (test_loc++<test_rotate/2)
+        if (test_loc++<test_rotate/2) //TODO add var to control
             continue;
 #endif
         

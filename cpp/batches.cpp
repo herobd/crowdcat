@@ -123,7 +123,7 @@ void TranscribeBatch::setWidth(unsigned int width)
     int padLeft = max((((int)width)-wordW)/2,0);
     for (SpottingPoint& sp : spottingPoints)
         sp.setPad(padLeft);
-    double scale=1.0;
+    scale=1.0;
     if (width>=wordW)
     {
         if (width>wordW) {
@@ -143,7 +143,7 @@ void TranscribeBatch::setWidth(unsigned int width)
     }
     else
     {
-        scale = width/(0.0+wordW);
+        scale = width/(0.0+wordW);//we save the scale to allow a proper display of ngram locations
         cv::resize(wordImg(cv::Rect(0,0,wordW,wordH)), newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
         //cv::resize(textImg(cv::Rect(0,0,wordW,textH)), newTextImg, cv::Size(), scale,1, cv::INTER_CUBIC );
     }

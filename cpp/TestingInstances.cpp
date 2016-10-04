@@ -7,7 +7,7 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
     //s = same ngram spotting (as previous)
     //t = transcription
     //m = manual transcription
-     testNumType={  'n',
+     /*testNumType={  'n',
                     's',
                     's',
                     'n',
@@ -32,7 +32,8 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     'm',
                     'm',
                     'm',
-     };
+     };*/
+    testNumType={'t','t','t','t','t','t'};
     //dummyWord = new Knowledge::Word(0,0,0,0,NULL,NULL,NULL,NULL,0);
 }
 

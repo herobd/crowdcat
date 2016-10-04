@@ -868,7 +868,9 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
     genDiv.appendChild(wordImg);
     if (ngrams.length>0) {
         for (var i=0; i<ngrams.length; i++) {
-            ngrams[i].x=parseInt(ngrams[i].x);
+            //if (!ngrams[i].scale)
+            //    ngrams[i].scale=1;
+            ngrams[i].x=Math.floor(parseInt(ngrams[i].x)*ngrams[i].scale);
         }
 
         //The remove buttons are too hard to press if they're close together

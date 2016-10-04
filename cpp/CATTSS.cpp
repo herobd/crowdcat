@@ -9,7 +9,7 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
     //cout <<"kill is "<<q->kill.load()<<endl;
     while(!q->kill.load()) {
         //cout <<"begin sleep"<<endl;
-        this_thread::sleep_for(chrono::minutes(30));
+        this_thread::sleep_for(chrono::minutes(15));
         q->checkIncomplete();
         c->checkIncomplete();
     }
@@ -153,7 +153,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
     try
     {
 #else
-        cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
+        //cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
         bool hard=true;
         if (num==-1) {
@@ -304,9 +304,9 @@ void CATTSS::threadLoop()
                 if (updateTask->type==NEW_EXEMPLAR_TASK)
                 {
 #ifdef TEST_MODE
-                    cout<<"START NewExemplarsTask: ["<<updateTask->id<<"]"<<endl;
-                    clock_t t;
-                    t = clock();
+                    //cout<<"START NewExemplarsTask: ["<<updateTask->id<<"]"<<endl;
+                    //clock_t t;
+                    //t = clock();
 #endif
                     vector<pair<unsigned long,string> > toRemoveExemplars;        
                     vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(updateTask->id),
@@ -316,16 +316,16 @@ void CATTSS::threadLoop()
                     spottingQueue->removeQueries(&toRemoveExemplars);
                     spottingQueue->addQueries(toSpot);
 #ifdef TEST_MODE
-                    t = clock() - t;
-                    cout<<"END NewExemplarsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+                    //t = clock() - t;
+                    //cout<<"END NewExemplarsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
                 }
                 else if (updateTask->type==TRANSCRIPTION_TASK)
                 {
 #ifdef TEST_MODE
-                    cout<<"START TranscriptionTask: ["<<updateTask->id<<"]"<<endl;
-                    clock_t t;
-                    t = clock();
+                    //cout<<"START TranscriptionTask: ["<<updateTask->id<<"]"<<endl;
+                    //clock_t t;
+                    //t = clock();
 #endif
                     vector<pair<unsigned long, string> > toRemoveExemplars;
                     if (updateTask->resent_manual_bool)
@@ -339,16 +339,16 @@ void CATTSS::threadLoop()
                     }
                     spottingQueue->removeQueries(&toRemoveExemplars);
 #ifdef TEST_MODE
-                    t = clock() - t;
-                    cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+                    //t = clock() - t;
+                    //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
                 }
                 else if (updateTask->type==SPOTTINGS_TASK)
                 {
 #ifdef TEST_MODE
-                    cout<<"START SpottingsTask: ["<<updateTask->id<<"]"<<endl;
-                    clock_t t;
-                    t = clock();
+                    //cout<<"START SpottingsTask: ["<<updateTask->id<<"]"<<endl;
+                    //clock_t t;
+                    //t = clock();
 #endif
                     vector<pair<unsigned long,string> > toRemoveSpottings;        
                     vector<unsigned long> toRemoveBatches;        
@@ -369,8 +369,8 @@ void CATTSS::threadLoop()
                         delete toAdd;
                     }
 #ifdef TEST_MODE
-                    t = clock() - t;
-                    cout<<"END SpottingsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+                    //t = clock() - t;
+                    //cout<<"END SpottingsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
                 }
                 delete updateTask;

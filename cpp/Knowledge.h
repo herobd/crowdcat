@@ -40,7 +40,7 @@ typedef Graph<float,float,float> GraphType;
 //#define THRESH_SCORING 1.0
 #define LOW_COUNT_PRUNE_THRESH 5
 #define LOW_COUNT_SCORE_THRESH 0.75
-#define THRESH_SCORING_COUNT 6
+#define THRESH_SCORING_COUNT 7
 
 #define CHAR_ASPECT_RATIO 2.45 //TODO
 
@@ -91,6 +91,7 @@ private:
 
     multimap<int,Spotting> spottings;
     bool done;
+    bool loose; //If the user reports and error during trans (not spotting error), we give it a second chance but loosen the regex to take in more possibilities
     unsigned long sentBatchId;
 
     set<pair<unsigned long,string> > harvested;
@@ -129,15 +130,17 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //}    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
+        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
+        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
     }
     
     ~Word()
