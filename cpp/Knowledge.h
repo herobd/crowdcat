@@ -66,7 +66,7 @@ namespace Knowledge
 
 //some general functions
 cv::Mat inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg=NULL, double* std=NULL, bool show=SHOW);
-int getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
+int (int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
 void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry);
 
 
@@ -75,7 +75,6 @@ class Word: public WordBackPointer
 {
 private:
     pthread_rwlock_t lock;
-    vector<Word*> _words;
     int tlx, tly, brx, bry; // top y and bottom y
     string query;
     string gt;
@@ -142,6 +141,8 @@ public:
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
     }
+    Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    save(ofstream& out);
     
     ~Word()
     {
@@ -275,10 +276,12 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //}
     
-    Line(int ty, int by, cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
+    Line(int ty, int by, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
     {
         pthread_rwlock_init(&lock,NULL);
     }
+    Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    Line::save(ofstream& out);
     
     ~Line()
     {
@@ -332,6 +335,7 @@ private:
     pthread_rwlock_t lock;
     vector<Line*> _lines;
     cv::Mat pageImg; //I am owner of this Mat
+    string pageImgLoc;
     const Spotter* const* spotter;
     float* averageCharWidth;
     int* countCharWidth;
@@ -343,24 +347,24 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //    id = ++_id;
     //}
-    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
     {
         pthread_rwlock_init(&lock,NULL);
         id = ++_id;
     }
-    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int id) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int id) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
     {
         pthread_rwlock_init(&lock,NULL);
         this->id = id;
         _id = id;
     }
-    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
+    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         id = ++_id;
         pthread_rwlock_init(&lock,NULL);
     }
-    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth, int id) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth) 
+    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth, int id) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         if (pageImg.cols*pageImg.rows<=1)
@@ -370,6 +374,8 @@ public:
         _id = id;
         pthread_rwlock_init(&lock,NULL);
     }
+    Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    save(ofstream& out);
     
     ~Page()
     {
@@ -411,6 +417,7 @@ public:
     }
 
     const cv::Mat* getImg() const {return &pageImg;}
+    string getPageImgLoc() const (return pageImgLoc;}
     int getId() const {return id;}
 };
 
@@ -429,9 +436,9 @@ private:
     int countCharWidth;
     float threshScoring;
     
-    map<unsigned long, vector<Word*> > spottingsToWords;
     map<int,Page*> pages;
     map<string,int> pageIdMap;
+    map<unsigned long, vector<Word*> > spottingsToWords;
     Spotter* spotter;
     TranscribeBatchQueue manQueue;
     TranscribeBatch* makeManualBatch(int maxWidth, bool noSpottings);
@@ -446,6 +453,8 @@ private:
 
 public:
     Corpus();
+    Corpus(string loadPrefix);
+    save(string savePrefix);
     ~Corpus()
     {
         pthread_rwlock_destroy(&pagesLock);

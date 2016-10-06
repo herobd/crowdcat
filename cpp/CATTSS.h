@@ -46,6 +46,8 @@ class CATTSS
     sem_t semLock;
     mutex taskQueueLock;
 
+    string savePrefix;//file prefix for its regular saving.
+
     UpdateTask* dequeue();
     void enqueue(UpdateTask* task);
     void run(int numThreads);
@@ -56,6 +58,7 @@ class CATTSS
             string pageImageDir, 
             string segmentationFile, 
             string spottingModelPrefix,
+            string savePrefix,
             int numSpottingThreads,
             int numTaskThreads,
             int showHeight,

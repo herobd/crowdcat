@@ -77,3 +77,44 @@ bool Lexicon::readIn(string fileName, string field)
     in.close();
     return true;
 }
+
+void Lexicon::save(string savePrefix)
+{
+    ofstream out(savePrefix+"_Lexicon.dat");
+    out<<fields.size()<<"\n";
+    for (auto p : fields)
+    {
+        out<<p.first<<"\n";
+        out<<p.second.size()<<"\n";
+        for (string s : p.second)
+        {
+            out<<s<<"\n";
+        }
+    }
+    out.close();
+}
+void Lexicon::load(string loadPrefix)
+{
+    ifstream in (loadPrefix+"_Lexicon.dat");
+    int fSize;
+    in>>fSize;
+    in.get();
+    for (int i=0; i<fSize; i++)
+    {
+        string fieldName;
+        getline(in,fieldName);
+        int wSize;
+        in>>wSize;
+        in.get();
+        fields[fieldName].resize(wSize);
+        for (int j=0; j<wSize; j++)
+        {
+            string word;
+            getline(in,word);
+            fields.at(fieldName).at(j)=word;
+        }
+    }
+    in.close();
+}
+    in.close();
+}

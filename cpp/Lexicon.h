@@ -20,6 +20,16 @@ struct SearchMeta
     SearchMeta(int max) : field(""), max(max) {}
     SearchMeta(string field, int max) : field(field), max(max) {}
     SearchMeta(const SearchMeta& other) : field(other.field), max(other.max) {}
+    SearchMeta(ifstream& in) 
+    {
+        in>>max;
+        in.get();//burn newline
+        getline(in,field);
+    }
+    save(ofstream& out)
+    {
+        out<<max<<"\n"<<field<<"\n";
+    }
 };
 
 class Lexicon
@@ -39,6 +49,9 @@ public:
         }
         return self;
     }
+    void load(string loadPrefix);
+    void save(string savePrefix);
+
 private:
     Lexicon()
     {

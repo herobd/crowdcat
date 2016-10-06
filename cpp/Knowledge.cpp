@@ -2317,4 +2317,228 @@ void Knowledge::Word::preapproveSpotting(Spotting* spotting)
     pthread_rwlock_unlock(&lock);
 }
 
-//void Knowledge::
+void Knowledge::Corpus::save(string savePrefix)
+{
+    string saveName = savePrefix+"_Corpus.sav";
+    ofstream out(saveName);
+    out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
+    pthread_rwlock_rdlock(&pagesLock);
+    out<<pages.size()<<"\n";
+    for (auto p : pages)
+    {
+        out<<p.first<<"\n";
+        p.second->save(out);
+    }
+    out<<pagesIdMap.size()<<"\n";
+    for (auto p : pages)
+    {
+        out<<p.first<<"\n"<<p.second<<"\n";
+    }
+    pthread_rwlock_unlock(&pagesLock);
+
+    pthread_rwlock_rdlock(&spottingsMapLock);
+    out<<spottingsToWords.size()<<"\n";
+    for (auto p : spottingsToWords)
+    {
+        out<<p.first<<"\n"<<p.second.size()<<"\n";
+        for (const Word* w : p.second)
+            out<<w->getSpottingIndex()<<"\n";
+    }
+    pthread_rwlock_unlock(&spottingsMapLock);
+
+    //spotter->save(out); use normal load
+    manQueue.save(out);
+    /*out<<_gt.size()<<"\n";
+    for (string g : _gt)
+        out<<g<<"\n";
+    out<<_words.size()<<"\n";
+    for (auto w : _words)
+        out<<w->getSpottingIndex()<<"\n";
+    out<<_wordImgs.size()<<"\n";
+    for (const Mat& m : _wordImages)*/
+    //just call recreateDatasetVectors
+    out.close();
+}
+
+Knowledge::Corpus::Corpus(string loadPrefix)
+{
+    string loadName = loadPrefix+"_Corpus.sav";
+    ifstream in(loadName)
+
+    pthread_rwlock_init(&pagesLock,NULL);
+    pthread_rwlock_init(&spottingsMapLock,NULL);
+
+    in>>averageCharWidth>>countCharWidth>>threshScoring;
+    int pagesSize;
+    in>>pagesSize;
+    for (int i=0; i<pagesSize; i++)
+    {
+        int pageId;
+        in>>pageId;
+        Page page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
+        pages[pageId]=page;
+    }
+    in>>pagesSize;
+    for (int i=0; i<pagesSize; i++)
+    {
+        string s;
+        in.get();//burn newline
+        getline(in,s);
+        int pageId;
+        in>>pageId;
+        pageIdMap[s]=pageId;
+    }
+    recreateDatasetVectors(false);
+    int spottingsToWordsSize;
+    in>>spottingsToWordsSize;
+    for (int i=0; i<spottingsToWordsSize; i++)
+    {
+        unsigned long sid;
+        in>>sid;
+        int wordLen;
+        in>>wordLen;
+        for (int j=0; j<wordLen; j++)
+        {
+            int spottingIndex;
+            in>>spottingIndex;
+            spottingsToWords[sid].push_back(_words[spottingIndex]);
+        }
+    }
+    manQueue.load(in);
+    in.close();
+}
+
+void Knowledge::Page::save(ofstream& out)
+{
+    vector<Line*> ls = lines();
+    out<<ls.size()<<"\n";
+    out<<pageImgLoc<<"\n";
+    for (Line* l : ls)
+        l->save(l);
+    out<<_id<<"\n";
+    out<<id<<"\n";
+}
+
+Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+{
+    pthread_rwlock_init(&lock,NULL);
+    int sizeLines;
+    in>>sizeLines;
+    in.get();
+    getline(in,pageImgLoc);
+    pageImg = cv::imread(pageImgLoc);
+    assert(pageImg.cols*pageImg.rows > 1);
+    _lines.resize(sizezLines);
+    for (int i=0; i<sizeLines; i++)
+    {
+        _lines.at(i) = new Line(in,&pageIm,spotter,averageCharWidth,countCharWidth);
+    }
+    in>>_id;
+    in>>id;
+}
+
+void Knowledge::Line::save(ofstream& out)
+{
+    int cty, cby;
+    vector<Word*> ws = wordsAndBounds(&ty,&br);
+    out<<ws.size()<<"\n";
+    for (Word* w : ws)
+    {
+        w->save(out);
+    }
+    out<<cty<<"\n"<<cby<<"\n";
+    out<<pageId<<"\n";
+}
+
+Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+{
+    pthread_rwlock_init(&lock,NULL);
+    int wordSize;
+    in>>wordSize;
+    _words.resize(wordSize);
+    for (int i=0; i<wordSize; i++)
+    {
+        _words.at(i)=new Word(in, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth);
+    }
+    in>>tl>>by>>pageId;
+}
+
+void Knowledge::Word::save(ofstream& out)
+{
+    pthread_rwlock_rdlock(&lock);
+    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry;
+    out<<query<<"\n"<<gt<<"\n";
+    meta.save(out);
+    out<<pageId<<"\n"<<spottingIndex;
+    out<<topBaseline<<"\n"<<botBaseline<<"\n";
+    out<<spottings.size()<<"\n";
+    for (auto p : spottings)
+    {
+        out<<p.first<<"\n";
+        p.second.save(out);
+    }
+    out<<done<<"\n"<<loose<<"\n";
+    //?? out<<sentBatchId<<"\n";
+    out<<harvested.size()<<"\n";
+    for (auto p : harvested)
+    {
+        out<<p.first<<"\n";
+        out<<p.second<<"\n";
+    }
+    out << transcription<<"\n";
+    out<<removedSpottings.size()<<"\n";
+    for (auto p : removedSpottings)
+    {
+        out<<p.first<<"\n";
+        out<<p.second.size()<<"\n";
+        for (const Spotting* s : p.second)
+        {
+            s.save(out);
+        }
+    }
+    pthread_rwlock_unlock(&lock);
+}
+Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+{
+    pthread_rwlock_init(&lock,NULL);
+    in<<tlx<<tly<<brx<<bry;
+    in.get();//discard newline
+    getline(in,query);
+    getline(in,gt);
+    meta = SearchMeta(in);
+    in>>pageId>>spottingIndex;
+    in>>topBaseline>>botBaseline;
+    int sSize;
+    in>>sSize;
+    for (int i=0; i<sSzie; i++)
+    {
+        int x;
+        in>>x;
+        spottings.insert(make_pair(x,Spotting(in)));
+    }
+    in>>done>>loose;
+    in>>sentBatchId;
+    in>>sSize;
+    for (int i=0; i<sSize; i++)
+    {
+        unsigned long sid;
+        in>>sid;
+        in.get();//burn newline
+        string ngram;
+        getline(in,ngram);
+        harvested.insert(make_pair(sid,ngram));
+    }
+    getline(in,transcription);
+    in>>sSize;
+    for (int i=0; i<sSize; i++)
+    {
+        unsigned long sid;
+        int sSize2;
+        in>>sid>>sSize2;
+        removedSpottings[sid].resize(sSize2);
+        for (int j=0; j<sSize2; j++)
+        {
+            removedSpottings.at(sid).at(j)=Spotting(in);
+        }
+    }
+}`
