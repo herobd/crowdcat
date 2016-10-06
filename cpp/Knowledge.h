@@ -26,6 +26,8 @@
 #include "dataset.h"
 #include "Spotter.h"
 #include "AlmazanSpotter.h"
+#include "CorpusRef.h"
+#include "PageRef.h"
 
 using namespace std;
 
@@ -66,7 +68,7 @@ namespace Knowledge
 
 //some general functions
 cv::Mat inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg=NULL, double* std=NULL, bool show=SHOW);
-int (int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
+int getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv::Mat* pagePnt);
 void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* bry);
 
 
@@ -142,7 +144,7 @@ public:
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
     }
     Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
-    save(ofstream& out);
+    void save(ofstream& out);
     
     ~Word()
     {
@@ -265,7 +267,7 @@ private:
     pthread_rwlock_t lock;
     vector<Word*> _words;
     int ty, by; // top y and bottom y
-    cv::Mat* pagePnt;
+    const cv::Mat* pagePnt;
     const Spotter* const* spotter;
     float* averageCharWidth;
     int* countCharWidth;
@@ -281,7 +283,7 @@ public:
         pthread_rwlock_init(&lock,NULL);
     }
     Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
-    Line::save(ofstream& out);
+    void save(ofstream& out);
     
     ~Line()
     {
@@ -375,7 +377,7 @@ public:
         pthread_rwlock_init(&lock,NULL);
     }
     Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
-    save(ofstream& out);
+    void save(ofstream& out);
     
     ~Page()
     {
@@ -417,7 +419,7 @@ public:
     }
 
     const cv::Mat* getImg() const {return &pageImg;}
-    string getPageImgLoc() const (return pageImgLoc;}
+    string getPageImgLoc() const {return pageImgLoc;}
     int getId() const {return id;}
 };
 
@@ -454,7 +456,7 @@ private:
 public:
     Corpus();
     Corpus(string loadPrefix);
-    save(string savePrefix);
+    void save(string savePrefix);
     ~Corpus()
     {
         pthread_rwlock_destroy(&pagesLock);
@@ -489,6 +491,8 @@ public:
     int size() const;
     const cv::Mat image(unsigned int i) const;
     Word* getWord(unsigned int i) const;
+    CorpusRef* getCorpusRef();
+    PageRef* getPageRef();
 };
 
 }

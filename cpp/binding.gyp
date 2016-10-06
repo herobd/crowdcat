@@ -24,6 +24,7 @@
                     "maxflow/graph.h", "maxflow/graph.cpp", "maxflow/block.h", "maxflow/instances.inc", "maxflow/maxflow.cpp", 
                     "batches.h", "batches.cpp", 
                     "spotting.h", 
+                    "CorpusRef.h", "PageRef.h",
                     "WordBackPointer.h",
                     "SpottingQuery.h"
                     "SpottingQueue.h", "SpottingQueue.cpp",

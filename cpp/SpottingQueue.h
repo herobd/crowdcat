@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <queue>
 
+#include "SpottingQuery.h"
+
 using namespace std;
 
 class sqcomparison
@@ -27,6 +29,8 @@ class SpottingQueue
 {
     public:
     SpottingQueue(MasterQueue* masterQueue, Knowledge::Corpus* corpus);
+    SpottingQueue(string loadPrefix);
+    void save(string savePrefix);
     ~SpottingQueue();
     void run(int numThreads);
     void spottingLoop();
@@ -44,6 +48,8 @@ class SpottingQueue
     Knowledge::Corpus* corpus;
     atomic_char cont;
     vector<thread*> spottingThreads;
+    map<thread::id,SpottingQuery*> inProgress;
+    map<thread::id,mutex> progLock;
 
     sem_t semLock;
     mutex mutLock;

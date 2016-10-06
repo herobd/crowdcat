@@ -2181,6 +2181,8 @@ void Knowledge::Corpus::checkIncomplete()
 }
 vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
 {
+    if (transcription.find('\n') != string::npos)
+        transcription="$PASS$";
     return manQueue.feedback(id,transcription,toRemoveExemplars);
 }
 
@@ -2329,7 +2331,7 @@ void Knowledge::Corpus::save(string savePrefix)
         out<<p.first<<"\n";
         p.second->save(out);
     }
-    out<<pagesIdMap.size()<<"\n";
+    out<<pageIdMap.size()<<"\n";
     for (auto p : pages)
     {
         out<<p.first<<"\n"<<p.second<<"\n";
@@ -2341,7 +2343,7 @@ void Knowledge::Corpus::save(string savePrefix)
     for (auto p : spottingsToWords)
     {
         out<<p.first<<"\n"<<p.second.size()<<"\n";
-        for (const Word* w : p.second)
+        for (Word* w : p.second)
             out<<w->getSpottingIndex()<<"\n";
     }
     pthread_rwlock_unlock(&spottingsMapLock);
@@ -2363,7 +2365,7 @@ void Knowledge::Corpus::save(string savePrefix)
 Knowledge::Corpus::Corpus(string loadPrefix)
 {
     string loadName = loadPrefix+"_Corpus.sav";
-    ifstream in(loadName)
+    ifstream in(loadName);
 
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
@@ -2375,7 +2377,7 @@ Knowledge::Corpus::Corpus(string loadPrefix)
     {
         int pageId;
         in>>pageId;
-        Page page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
+        Page* page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
         pages[pageId]=page;
     }
     in>>pagesSize;
@@ -2408,13 +2410,32 @@ Knowledge::Corpus::Corpus(string loadPrefix)
     in.close();
 }
 
+CorpusRef* getCorpusRef()
+{
+    CorpusRef* ret = new CorpusRef();
+    for (int i=0; i<_words.size(); i++)
+    {
+        ret.addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i).getSpottingsPointer());
+    }
+    return ret;
+}
+PageRef* getPageRef()
+{
+    PageRef* ret = new PageRef();
+    for (auto p : pages)
+    {
+        ret.addPage(p.first,p.second->getImg());
+    }
+    return ret;
+}
+
 void Knowledge::Page::save(ofstream& out)
 {
     vector<Line*> ls = lines();
     out<<ls.size()<<"\n";
     out<<pageImgLoc<<"\n";
     for (Line* l : ls)
-        l->save(l);
+        l->save(out);
     out<<_id<<"\n";
     out<<id<<"\n";
 }
@@ -2428,10 +2449,10 @@ Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averag
     getline(in,pageImgLoc);
     pageImg = cv::imread(pageImgLoc);
     assert(pageImg.cols*pageImg.rows > 1);
-    _lines.resize(sizezLines);
+    _lines.resize(sizeLines);
     for (int i=0; i<sizeLines; i++)
     {
-        _lines.at(i) = new Line(in,&pageIm,spotter,averageCharWidth,countCharWidth);
+        _lines.at(i) = new Line(in,&pageImg,spotter,averageCharWidth,countCharWidth);
     }
     in>>_id;
     in>>id;
@@ -2440,7 +2461,7 @@ Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averag
 void Knowledge::Line::save(ofstream& out)
 {
     int cty, cby;
-    vector<Word*> ws = wordsAndBounds(&ty,&br);
+    vector<Word*> ws = wordsAndBounds(&cty,&cby);
     out<<ws.size()<<"\n";
     for (Word* w : ws)
     {
@@ -2458,9 +2479,9 @@ Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     _words.resize(wordSize);
     for (int i=0; i<wordSize; i++)
     {
-        _words.at(i)=new Word(in, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth);
+        _words.at(i)=new Word(in, pagePnt, spotter, averageCharWidth, countCharWidth);
     }
-    in>>tl>>by>>pageId;
+    in>>ty>>by>>pageId;
 }
 
 void Knowledge::Word::save(ofstream& out)
@@ -2491,7 +2512,7 @@ void Knowledge::Word::save(ofstream& out)
     {
         out<<p.first<<"\n";
         out<<p.second.size()<<"\n";
-        for (const Spotting* s : p.second)
+        for (Spotting& s : p.second)
         {
             s.save(out);
         }
@@ -2501,7 +2522,7 @@ void Knowledge::Word::save(ofstream& out)
 Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
-    in<<tlx<<tly<<brx<<bry;
+    in>>tlx>>tly>>brx>>bry;
     in.get();//discard newline
     getline(in,query);
     getline(in,gt);
@@ -2510,7 +2531,7 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     in>>topBaseline>>botBaseline;
     int sSize;
     in>>sSize;
-    for (int i=0; i<sSzie; i++)
+    for (int i=0; i<sSize; i++)
     {
         int x;
         in>>x;
@@ -2541,4 +2562,4 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
             removedSpottings.at(sid).at(j)=Spotting(in);
         }
     }
-}`
+}

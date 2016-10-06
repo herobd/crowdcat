@@ -18,6 +18,24 @@ class SpottingQuery
     cv::Mat getImg() {return img;}
     SpottingType getType() const {return type;}
 
+    SpottingQuery(ifstream& in)
+    {
+        string line;
+        getline(in,ngram);
+        getline(in,line);
+        id = stoul(line);
+        GlobalK::loadImage(img,in);
+        getline(in,line);
+        type = stoi(line);
+    }
+    void save(ofstream& out)
+    {
+        out<<ngram<<"\n";
+        out<<id<<"\n";
+        GlobalK::saveImage(img,out);
+        out<<type<<"\n";
+    }
+
     private:
     string ngram;
     unsigned long id;

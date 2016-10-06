@@ -12,6 +12,9 @@
 #include <atomic>
 #include <iostream>
 
+#include "PageRef.h"
+#include "Global.h"
+
 using namespace std;
 
 #define FUZZY 12
@@ -50,6 +53,45 @@ public:
         tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank), gt(s.gt)
     {
         id = s.id;
+    }
+
+    Spotting(ifstream& in, PageRef* pageRef)
+    {
+        string line;
+        getline(in,line);
+        tlx = stoi(line);
+        getline(in,line);
+        tly = stoi(line);
+        getline(in,line);
+        brx = stoi(line);
+        getline(in,line);
+        bry = stoi(line);
+        getline(in,line);
+        pageId = stoi(line);
+        pagePnt = pageRef.getPageImg(pageId);
+        getline(in,ngram);
+        getline(in,line);
+        score = stof(line);
+        getline(in,line);
+        id = stoul(line);
+        getline(in,line);
+        gt = stoi(line);
+        getline(in,line);
+        type = stoi(line);
+        getline(in,line);
+        _id.store( stoul(line));
+    }
+    virtual void save(ofstream& out)
+    {
+        out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
+        out<<pageId<<"\n";
+        out<<ngram<<"\n";
+        out<<score<<"\n";
+        out<<id<<"\n";
+        out<<gt<<"\n";
+        out<<type<<"\n";
+        out<<ngramRank<<"\n";
+        out<<_id.load()<<"\n";
     }
     Spotting& operator=(const Spotting& other)
     {
@@ -194,6 +236,18 @@ public:
         ngramImage=other.ngramImage;
         return *this;
     }
+    SpottingImage(ifstream& in, PageRef* pageRef) : Spotting(in,pageRef)
+    {
+        GlobalK::loadImage(image,in);
+        GlobalK::loadImage(ngramImage,in);
+    }
+    void save(ofstream& out) 
+    {
+        Spotting::save(out);
+        GlobalK::saveImage(image,out);
+        GlobalK::saveImage(ngramImage,out);
+
+    }
     virtual ~SpottingImage() {}
     
     virtual const cv::Mat img() const
@@ -238,6 +292,15 @@ public:
         Spotting::operator=(other);
         ngramImage=other.ngramImg();
         return *this;
+    }
+    SpottingImage(ifstream& in, PageRef* pageRef) : Spotting(in,pageRef)
+    {
+        GlobalK::loadImage(ngramImage,in);
+    }
+    void save(ofstream& out)
+    {
+        Spotting::save(out);
+        GlobalL::saveImage(ngramImage,out);
     }
     virtual ~SpottingExemplar() {}
 

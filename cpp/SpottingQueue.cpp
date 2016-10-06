@@ -87,6 +87,7 @@ void SpottingQueue::run(int numThreads)
 
 void SpottingQueue::spottingLoop()
 {
+    thread::id threadId = this_thread::get_id();
     while(1)
     {
         sem_wait(&semLock);
@@ -99,6 +100,10 @@ void SpottingQueue::spottingLoop()
             break;
         
 
+        progLock[threadId].lock();
+        inProgress[threadId]=query;
+        progLock[threadId].unlock();
+
 #ifdef TEST_MODE
         cout<<"START spotting: "<<query->getNgram()<<" ["<<query->getId()<<"]"<<endl;
         clock_t t;
@@ -109,8 +114,13 @@ void SpottingQueue::spottingLoop()
         t = clock() - t;
         cout<<"END spotting: "<<query->getNgram()<<" ["<<query->getId()<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
+        progLock[threadId].lock();
+        inProgress[threadId]=NULL;
         if (results==NULL)
+        {
+            progLock[threadId].unlock();
             continue;
+        }
         bool cont=true;
         emLock.lock();
         auto iter = emList.find(query->getId());
@@ -124,6 +134,7 @@ void SpottingQueue::spottingLoop()
         {
             masterQueue->updateSpottingResults(results);
         }
+        progLock[threadId].unlock();
 #ifdef TEST_MODE
         //else
             //cout<<"Successful mid-run cancel."<<endl;
@@ -317,3 +328,88 @@ SpottingQuery* SpottingQueue::dequeue()
     }
     return ret;
 }
+
+void SpottingQueue::save(string savePrefix)
+{
+    ofstream out (savePrefix);
+    mutLock.lock();
+   
+    vector<SpottingQuery*> saveProg;
+    for (auto p : inProgress)
+    {
+        progLock[p.first].lock();
+        if (inProgress[p.first]!=NULL && emList.find(inProgress[p.first].getId())==emList.end())
+            saveProg.push_back(inProgress[p.first]);
+        progLock[p.first].unlock();
+    }
+    //out<<saveProg.size()<<"\n";
+
+    out<<onDeck.size()+saveProg.size()<<"\n";
+    for (SpottingQuery* s : saveProg)
+    {
+        s->save(out);
+    }
+    for (SpottingQuery* s : onDeck)
+    {
+        s->save(out);
+    }
+
+    out<<ngramQueries.size()<<"\n";
+    for (auto p : ngramQueries)
+    {
+        out<<p.first<<"\n";
+        out<<p.second.size()<<"\n";
+        for (SpottingQuery* s : p.second)
+        {
+            s->save(out);
+        }
+    }
+    mutLock.unlock();
+    out.close();
+}
+SpottingQueue::SpottingQueue(string loadPrefix, MasterQueue* masterQueue, Knowledge::Corpus* corpus) : masterQueue(masterQueue), corpus(corpus)
+{
+    cont.store(1);
+    sem_init(&semLock, 0, 0);
+
+    ifstream in (loadPrefix)
+    
+    string line;
+    getline(in,line);
+    int size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        bool add=true;
+        SpottingQuery* loading= new SpottingQuery(in);
+        for (SpottingQuery* s : onDeck)
+            if (s->getNgram().compare(loading->getNgram()) == 0)
+            {
+                add=false;
+                break;
+            }
+        if (add)
+            onDeck.push_back(loading);
+        else
+            ngramQueues[loading->getNgram()].push(loading);
+        sem_post(&semLock);
+    }
+
+    getline(in,line);
+    size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        string ngram;
+        getline(in,ngram);
+        getline(in,line);
+        int nSize = stoi(line);
+        for (int j=0; j<nSize; j++)
+        {
+            ngramQueues[ngram].push(new SpottingQuery(in));
+            sem_post(&semLock);
+        }
+    }
+
+
+    in.close();
+}
+    

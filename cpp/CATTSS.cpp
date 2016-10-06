@@ -12,6 +12,7 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
         this_thread::sleep_for(chrono::minutes(15));
         q->checkIncomplete();
         c->checkIncomplete();
+        save();
     }
 }
 void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
@@ -28,22 +29,47 @@ CATTSS::CATTSS( string lexiconFile,
                 string pageImageDir, 
                 string segmentationFile, 
                 string spottingModelPrefix,
+                string savePrefix,
                 int numSpottingThreads,
                 int numTaskThreads,
                 int showHeight,
                 int showWidth,
-                int showMilli )
+                int showMilli ) : savePrefix(savePrefix)
 {
-    
-    masterQueue = new MasterQueue();
-    Lexicon::instance()->readIn(lexiconFile);
-    corpus = new Knowledge::Corpus();
-    corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
-    corpus->loadSpotter(spottingModelPrefix);
-    spottingQueue = new SpottingQueue(masterQueue,corpus);
-    
     cont.store(1);
     sem_init(&semLock, 0, 0);
+
+    ifstream in (savePrefix+"_CATTSS.sav");
+    if (in.good())
+    {
+        Lexicon::instance()->load(savePrefix);
+        corpus = new Knowledge::Corpus(savePrefix);
+        corpus->loadSpotter(spottingModelPrefix);
+        masterQueue = new MasterQueue(savePrefix,corpus->getCorpusRef(),corpus->getPageRef());
+        spottingQueue = new SpottingQueue(savePrefix,masterQueue,corpus);
+
+        string line;
+        getline(in,line);
+        int tSize = stoi(line);
+        for (int i=0; i<tSize; i++)
+        {
+
+            taskQueue.push_back(new UpdateTask(in));
+            sem_post(&semLock);
+        }
+        in.close();
+    }
+    else
+    {
+    
+        masterQueue = new MasterQueue();
+        Lexicon::instance()->readIn(lexiconFile);
+        corpus = new Knowledge::Corpus();
+        corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
+        corpus->loadSpotter(spottingModelPrefix);
+        spottingQueue = new SpottingQueue(masterQueue,corpus);
+    }
+    
    
     //should be priority 77 
     incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
@@ -411,4 +437,25 @@ UpdateTask* CATTSS::dequeue()
     }
     taskQueueLock.unlock();
     return ret;
+}
+
+void CATTSS::save()
+{
+    if (savePrefix.length()>0)
+    {
+        masterQueue->save(savePrefix);
+        spottingQueue->save(savePrefix);
+        corpus->save(savePrefix);
+        Lexicon::instance()->save(savePrefix);
+
+        ofstream out (savePrefix+"_CATTSS.sav");
+        taskQueueLock.lock();
+        out<<taskQueue.size()<<"\n";
+        for (const UpdateTask* u : taskQueue)
+        {
+            u->size(out);
+        }
+        taskQueueLock.unlock();
+        out.close();
+    }
 }

@@ -52,10 +52,10 @@ makeData: $(OBJECTS)
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h FacadeSpotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
 
-obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h
+obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h CorpusRef.h PageRef.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/TranscribeBatchQueue.o TranscribeBatchQueue.cpp $(LIBS)
 
-obj/NewExemplarsBatchQueue.o: NewExemplarsBatchQueue.h NewExemplarsBatchQueue.cpp
+obj/NewExemplarsBatchQueue.o: NewExemplarsBatchQueue.h NewExemplarsBatchQueue.cpp CorpusRef.h PageRef.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/NewExemplarsBatchQueue.o NewExemplarsBatchQueue.cpp $(LIBS)
 
 obj/AlmazanSpotter.o: AlmazanSpotter.h AlmazanSpotter.cpp AlmazanDataset.h
@@ -85,7 +85,7 @@ obj/SpottingResults.o: SpottingResults.h SpottingResults.cpp
 obj/TestQueue.o: TestQueue.h TestQueue.cpp SpottingResults.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/TestQueue.o TestQueue.cpp $(LIBS)
 	
-obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h
+obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h CorpusRef.h PageRef.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Knowledge.o Knowledge.cpp $(LIBS)
 	
 obj/Lexicon.o: Lexicon.h Lexicon.cpp

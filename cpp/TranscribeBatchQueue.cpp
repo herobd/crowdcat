@@ -177,3 +177,30 @@ void TranscribeBatchQueue::checkIncomplete()
     }
     unlock();
 }
+
+void TranscribeBatchQueue::save(ofstream& out)
+{
+    lock();
+    //shortcut by saving the returnMap as part of the queue
+    out<<(queue.size()+returnMap.size())<<"\n";
+    for (auto p : returnMap) //returnmap goes first
+    {
+        p.second->save(out);
+    }
+    for (TranscribeBatch* t : queue)
+    {
+        t->save(out);
+    } 
+    //we skip the doneMap as it is only used on resends
+    unlock();
+}
+void TranscribeBatchQueue::load(ifstream& in, CorpusRef* corpusRef)
+{
+    string line;
+    getline(in,line);
+    int qSize = stoi(line);
+    for (int i=0; i<qSize; i++)
+    {
+        queue.push_back(new TranscribeBatch(in,corpusRef));
+    }
+}

@@ -26,7 +26,7 @@ struct SearchMeta
         in.get();//burn newline
         getline(in,field);
     }
-    save(ofstream& out)
+    void save(ofstream& out)
     {
         out<<max<<"\n"<<field<<"\n";
     }

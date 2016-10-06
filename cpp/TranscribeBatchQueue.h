@@ -11,6 +11,7 @@
 #include "spotting.h"
 #include "batches.h"
 #include "WordBackPointer.h"
+#include "CorpusRef.h"
 
 using namespace std;
 
@@ -18,6 +19,9 @@ class TranscribeBatchQueue
 {
     public:
         TranscribeBatchQueue();
+        void save(ofstream& out);
+        void load(ifstream& in, CorpusRef* corpusRef);
+
         void enqueueAll(vector<TranscribeBatch*> batches, vector<unsigned long>* remove=NULL);
 
         TranscribeBatch* dequeue(unsigned int maxWidth);

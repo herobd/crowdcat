@@ -27,6 +27,47 @@ struct UpdateTask
     UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
     UpdateTask(string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
     UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 
+
+    UpdateTask(ifstream& in)
+    {
+        string line;
+        getline(in,line);
+        type = stoi(line);
+        getline(in,id);
+        getline(in,line);
+        int size = stoi(line);
+        labels.resize(size);
+        for (int i=0; i<size; i++)
+        {
+            getline(in,line);
+            labels.at(i)=stoi(line);
+        }
+        getline(in,line);
+        resent_manual_bool = stoi(line);
+        getline(in,line);
+        size = stoi(line);
+        strings.resize(size);
+        for (int i=0; i<size; i++)
+        {
+            getline(in,strings.at(i));
+        }
+    }
+    void save(ofstream& out)
+    {
+        out<<type<<"\n";
+        out<<id<<"\n";
+        out<<labels.size()<<"\n";
+        for (int i : labels)
+        {
+            out<<i<<"\n";
+        }
+        out<<resent_manual_bool<<"\n";
+        out<<strings.size()<<"\n";
+        for (string s : strings)
+        {
+            out<<s<<"\n";
+        }
+    }
 };
 
 class CATTSS

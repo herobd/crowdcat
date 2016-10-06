@@ -153,3 +153,71 @@ void TranscribeBatch::setWidth(unsigned int width)
     //cv::waitKey(1);
 #endif
 }
+
+void TranscribeBatch::save(ofstream& out)
+{
+    out<<origin->getSpottingId()<<"\n";
+    out<<possibilities.size()<<"\n";
+    for (string p : possibilities)
+    {
+        out<<p<<"\n";
+    }
+    GlobalK::saveImage(wordImg,out);
+    //Global::writeImage(newWordImg,out);
+
+    //out<<imgWidth<<"\n";
+    out<<id<<"\n";
+    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
+    
+    out<<spottingPoints.size()<<"\n";
+    for (SpottingPoint& s : spottingPoints)
+    {
+        s.save(out);
+    }
+    //out<<scale<<"\n";
+    out<<gt<<"\n";
+    out<<manual<<"\n";
+    out<<_id.load()<<"\n";
+}
+
+TranscribeBatch::TranscribeBatch(ifstream& in, CorpusRef* corpusRef)
+{
+    string line;
+    getline(in,line);
+    int wid = stoi(line);
+    origin = corpusRef->getBackPointer(wid);
+    origImg = corpusRef->getWordImg(wid);
+    spottings = corpusRef->getSpottingsPointer(wid);
+    getline(in,line);
+    int size = stoi(line);
+    possibilies.resize(size);
+    for (int i=0; i<size; i++)
+    {
+        getline(in,possibilities[i]);
+    }
+    GlobalK::loadImage(wordImg,in);
+    //Global::readImage(newWordImg,in);
+
+    getline(in,line);
+    id = stoul(line);
+    getline(in,line);
+    tlx = stoi(line);
+    getline(in,line);
+    tly = stoi(line);
+    getline(in,line);
+    brx = stoi(line);
+    getline(in,line);
+    bry = stoi(line);
+
+    getline(in,line);
+    size = stoi(line);
+    spottingPoints.resize(size);
+    for (int i=0; i<size; i++)
+    {
+        spottingPoints[i] = SpottingPoint(in);
+    }
+    getline(in,gt);
+    getline(in,line);
+    manual=stoi(line);
+    getline(in,line);
+    _id.store( stoul(line));

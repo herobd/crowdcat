@@ -80,7 +80,7 @@ bool Lexicon::readIn(string fileName, string field)
 
 void Lexicon::save(string savePrefix)
 {
-    ofstream out(savePrefix+"_Lexicon.dat");
+    ofstream out(savePrefix+"_Lexicon.sav");
     out<<fields.size()<<"\n";
     for (auto p : fields)
     {
@@ -95,7 +95,7 @@ void Lexicon::save(string savePrefix)
 }
 void Lexicon::load(string loadPrefix)
 {
-    ifstream in (loadPrefix+"_Lexicon.dat");
+    ifstream in (loadPrefix+"_Lexicon.sav");
     int fSize;
     in>>fSize;
     in.get();
@@ -116,5 +116,4 @@ void Lexicon::load(string loadPrefix)
     }
     in.close();
 }
-    in.close();
-}
+

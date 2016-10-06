@@ -250,3 +250,46 @@ void NewExemplarsBatchQueue::needExemplar(string ngram)
     need[ngram]=true;
     unlock();
 }
+
+void NewExemplarsBatchQueue::save(ofstream& out)
+{
+    lock();
+    out<<(queue.size()+returnMap.size())<<"\n";
+    for (auto p : returnMap)
+    {
+        for (int i=0; i<p.second->size(); i++)
+            SpottingExemplar(p.second->at(i)).save(out);
+    }
+    for (Spotting* s : queue)
+    {
+        s->save(out);
+    }
+
+    out<<need.size()<<"\n";
+    for (auto p : need)
+    {
+        out<<p.first<<"\n"<<p.second<<"\n";
+    }
+    unlock();
+}
+void NewExemplarsBatchQueue::load(ifstream& in, Knowledge::Corpus* corpusRef)
+{
+    string line;
+    getline(in,line);
+    int qSize = stoi(line);
+    for (int i=0; i<qSize; i++)
+    {
+        queue.insert(new SpottingExemplar(in,corpusRef));
+    }
+    getline(in,line);
+    int nSize=stoi(line);
+    for (int i=0; i<nSize; i++)
+    {
+        string ngram;
+        getline(in, ngram);
+        getline(in, line);
+        bool n=stoi(line);
+        need[ngram]=n;
+    }
+}
+}

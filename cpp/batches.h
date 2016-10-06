@@ -15,6 +15,8 @@
 
 #include "spotting.h"
 #include "WordBackPointer.h"
+#include "CorpusRef.h"
+#include "Global.h"
 
 using namespace std;
 
@@ -113,6 +115,9 @@ public:
     TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKNOWN$", unsigned long batchId=0);
     
     void init(WordBackPointer* origin, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id);
+
+    TranscribeBatch(ifstream& in, CorpusRef* corpusRef);
+    void save(ofstream& out);
 
     const vector<string>& getPossibilities() {return possibilities;}
     cv::Mat getImage() { if (newWordImg.cols!=0) return newWordImg; return wordImg;}

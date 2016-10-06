@@ -102,7 +102,7 @@ MasterQueue::MasterQueue() {
     testIter=0;	
     test_rotate=0;
     //addTestSpottings();
-    accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
+    //accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     done=0;
     numCFalse=numCTrue=0;
 
@@ -112,7 +112,7 @@ MasterQueue::MasterQueue() {
 
 
 
-void MasterQueue::addTestSpottings()
+/*void MasterQueue::addTestSpottings()
 {
     string pageLocation = "/home/brian/intel_index/data/gw_20p_wannot/";
     
@@ -210,7 +210,7 @@ bool MasterQueue::test_autoBatch()
     if (tmp!=NULL)
         delete tmp;
     return true;
-}
+}*/
 
 #ifndef TEST_MODE_C
 BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
@@ -362,7 +362,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     return batch;
 }
 
-void MasterQueue::test_finish()
+/*void MasterQueue::test_finish()
 {
     if (resultsQueue.size()==0)
     {
@@ -421,7 +421,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
     if (results.find(id)==results.end())
         test_showResults(id,"");
     return res;
-}
+}*/
 
 vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long, string> >* remove)
 {
@@ -622,6 +622,8 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
 
 void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars) 
 {
+    if (transcription.find('\n') != string::npos)
+        transcription="$PASS$";
     vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription, toRemoveExemplars);
 
     //enqueue these for approval
@@ -637,4 +639,82 @@ void MasterQueue::enqueueNewExemplars(const vector<Spotting*>& newExemplars, vec
 void MasterQueue::needExemplar(string ngram)
 {
     newExemplarsBatchQueue.needExemplar(ngram);
+}
+
+
+void MasterQueue::save(string savePrefix)
+{
+    ofstream out(savePrefix);
+
+    //This is a costly lockdown, but bad things might happen if the queue is changed between writing the two
+    pthread_rwlock_rdlock(&semResults);
+    pthread_rwlock_rdlock(&semResultsQueue);
+    out<<results.size()<<"\n";
+    for (auto p : results)
+    {
+        out<<p.first<<"\n";
+        pthread_rwlock_rdlock(p.first.first);
+        p.first.second->save(out);
+        pthread_rwlock_runlock(p.first.first);
+    }
+
+    out<<resultsQueue.size()<<"\n";
+    for (auto p : resultsQueue)
+    {
+        out<<p.first<<"\n";
+    }
+    pthread_rwlock_unlock(&semResultsQueue);
+    pthread_rwlock_unlock(&semResults);
+        
+    transcribeBatchQueue.save(out);
+    newExemplarBatchQueue.save(out);
+
+    out<<finish.load()<<"\n";
+    out<<numCTrue<<"\n"<<numCFalse<<"\n";
+    out.close();    
+}
+MasterQueue::MasterQueue(string loadPrefix, CorpusRef* corpusRef)
+{
+    finish.store(false);
+    pthread_rwlock_init(&semResultsQueue,NULL);
+    pthread_rwlock_init(&semResults,NULL);
+    kill.store(false);
+    
+    ifstream in(loadPrefix);
+
+    string line;
+    getline(in,line);
+    int rSize = stoi(line);
+    for (int i=0; i<rSize; i++)
+    {
+        getline(in,line);
+        unsigned long id = stoul(line);
+        SpottingResults* res = new SpottingResults(in);
+        assert(id==res->getId);
+        sem_t* sem = new sem_t();
+        sem_init(sem,false,1);
+        auto p = make_pair(sem,res);
+        results[res->getId()] = p;
+    }
+    getline(in,line);
+    rSize = stoi(line);
+    for (int i=0; i<rSize; i++)
+    {
+        getline(in,line);
+        unsigned long id = stoul(line);
+        resultsQueue[results[id].second->getId()] = results[id];
+    }
+    transcribeBatchQueue.load(in,corpusRef);
+    newExemplarBatchQueue.load(in,pageRef);
+
+    getline(in,line);
+    finish.store(stoi(line));
+ 
+    getline(in,line);
+    numCTrue = stoi(line);
+    getline(in,line);
+    numCFalse = stoi(line);
+
+    in.close();
+    delete corpusRef;
 }

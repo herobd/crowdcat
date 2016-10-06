@@ -54,6 +54,7 @@ var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
+var savePrefix="save/0_";
 var numThreadsSpotting=4;
 var numThreadsUpdating=3;
 var showWidth=2500;
@@ -828,6 +829,7 @@ var ControllerApp = function(port) {
                                     pageImageDirs[i],
                                     segmentationFiles[i],
                                     spottingModelPrefix+datasetNames[i],
+                                    '',
                                     numThreadsSpotting,
                                     numThreadsUpdating,
                                     showHeight,
@@ -840,6 +842,7 @@ var ControllerApp = function(port) {
                                 pageImageDir,
                                 segmentationFile,
                                 spottingModelPrefix+datasetName,
+                                savePrefix,
                                 numThreadsSpotting,
                                 numThreadsUpdating,
                                 showHeight,

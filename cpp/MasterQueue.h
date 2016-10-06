@@ -24,6 +24,8 @@
 #endif
 #include <fstream>
 
+#include "CorpusRef.h"
+
 using namespace std;
 
 #define ROTATE 1 //this is for testing, forcing it to feed up batches from different spotting results.
@@ -50,7 +52,7 @@ private:
     //cv::Mat page;
     int testIter;
     int test_rotate;
-    map<string,cv::Mat> pages;
+    /*map<string,cv::Mat> pages;
     void addTestSpottings();
     void test_showResults(unsigned long id,string ngram);
     void test_finish();
@@ -62,12 +64,16 @@ private:
     map<unsigned long, int> test_numTruePos;
     map<unsigned long, int> test_numFalsePos;
     double accuracyAvg, recallAvg, manualAvg, effortAvg;
-    int done;
+    int done;*/
+
     atomic_bool finish;
     int numCTrue, numCFalse;
     void updateSpottingsMix(const vector<SpottingExemplar*>* spottings);
 public:
     MasterQueue();
+    MasterQueue(string loadPrefix, CorpusRef* corpusRef);
+    void save(string savePrefix);
+
 #ifndef TEST_MODE_C
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
 #endif
@@ -94,13 +100,13 @@ public:
         kill.store(true);
         //~(*incompleteChecker)();
         
-        cout << "***********"<<endl;
+        /*cout << "***********"<<endl;
         cout << "* accuracy: "<<accuracyAvg/done<<endl;
         cout << "* recall: "<<recallAvg/done<<endl;
         cout << "* manual: "<<manualAvg/done<<endl;
         cout << "* effort: "<<effortAvg/done<<endl;
         cout << "* true/false: "<<numCTrue/(0.0+numCFalse)<<endl;
-        cout << "***********"<<endl;
+        cout << "***********"<<endl;*/
         pthread_rwlock_destroy(&semResultsQueue);
         pthread_rwlock_destroy(&semResults);
     }
