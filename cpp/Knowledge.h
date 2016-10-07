@@ -455,8 +455,8 @@ private:
 
 public:
     Corpus();
-    Corpus(string loadPrefix);
-    void save(string savePrefix);
+    Corpus(ifstream& in);
+    void save(ofstream& out);
     ~Corpus()
     {
         pthread_rwlock_destroy(&pagesLock);

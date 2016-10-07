@@ -329,16 +329,16 @@ SpottingQuery* SpottingQueue::dequeue()
     return ret;
 }
 
-void SpottingQueue::save(string savePrefix)
+void SpottingQueue::save(ofstream& out)
 {
-    ofstream out (savePrefix);
+    //ofstream out (savePrefix);
     mutLock.lock();
    
     vector<SpottingQuery*> saveProg;
     for (auto p : inProgress)
     {
         progLock[p.first].lock();
-        if (inProgress[p.first]!=NULL && emList.find(inProgress[p.first].getId())==emList.end())
+        if (inProgress[p.first]!=NULL && emList.find(inProgress[p.first]->getId())==emList.end())
             saveProg.push_back(inProgress[p.first]);
         progLock[p.first].unlock();
     }
@@ -354,25 +354,28 @@ void SpottingQueue::save(string savePrefix)
         s->save(out);
     }
 
-    out<<ngramQueries.size()<<"\n";
-    for (auto p : ngramQueries)
+    out<<ngramQueues.size()<<"\n";
+    for (auto p : ngramQueues)
     {
         out<<p.first<<"\n";
         out<<p.second.size()<<"\n";
-        for (SpottingQuery* s : p.second)
+        priority_queue<SpottingQuery*, std::vector<SpottingQuery*>, sqcomparison> copy( p.second);
+        while(copy.size()>0)
         {
+            SpottingQuery* s = copy.top();
+            copy.pop();
             s->save(out);
         }
     }
     mutLock.unlock();
-    out.close();
+    //out.close();
 }
-SpottingQueue::SpottingQueue(string loadPrefix, MasterQueue* masterQueue, Knowledge::Corpus* corpus) : masterQueue(masterQueue), corpus(corpus)
+SpottingQueue::SpottingQueue(ifstream& in, MasterQueue* masterQueue, Knowledge::Corpus* corpus) : masterQueue(masterQueue), corpus(corpus)
 {
     cont.store(1);
     sem_init(&semLock, 0, 0);
 
-    ifstream in (loadPrefix)
+    //ifstream in (loadPrefix);
     
     string line;
     getline(in,line);
@@ -410,6 +413,6 @@ SpottingQueue::SpottingQueue(string loadPrefix, MasterQueue* masterQueue, Knowle
     }
 
 
-    in.close();
+    //in.close();
 }
     

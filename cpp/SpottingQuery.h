@@ -26,7 +26,7 @@ class SpottingQuery
         id = stoul(line);
         GlobalK::loadImage(img,in);
         getline(in,line);
-        type = stoi(line);
+        type = static_cast<SpottingType>(stoi(line));
     }
     void save(ofstream& out)
     {

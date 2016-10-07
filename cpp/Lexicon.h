@@ -49,8 +49,8 @@ public:
         }
         return self;
     }
-    void load(string loadPrefix);
-    void save(string savePrefix);
+    void load(ifstream& in);
+    void save(ofstream& out);
 
 private:
     Lexicon()

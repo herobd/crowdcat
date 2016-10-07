@@ -12,7 +12,7 @@ class PageRef
 {
     public:
     PageRef() {}
-    void addPage(int pageId, cv::Mat* im)
+    void addPage(int pageId, const cv::Mat* im)
     {
         pages[pageId]=im;
     }
@@ -22,7 +22,7 @@ class PageRef
     }
 
     private:
-    map<int, cv::Mat*> pages;
+    map<int, const cv::Mat*> pages;
 };
 
 #endif

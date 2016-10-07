@@ -12,6 +12,8 @@
 
 int main() {
     //TEST
+
+
 /**/
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     

@@ -13,6 +13,9 @@
 
 #include <unistd.h>
 //#include "ctpl_stl.h"
+//#include "tester.h"
+
+#define CHECK_SAVE_TIME 3
 
 #define NEW_EXEMPLAR_TASK 1
 #define TRANSCRIPTION_TASK 2
@@ -113,6 +116,7 @@ class CATTSS
         delete corpus;
         delete spottingQueue;
     } 
+    void save();
 
     BatchWraper* getBatch(int num, int width, int color, string prevNgram);
     void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);
@@ -124,5 +128,6 @@ class CATTSS
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
     void threadLoop();
 
+    //friend class Tester;
 };
 #endif

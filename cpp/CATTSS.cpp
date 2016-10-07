@@ -1,7 +1,7 @@
 #include "CATTSS.h"
 
 
-void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
+void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c)
 {
     //This is the lowest priority of the systems threads
     nice(3);
@@ -9,10 +9,10 @@ void checkIncompleteSleeper(MasterQueue* q, Knowledge::Corpus* c)
     //cout <<"kill is "<<q->kill.load()<<endl;
     while(!q->kill.load()) {
         //cout <<"begin sleep"<<endl;
-        this_thread::sleep_for(chrono::minutes(15));
+        this_thread::sleep_for(chrono::minutes(CHECK_SAVE_TIME));
         q->checkIncomplete();
         c->checkIncomplete();
-        save();
+        cattss->save();
     }
 }
 void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
@@ -42,11 +42,11 @@ CATTSS::CATTSS( string lexiconFile,
     ifstream in (savePrefix+"_CATTSS.sav");
     if (in.good())
     {
-        Lexicon::instance()->load(savePrefix);
-        corpus = new Knowledge::Corpus(savePrefix);
+        Lexicon::instance()->load(in);
+        corpus = new Knowledge::Corpus(in);
         corpus->loadSpotter(spottingModelPrefix);
-        masterQueue = new MasterQueue(savePrefix,corpus->getCorpusRef(),corpus->getPageRef());
-        spottingQueue = new SpottingQueue(savePrefix,masterQueue,corpus);
+        masterQueue = new MasterQueue(in,corpus->getCorpusRef(),corpus->getPageRef());
+        spottingQueue = new SpottingQueue(in,masterQueue,corpus);
 
         string line;
         getline(in,line);
@@ -72,7 +72,7 @@ CATTSS::CATTSS( string lexiconFile,
     
    
     //should be priority 77 
-    incompleteChecker = new thread(checkIncompleteSleeper,masterQueue,corpus);//This could be done by a thread for each sr
+    incompleteChecker = new thread(checkIncompleteSleeper,this,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
     showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
@@ -443,19 +443,29 @@ void CATTSS::save()
 {
     if (savePrefix.length()>0)
     {
-        masterQueue->save(savePrefix);
-        spottingQueue->save(savePrefix);
-        corpus->save(savePrefix);
-        Lexicon::instance()->save(savePrefix);
-
+#ifdef TEST_MODE
+        cout<<"START save"<<endl;
+        clock_t t;
+        t = clock();
+#endif
         ofstream out (savePrefix+"_CATTSS.sav");
+
+        Lexicon::instance()->save(out);
+        corpus->save(out);
+        masterQueue->save(out);
+        spottingQueue->save(out);
+
         taskQueueLock.lock();
         out<<taskQueue.size()<<"\n";
-        for (const UpdateTask* u : taskQueue)
+        for (UpdateTask* u : taskQueue)
         {
-            u->size(out);
+            u->save(out);
         }
         taskQueueLock.unlock();
         out.close();
+#ifdef TEST_MODE
+        t = clock() - t;
+        cout<<"END save: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+#endif
     }
 }

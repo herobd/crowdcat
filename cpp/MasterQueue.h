@@ -25,6 +25,7 @@
 #include <fstream>
 
 #include "CorpusRef.h"
+#include "PageRef.h"
 
 using namespace std;
 
@@ -71,8 +72,8 @@ private:
     void updateSpottingsMix(const vector<SpottingExemplar*>* spottings);
 public:
     MasterQueue();
-    MasterQueue(string loadPrefix, CorpusRef* corpusRef);
-    void save(string savePrefix);
+    MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef);
+    void save(ofstream& out);
 
 #ifndef TEST_MODE_C
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);

@@ -16,7 +16,7 @@ class CorpusRef
 {
     public:
     CorpusRef() {}
-    void addWord(unsigned int i, WordBackPointer* bp, cv::Mat* im, const multimap<int,Spotting>* sp)
+    void addWord(unsigned int i, WordBackPointer* bp, const cv::Mat* im, const multimap<int,Spotting>* sp)
     {
         backPointers[i]=bp;
         wordImgs[i]=im;
@@ -32,12 +32,12 @@ class CorpusRef
     }
     const multimap<int,Spotting>* getSpottingsPointer(unsigned int i) const
     {
-        return spottings[i];
+        return spottings.at(i);
     }
 
     private:
     map<unsigned int, WordBackPointer*> backPointers;
-    map<unsigned int,  cv::Mat*> wordImgs;
+    map<unsigned int,  const cv::Mat*> wordImgs;
     map<unsigned int, const multimap<int,Spotting>*> spottings;
 };
 

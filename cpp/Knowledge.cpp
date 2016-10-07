@@ -2319,10 +2319,10 @@ void Knowledge::Word::preapproveSpotting(Spotting* spotting)
     pthread_rwlock_unlock(&lock);
 }
 
-void Knowledge::Corpus::save(string savePrefix)
+void Knowledge::Corpus::save(ofstream& out)
 {
-    string saveName = savePrefix+"_Corpus.sav";
-    ofstream out(saveName);
+    //string saveName = savePrefix+"_Corpus.sav";
+    //ofstream out(saveName);
     out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
     pthread_rwlock_rdlock(&pagesLock);
     out<<pages.size()<<"\n";
@@ -2359,13 +2359,13 @@ void Knowledge::Corpus::save(string savePrefix)
     out<<_wordImgs.size()<<"\n";
     for (const Mat& m : _wordImages)*/
     //just call recreateDatasetVectors
-    out.close();
+    //out.close();
 }
 
-Knowledge::Corpus::Corpus(string loadPrefix)
+Knowledge::Corpus::Corpus(ifstream& in)
 {
-    string loadName = loadPrefix+"_Corpus.sav";
-    ifstream in(loadName);
+    //string loadName = loadPrefix+"_Corpus.sav";
+    //ifstream in(loadName);
 
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
@@ -2406,25 +2406,27 @@ Knowledge::Corpus::Corpus(string loadPrefix)
             spottingsToWords[sid].push_back(_words[spottingIndex]);
         }
     }
-    manQueue.load(in);
-    in.close();
+    CorpusRef* cr = getCorpusRef();
+    manQueue.load(in,cr);
+    delete cr;
+    //in.close();
 }
 
-CorpusRef* getCorpusRef()
+CorpusRef* Knowledge::Corpus::getCorpusRef()
 {
     CorpusRef* ret = new CorpusRef();
     for (int i=0; i<_words.size(); i++)
     {
-        ret.addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i).getSpottingsPointer());
+        ret->addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i)->getSpottingsPointer());
     }
     return ret;
 }
-PageRef* getPageRef()
+PageRef* Knowledge::Corpus::getPageRef()
 {
     PageRef* ret = new PageRef();
     for (auto p : pages)
     {
-        ret.addPage(p.first,p.second->getImg());
+        ret->addPage(p.first,p.second->getImg());
     }
     return ret;
 }
@@ -2535,7 +2537,7 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     {
         int x;
         in>>x;
-        spottings.insert(make_pair(x,Spotting(in)));
+        spottings.insert(make_pair(x,Spotting(pagePnt,in)));
     }
     in>>done>>loose;
     in>>sentBatchId;
@@ -2559,7 +2561,7 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
         removedSpottings[sid].resize(sSize2);
         for (int j=0; j<sSize2; j++)
         {
-            removedSpottings.at(sid).at(j)=Spotting(in);
+            removedSpottings.at(sid).at(j)=Spotting(pagePnt,in);
         }
     }
 }

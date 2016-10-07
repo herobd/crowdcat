@@ -22,9 +22,11 @@ OBJECTS = obj/TranscribeBatchQueue.o \
           obj/SpottingQueue.o \
           obj/batches.o \
           obj/AlmazanSpotter.o \
-          obj/AlmazanDataset.o
+          obj/AlmazanDataset.o \
+          obj/tester.o \
+          obj/test.o \
+          obj/CATTSS.o
           #obj/FacadeSpotter.o \
-          #obj/test.o \
           #obj/TestQueue.o 
 
 bin: $(PROGRAM_NAME)
@@ -49,7 +51,10 @@ train: $(OBJECTS)
 makeData: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o makeData makeData.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
-obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h FacadeSpotter.h
+obj/tester.o: tester.cpp tester.h CATTSS.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/tester.o tester.cpp $(LIBS)
+
+obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
 
 obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h CorpusRef.h PageRef.h
@@ -75,6 +80,9 @@ obj/batches.o: batches.h batches.cpp WordBackPointer.h
 
 obj/Global.o: Global.h Global.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Global.o Global.cpp $(LIBS)
+
+obj/CATTSS.o: CATTSS.h CATTSS.cpp MasterQueue.h Lexicon.h SpottingQueue.h Knowledge.h spotting.h BatchWraper.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/CATTSS.o CATTSS.cpp $(LIBS)
 
 obj/MasterQueue.o: MasterQueue.h MasterQueue.cpp SpottingResults.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/MasterQueue.o MasterQueue.cpp $(LIBS)

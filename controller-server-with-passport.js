@@ -54,7 +54,7 @@ var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
-var savePrefix="save/0_";
+var savePrefix="save/0_BENTHAM";
 var numThreadsSpotting=4;
 var numThreadsUpdating=3;
 var showWidth=2500;

@@ -13,6 +13,7 @@
 #include <iostream>
 #include "batches.h"
 #include "Global.h"
+#include "PageRef.h"
 
 #define UPDATE_OVERLAP_THRESH 0.4
 #define UPDATE_OVERLAP_THRESH_TIGHT 0.7
@@ -68,6 +69,9 @@ public:
 class SpottingResults {
 public:
     SpottingResults(string ngram);
+    SpottingResults(ifstream& in, PageRef* pageRef);
+    void save(ofstream& out);
+
     string ngram;
     
     ~SpottingResults() 
@@ -127,11 +131,10 @@ private:
 
     //float lastDifAcceptThreshold;
     //float lastDifRejectThreshold;
-    float lastDifPullFromScore;
+    float lastDifPullFromScore; //The delta for the monentum
     float momentum;
     
-    float pullFromScore;
-    float delta;
+    float pullFromScore; //The choosen score from which batches are pulled (around the score, alternatively grt than and less than).
     
     float maxScore;
     float minScore;
@@ -139,10 +142,10 @@ private:
     int numLeftInRange; //This actually has the count from the round previous, for efficency
 
     //This multiset orders the spotting results to ease the extraction of batches
-    multiset<Spotting*,scoreComp> instancesByScore;
-    multiset<Spotting*,tlComp> instancesByLocation;
-    map<unsigned long,Spotting> instancesById;
-    map<unsigned long,bool> classById;
+    multiset<Spotting*,scoreComp> instancesByScore; //This holds Spottings yet to be classified
+    multiset<Spotting*,tlComp> instancesByLocation; //This is a convienince holder of all Spottings
+    map<unsigned long,Spotting> instancesById; //This is all the Spottings
+    map<unsigned long,bool> classById; //This is the classifications of Spottings
     
     map<unsigned long, chrono::system_clock::time_point > starts;
    

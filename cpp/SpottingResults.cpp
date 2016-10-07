@@ -33,8 +33,6 @@ SpottingResults::SpottingResults(string ngram) :
     done=false;
 
     //pullFromScore=splitThreshold;
-    delta=0;
-    //haveRe
     momentum=1.2;
     lastDifPullFromScore=0;
 }
@@ -947,4 +945,120 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
         //Else, add it in normally
         //All non-intersected old ones need to have their score not count anymore (but save in case of later resurrection)
     return false;
+}
+
+void SpottingResults::save(ofstream& out)
+{
+    out<<ngram<<"\n";
+    out<<numberClassifiedTrue<<"\n";
+    out<<numberClassifiedFalse<<"\n";
+    out<<numberAccepted<<"\n";
+    out<<numberRejected<<"\n";
+    out<<_id.load()<<"\n";
+    out<<id<<"\n";
+    out<<acceptThreshold<<"\n"<<rejectThreshold<<"\n";
+    out<<allBatchesSent<<"\n"<<done<<"\n";
+    out<<trueMean<<"\n"<<trueVariance<<"\n";
+    out<<falseMean<<"\n"<<falseVariance<<"\n";
+    out<<lastDifPullFromScore<<"\n"<<momentum<<"\n";
+    out<<pullFromScore<<"\n";
+    out<<maxScore<<"\n"<<minScore<<"\n";
+    out<<numLeftInRange<<"\n";
+
+    out<<instancesById.size()<<"\n";
+    for (auto p : instancesById)
+    {
+        p.second.save(out);
+    }
+
+    out<<instancesByScore.size()+starts.size()<<"\n";
+    for (Spotting* s : instancesByScore)
+    {
+        out<<s->id<<"\n";
+    }
+    for (auto p : starts)
+    {
+        out<<p.first<<"\n";
+    }
+
+    out<<classById.size()<<"\n";
+    for (auto p : classById)
+    {
+        out<<p.first<<"\n";
+        out<<p.second<<"\n";
+    }
+    //skip updateMap as no feedback will be recieved.
+    //skip tracer as we will just refind it
+}
+
+SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
+{
+    string line;
+    getline(in,ngram);
+    getline(in,line);
+    numberClassifiedTrue = stoi(line);
+    getline(in,line);
+    numberClassifiedFalse = stoi(line);
+    getline(in,line);
+    numberAccepted = stoi(line);
+    getline(in,line);
+    numberRejected = stoi(line);
+    getline(in,line);
+    _id.store(stoul(line));
+    getline(in,line);
+    id = stoul(line);
+    getline(in,line);
+    acceptThreshold = stod(line);
+    getline(in,line);
+    rejectThreshold = stod(line);
+    getline(in,line);
+    allBatchesSent = stoi(line);
+    getline(in,line);
+    done = stoi(line);
+    getline(in,line);
+    trueMean = stof(line);
+    getline(in,line);
+    trueVariance = stof(line);
+    getline(in,line);
+    falseMean = stof(line);
+    getline(in,line);
+    falseVariance = stof(line);
+    getline(in,line);
+    lastDifPullFromScore = stof(line);
+    getline(in,line);
+    momentum = stof(line);
+    getline(in,line);
+    pullFromScore = stof(line);
+    getline(in,line);
+    maxScore = stof(line);
+    getline(in,line);
+    minScore = stof(line);
+    getline(in,line);
+    numLeftInRange = stoi(line);
+
+    getline(in,line);
+    int size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        Spotting s(in,pageRef);
+        instancesById[s.id]=s;
+        instancesByLocation.insert(&instancesById[s.id]);
+    }
+    getline(in,line);
+    size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        getline(in,line);
+        unsigned long sid = stoul(line);
+        instancesByScore.insert(&instancesById[sid]);
+    }
+    getline(in,line);
+    size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        getline(in,line);
+        unsigned long sid = stoul(line);
+        getline(in,line);
+        classById[sid] = stoi(line);
+    }
 }

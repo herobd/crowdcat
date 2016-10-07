@@ -78,9 +78,9 @@ bool Lexicon::readIn(string fileName, string field)
     return true;
 }
 
-void Lexicon::save(string savePrefix)
+void Lexicon::save(ofstream& out)
 {
-    ofstream out(savePrefix+"_Lexicon.sav");
+    //ofstream out(savePrefix+"_Lexicon.sav");
     out<<fields.size()<<"\n";
     for (auto p : fields)
     {
@@ -91,11 +91,11 @@ void Lexicon::save(string savePrefix)
             out<<s<<"\n";
         }
     }
-    out.close();
+    //out.close();
 }
-void Lexicon::load(string loadPrefix)
+void Lexicon::load(ifstream& in)
 {
-    ifstream in (loadPrefix+"_Lexicon.sav");
+    //ifstream in (loadPrefix+"_Lexicon.sav");
     int fSize;
     in>>fSize;
     in.get();
@@ -114,6 +114,6 @@ void Lexicon::load(string loadPrefix)
             fields.at(fieldName).at(j)=word;
         }
     }
-    in.close();
+    //in.close();
 }
 

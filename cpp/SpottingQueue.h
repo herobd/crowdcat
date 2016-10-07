@@ -29,8 +29,8 @@ class SpottingQueue
 {
     public:
     SpottingQueue(MasterQueue* masterQueue, Knowledge::Corpus* corpus);
-    SpottingQueue(string loadPrefix);
-    void save(string savePrefix);
+    SpottingQueue(ifstream& in, MasterQueue* masterQueue, Knowledge::Corpus* corpus);
+    void save(ofstream& out);
     ~SpottingQueue();
     void run(int numThreads);
     void spottingLoop();

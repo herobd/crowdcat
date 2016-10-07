@@ -24,26 +24,59 @@ using namespace std;
 class SpottingPoint
 {
     public:
+        SpottingPoint() : x(-1), ngram(""), x1(-1), y1(-1), x2(-1), y2(-1), page(-1), id(""), color("")
+        {}
         SpottingPoint(unsigned long id, int x, string ngram, int b, int g, int r,  
                 int page, int x1, int y1, int x2, int y2) : x(x), ngram(ngram), x1(x1), y1(y1), x2(x2), y2(y2), page(page)
-    {
-        stringstream stream;
-        if (b>255)
-            b=255;
-        if (g>255)
-            g=255;
-        if (r>255)
-            r=255;
-        stream << setfill('0') << setw(sizeof(unsigned char)*2) << hex << r<<g<<b;
-        color = stream.str();
-        this->id = to_string(id);
-    }
+        {
+            stringstream stream;
+            if (b>255)
+                b=255;
+            if (g>255)
+                g=255;
+            if (r>255)
+                r=255;
+            stream << setfill('0') << setw(sizeof(unsigned char)*2) << hex << r<<g<<b;
+            color = stream.str();
+            this->id = to_string(id);
+        }
         void setPad(int pad) {this->pad=pad;}
         string getX() {return to_string(pad+x);}
         string getNgram() {return ngram;}
         string getColor() {return color;}
         string getId() {return id;}
         int page, x1,y1,x2,y2;
+
+        SpottingPoint(ifstream& in)
+        {
+            string line;
+            getline(in,line);
+            page=stoi(line);
+            getline(in,line);
+            x1=stoi(line);
+            getline(in,line);
+            y1=stoi(line);
+            getline(in,line);
+            x2=stoi(line);
+            getline(in,line);
+            y2=stoi(line);
+            getline(in,line);
+            x=stoi(line);
+            getline(in,line);
+            page=stoi(line);
+            getline(in,ngram);
+            getline(in,color);
+            getline(in,id);
+        }
+        void save(ofstream& out)
+        {
+            out<<page<<"\n";
+            out<<x1<<"\n"<<y1<<"\n"<<x2<<"\n"<<y2<<"\n";
+            out<<x<<"\n"<<pad<<"\n";
+            out<<ngram<<"\n";
+            out<<color<<"\n";
+            out<<id<<"\n";
+        }
     private:
         int x, pad;
         string ngram, color, id;

@@ -80,29 +80,39 @@ double GlobalK::otsuThresh(vector<int> histogram)
 
     return ( threshold1 + threshold2 ) / 2.0;
 }
-void GlobalK::writeImage(const cv::Mat& im, ofstream& out)
+void GlobalK::saveImage(const cv::Mat& im, ofstream& out)
 {
-    bool color=im.channels==3;
-    vector<unsigned char> encoded;
-    cv::imencode("png",im,encoded);
-    out<<color<<"\n";
-    out<<encoded.size()<<"\n";
-    for (unsigned char c : encoded)
-        out<<c;
-    out<<"\n";
+    if (im.cols==0)
+    {
+        out<<"X"<<endl;
+    }
+    else
+    {
+        bool color=im.channels()==3;
+        vector<unsigned char> encoded;
+        cv::imencode(".png",im,encoded);
+        out<<color<<"\n";
+        out<<encoded.size()<<"\n";
+        for (unsigned char c : encoded)
+            out<<c;
+        out<<"\n";
+    }
 }
 void GlobalK::loadImage(cv::Mat& im, ifstream& in)
 {
     string line;
     getline(in,line);
-    bool color=stoi(line);
-    getline(in,line);
-    int size = stoi(line);
-    vector<unsigned char> encoded(size);
-    for (int i=0; i<size; i++)
+    if (line[0]!='X')
     {
-        encoded[i]=in.get();
+        bool color=stoi(line);
+        getline(in,line);
+        int size = stoi(line);
+        vector<unsigned char> encoded(size);
+        for (int i=0; i<size; i++)
+        {
+            encoded[i]=in.get();
+        }
+        assert('\n'==in.get());
+        im=cv::imdecode(encoded,color?CV_LOAD_IMAGE_COLOR:CV_LOAD_IMAGE_GRAYSCALE);
     }
-    assert('\n'==in.get());
-    im=cv::imdecode(encoded,color?CV_LOAD_IMAGE_COLOR:CV_LOAD_IMAGE_GRAYSCALE);
 }

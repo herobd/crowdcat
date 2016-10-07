@@ -103,7 +103,7 @@ MasterQueue::MasterQueue() {
     test_rotate=0;
     //addTestSpottings();
     //accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
-    done=0;
+    //done=0;
     numCFalse=numCTrue=0;
 
     
@@ -642,9 +642,9 @@ void MasterQueue::needExemplar(string ngram)
 }
 
 
-void MasterQueue::save(string savePrefix)
+void MasterQueue::save(ofstream& out)
 {
-    ofstream out(savePrefix);
+    //ofstream out(savePrefix);
 
     //This is a costly lockdown, but bad things might happen if the queue is changed between writing the two
     pthread_rwlock_rdlock(&semResults);
@@ -653,9 +653,9 @@ void MasterQueue::save(string savePrefix)
     for (auto p : results)
     {
         out<<p.first<<"\n";
-        pthread_rwlock_rdlock(p.first.first);
-        p.first.second->save(out);
-        pthread_rwlock_runlock(p.first.first);
+        sem_wait(p.second.first);
+        p.second.second->save(out);
+        sem_post(p.second.first);
     }
 
     out<<resultsQueue.size()<<"\n";
@@ -667,20 +667,20 @@ void MasterQueue::save(string savePrefix)
     pthread_rwlock_unlock(&semResults);
         
     transcribeBatchQueue.save(out);
-    newExemplarBatchQueue.save(out);
+    newExemplarsBatchQueue.save(out);
 
     out<<finish.load()<<"\n";
     out<<numCTrue<<"\n"<<numCFalse<<"\n";
-    out.close();    
+    //out.close();    
 }
-MasterQueue::MasterQueue(string loadPrefix, CorpusRef* corpusRef)
+MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
 {
     finish.store(false);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
     kill.store(false);
     
-    ifstream in(loadPrefix);
+    //ifstream in(loadPrefix);
 
     string line;
     getline(in,line);
@@ -689,8 +689,8 @@ MasterQueue::MasterQueue(string loadPrefix, CorpusRef* corpusRef)
     {
         getline(in,line);
         unsigned long id = stoul(line);
-        SpottingResults* res = new SpottingResults(in);
-        assert(id==res->getId);
+        SpottingResults* res = new SpottingResults(in,pageRef);
+        assert(id==res->getId());
         sem_t* sem = new sem_t();
         sem_init(sem,false,1);
         auto p = make_pair(sem,res);
@@ -705,7 +705,7 @@ MasterQueue::MasterQueue(string loadPrefix, CorpusRef* corpusRef)
         resultsQueue[results[id].second->getId()] = results[id];
     }
     transcribeBatchQueue.load(in,corpusRef);
-    newExemplarBatchQueue.load(in,pageRef);
+    newExemplarsBatchQueue.load(in,pageRef);
 
     getline(in,line);
     finish.store(stoi(line));
@@ -715,6 +715,6 @@ MasterQueue::MasterQueue(string loadPrefix, CorpusRef* corpusRef)
     getline(in,line);
     numCFalse = stoi(line);
 
-    in.close();
+    //in.close();
     delete corpusRef;
 }

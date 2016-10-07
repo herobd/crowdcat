@@ -272,14 +272,14 @@ void NewExemplarsBatchQueue::save(ofstream& out)
     }
     unlock();
 }
-void NewExemplarsBatchQueue::load(ifstream& in, Knowledge::Corpus* corpusRef)
+void NewExemplarsBatchQueue::load(ifstream& in, PageRef* pageRef)
 {
     string line;
     getline(in,line);
     int qSize = stoi(line);
     for (int i=0; i<qSize; i++)
     {
-        queue.insert(new SpottingExemplar(in,corpusRef));
+        queue.insert(new SpottingExemplar(in,pageRef));
     }
     getline(in,line);
     int nSize=stoi(line);
@@ -292,4 +292,4 @@ void NewExemplarsBatchQueue::load(ifstream& in, Knowledge::Corpus* corpusRef)
         need[ngram]=n;
     }
 }
-}
+

@@ -26,7 +26,7 @@ using namespace std;
 #define SPOTTING_TYPE_EXEMPLAR 4
 #define SPOTTING_TYPE_TRANS_TRUE 5
 #define SPOTTING_TYPE_TRANS_FALSE 6*/
-enum SpottingType {SPOTTING_TYPE_NONE, SPOTTING_TYPE_APPROVED, SPOTTING_TYPE_THRESHED, SPOTTING_TYPE_EXEMPLAR, SPOTTING_TYPE_TRANS_TRUE, SPOTTING_TYPE_TRANS_FALSE};
+enum SpottingType {SPOTTING_TYPE_NONE=0, SPOTTING_TYPE_APPROVED=1, SPOTTING_TYPE_THRESHED=2, SPOTTING_TYPE_EXEMPLAR=3, SPOTTING_TYPE_TRANS_TRUE=4, SPOTTING_TYPE_TRANS_FALSE=5};
 
 class Spotting {
 public:
@@ -68,7 +68,8 @@ public:
         bry = stoi(line);
         getline(in,line);
         pageId = stoi(line);
-        pagePnt = pageRef.getPageImg(pageId);
+        if (pageRef!=NULL)
+            pagePnt = pageRef->getPageImg(pageId);
         getline(in,ngram);
         getline(in,line);
         score = stof(line);
@@ -77,9 +78,14 @@ public:
         getline(in,line);
         gt = stoi(line);
         getline(in,line);
-        type = stoi(line);
+        type = static_cast<SpottingType>(stoi(line));
         getline(in,line);
         _id.store( stoul(line));
+    }
+    //Note the reversal in paramter order, this prevents ambigous overload when passing nullptr
+    Spotting(const cv::Mat* pagePnt, ifstream& in) : Spotting(in,NULL)
+    {
+        this->pagePnt=pagePnt;
     }
     virtual void save(ofstream& out)
     {
@@ -293,14 +299,14 @@ public:
         ngramImage=other.ngramImg();
         return *this;
     }
-    SpottingImage(ifstream& in, PageRef* pageRef) : Spotting(in,pageRef)
+    SpottingExemplar(ifstream& in, PageRef* pageRef) : Spotting(in,pageRef)
     {
         GlobalK::loadImage(ngramImage,in);
     }
     void save(ofstream& out)
     {
         Spotting::save(out);
-        GlobalL::saveImage(ngramImage,out);
+        GlobalK::saveImage(ngramImage,out);
     }
     virtual ~SpottingExemplar() {}
 

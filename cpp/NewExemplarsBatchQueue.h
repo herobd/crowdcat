@@ -12,6 +12,7 @@
 #include "Global.h"
 #include "spotting.h"
 #include "batches.h"
+#include "PageRef.h"
 
 using namespace std;
 
@@ -53,6 +54,8 @@ class NewExemplarsBatchQueue
 {
     public:
         NewExemplarsBatchQueue();
+        void save(ofstream& out);
+        void load(ifstream& in, PageRef* pageRef);
         void enqueue(const vector<Spotting*>& batch, vector<pair<unsigned long, string> >* toRemoveExemplars);
 
         NewExemplarsBatch* dequeue(int batchSize, unsigned int maxWidth, int color, bool any=false);

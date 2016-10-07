@@ -27,7 +27,7 @@ class GlobalK
         int getNgramRank(string ngram);
 
         static double otsuThresh(vector<int> histogram);
-        static void saveImage(cv::Mat& im, ofstream& out);
+        static void saveImage(const cv::Mat& im, ofstream& out);
         static void loadImage(cv::Mat& im, ifstream& in);
 };
 
