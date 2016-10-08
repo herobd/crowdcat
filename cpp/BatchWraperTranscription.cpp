@@ -30,6 +30,7 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     gt=batch->getGT();
     scale=batch->getScale();
 }
+#ifndef NO_NAN
 void BatchWraperTranscription::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
@@ -78,3 +79,4 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 
     callback->Call(8, argv);
 }
+#endif

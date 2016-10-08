@@ -1,6 +1,8 @@
 #ifndef BATCH_WRAPER_SPOTTINGS
 #define BATCH_WRAPER_SPOTTINGS
+#ifndef NO_NAN
 #include <nan.h>
+#endif
 #include <iostream>
 #include <assert.h>
 #define BUFFERSIZE 65536
@@ -10,9 +12,11 @@
 #include "batches.h"
 #include "BatchWraper.h"
 
+#ifndef NO_NAN
 using namespace Nan;
-using namespace std;
 using namespace v8;
+#endif
+using namespace std;
 class BatchWraperSpottings: public BatchWraper
 {
     protected:
@@ -28,6 +32,8 @@ class BatchWraperSpottings: public BatchWraper
     public:
         BatchWraperSpottings(SpottingsBatch* batch);
         ~BatchWraperSpottings() {}
+#ifndef NO_NAN
         virtual void doCallback(Callback* callback);
+#endif
 };
 #endif

@@ -13,7 +13,9 @@
 
 #include <unistd.h>
 //#include "ctpl_stl.h"
-//#include "tester.h"
+#ifdef NO_NAN
+#include "tester.h"
+#endif
 
 #define CHECK_SAVE_TIME 3
 
@@ -127,7 +129,8 @@ class CATTSS
 
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
     void threadLoop();
-
-    //friend class Tester;
+#ifdef NO_NAN
+    friend class Tester;
+#endif
 };
 #endif

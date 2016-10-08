@@ -43,6 +43,7 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;
 }
+#ifndef NO_NAN
 void BatchWraperSpottings::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
@@ -87,3 +88,4 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 
     callback->Call(8, argv);
 }
+#endif

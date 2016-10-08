@@ -22,8 +22,9 @@ struct SearchMeta
     SearchMeta(const SearchMeta& other) : field(other.field), max(other.max) {}
     SearchMeta(ifstream& in) 
     {
-        in>>max;
-        in.get();//burn newline
+        string line;
+        getline(in,line);
+        max = stoi(line);
         getline(in,field);
     }
     void save(ofstream& out)

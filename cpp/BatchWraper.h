@@ -1,10 +1,12 @@
 #ifndef BATCH_WRAPER
 #define BATCH_WRAPER
-#include <nan.h>
 
+#ifndef NO_NAN
+#include <nan.h>
 using namespace Nan;
-using namespace std;
 using namespace v8;
+#endif
+using namespace std;
 
 struct Location
 {
@@ -22,12 +24,15 @@ class BatchWraper
     public:
         virtual ~BatchWraper() {}
         //virtual BatchWraper(Batch* batch)=0;
+#ifndef NO_NAN
         virtual void doCallback(Callback* callback)=0;
+#endif
 };
 
 class BatchWraperBlank : public BatchWraper
 {
     public:
+#ifndef NO_NAN
         virtual void doCallback(Callback* callback)
         {
 
@@ -46,6 +51,7 @@ class BatchWraperBlank : public BatchWraper
             callback->Call(8, argv);
 
         }
+#endif
         
 };
 #endif

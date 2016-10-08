@@ -332,6 +332,7 @@ SpottingQuery* SpottingQueue::dequeue()
 void SpottingQueue::save(ofstream& out)
 {
     //ofstream out (savePrefix);
+    out<<"SPOTTINGQUEUE"<<endl;
     mutLock.lock();
    
     vector<SpottingQuery*> saveProg;
@@ -354,17 +355,28 @@ void SpottingQueue::save(ofstream& out)
         s->save(out);
     }
 
-    out<<ngramQueues.size()<<"\n";
+    int ngramQueuesSize=0;
     for (auto p : ngramQueues)
     {
-        out<<p.first<<"\n";
-        out<<p.second.size()<<"\n";
-        priority_queue<SpottingQuery*, std::vector<SpottingQuery*>, sqcomparison> copy( p.second);
-        while(copy.size()>0)
+        if (p.second.size()>0)
         {
-            SpottingQuery* s = copy.top();
-            copy.pop();
-            s->save(out);
+            ngramQueuesSize++;
+        }
+    }
+    out<<ngramQueuesSize<<"\n";
+    for (auto p : ngramQueues)
+    {
+        if (p.second.size()>0)
+        {
+            out<<p.first<<"\n";
+            out<<p.second.size()<<"\n";
+            priority_queue<SpottingQuery*, std::vector<SpottingQuery*>, sqcomparison> copy( p.second);
+            while(copy.size()>0)
+            {
+                SpottingQuery* s = copy.top();
+                copy.pop();
+                s->save(out);
+            }
         }
     }
     mutLock.unlock();
@@ -378,6 +390,8 @@ SpottingQueue::SpottingQueue(ifstream& in, MasterQueue* masterQueue, Knowledge::
     //ifstream in (loadPrefix);
     
     string line;
+    getline(in,line);
+    assert(line.compare("SPOTTINGQUEUE")==0);
     getline(in,line);
     int size = stoi(line);
     for (int i=0; i<size; i++)

@@ -574,6 +574,11 @@ string Knowledge::Word::generateQuery()
 
         //The last character sometimes has a trail making it larger
         least-=1;
+        if (loose)
+        {
+            least-=1;
+            most+=1;
+        }
         least = max(0,least);
         ret += "[a-zA-Z0-9]{"+to_string(least)+","+to_string(most)+"}";
     }
@@ -2323,6 +2328,7 @@ void Knowledge::Corpus::save(ofstream& out)
 {
     //string saveName = savePrefix+"_Corpus.sav";
     //ofstream out(saveName);
+    out<<"CORPUS"<<endl;
     out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
     pthread_rwlock_rdlock(&pagesLock);
     out<<pages.size()<<"\n";
@@ -2332,7 +2338,7 @@ void Knowledge::Corpus::save(ofstream& out)
         p.second->save(out);
     }
     out<<pageIdMap.size()<<"\n";
-    for (auto p : pages)
+    for (auto p : pageIdMap)
     {
         out<<p.first<<"\n"<<p.second<<"\n";
     }
@@ -2370,39 +2376,47 @@ Knowledge::Corpus::Corpus(ifstream& in)
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
 
-    in>>averageCharWidth>>countCharWidth>>threshScoring;
-    int pagesSize;
-    in>>pagesSize;
+    string line;
+    getline(in,line);
+    assert(line.compare("CORPUS")==0);
+    getline(in,line);
+    averageCharWidth = stof(line);
+    getline(in,line);
+    countCharWidth = stoi(line);
+    getline(in,line);
+    threshScoring = stof(line);
+    getline(in,line);
+    int pagesSize = stoi(line);
     for (int i=0; i<pagesSize; i++)
     {
-        int pageId;
-        in>>pageId;
+        getline(in,line);
+        int pageId = stoi(line);
         Page* page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
         pages[pageId]=page;
     }
-    in>>pagesSize;
+    getline(in,line);
+    pagesSize = stoi(line);
     for (int i=0; i<pagesSize; i++)
     {
         string s;
-        in.get();//burn newline
         getline(in,s);
-        int pageId;
-        in>>pageId;
+        getline(in,line);
+        int pageId = stoi(line);
         pageIdMap[s]=pageId;
     }
     recreateDatasetVectors(false);
-    int spottingsToWordsSize;
-    in>>spottingsToWordsSize;
+    getline(in,line);
+    int spottingsToWordsSize=stoi(line);
     for (int i=0; i<spottingsToWordsSize; i++)
     {
-        unsigned long sid;
-        in>>sid;
-        int wordLen;
-        in>>wordLen;
+        getline(in,line);
+        unsigned long sid=stoul(line);
+        getline(in,line);
+        int wordLen=stoi(line);
         for (int j=0; j<wordLen; j++)
         {
-            int spottingIndex;
-            in>>spottingIndex;
+            getline(in,line);
+            int spottingIndex=stoi(line);
             spottingsToWords[sid].push_back(_words[spottingIndex]);
         }
     }
@@ -2433,6 +2447,7 @@ PageRef* Knowledge::Corpus::getPageRef()
 
 void Knowledge::Page::save(ofstream& out)
 {
+    out<<"PAGE"<<endl;
     vector<Line*> ls = lines();
     out<<ls.size()<<"\n";
     out<<pageImgLoc<<"\n";
@@ -2445,9 +2460,11 @@ void Knowledge::Page::save(ofstream& out)
 Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
-    int sizeLines;
-    in>>sizeLines;
-    in.get();
+    string line;
+    getline(in,line);
+    assert(line.compare("PAGE")==0);
+    getline(in,line);
+    int sizeLines = stoi(line);
     getline(in,pageImgLoc);
     pageImg = cv::imread(pageImgLoc);
     assert(pageImg.cols*pageImg.rows > 1);
@@ -2456,12 +2473,15 @@ Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averag
     {
         _lines.at(i) = new Line(in,&pageImg,spotter,averageCharWidth,countCharWidth);
     }
-    in>>_id;
-    in>>id;
+    getline(in,line);
+    _id=stoul(line);
+    getline(in,line);
+    id=stoul(line);
 }
 
 void Knowledge::Line::save(ofstream& out)
 {
+    out<<"LINE"<<endl;
     int cty, cby;
     vector<Word*> ws = wordsAndBounds(&cty,&cby);
     out<<ws.size()<<"\n";
@@ -2476,23 +2496,32 @@ void Knowledge::Line::save(ofstream& out)
 Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
-    int wordSize;
-    in>>wordSize;
+    string line;
+    getline(in,line);
+    assert(line.compare("LINE")==0);
+    getline(in,line);
+    int wordSize = stoi(line);
     _words.resize(wordSize);
     for (int i=0; i<wordSize; i++)
     {
         _words.at(i)=new Word(in, pagePnt, spotter, averageCharWidth, countCharWidth);
     }
-    in>>ty>>by>>pageId;
+    getline(in,line);
+    ty = stoi(line);
+    getline(in,line);
+    by = stoi(line);
+    getline(in,line);
+    pageId = stoi(line);
 }
 
 void Knowledge::Word::save(ofstream& out)
 {
+    out<<"WORD"<<endl;
     pthread_rwlock_rdlock(&lock);
-    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry;
+    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
     out<<query<<"\n"<<gt<<"\n";
     meta.save(out);
-    out<<pageId<<"\n"<<spottingIndex;
+    out<<pageId<<"\n"<<spottingIndex<<"\n";
     out<<topBaseline<<"\n"<<botBaseline<<"\n";
     out<<spottings.size()<<"\n";
     for (auto p : spottings)
@@ -2524,40 +2553,61 @@ void Knowledge::Word::save(ofstream& out)
 Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
-    in>>tlx>>tly>>brx>>bry;
-    in.get();//discard newline
+    string line;
+    getline(in,line);
+    assert(line.compare("WORD")==0);
+    getline(in,line);
+    tlx = stoi(line);
+    getline(in,line);
+    tly = stoi(line);
+    getline(in,line);
+    brx = stoi(line);
+    getline(in,line);
+    bry = stoi(line);
     getline(in,query);
     getline(in,gt);
     meta = SearchMeta(in);
-    in>>pageId>>spottingIndex;
-    in>>topBaseline>>botBaseline;
-    int sSize;
-    in>>sSize;
+    getline(in,line);
+    pageId = stoi(line);
+    getline(in,line);
+    spottingIndex = stoi(line);
+    getline(in,line);
+    topBaseline = stoi(line);
+    getline(in,line);
+    botBaseline = stoi(line);
+    getline(in,line);
+    int sSize = stoi(line);
     for (int i=0; i<sSize; i++)
     {
-        int x;
-        in>>x;
+        getline(in,line);
+        int x=stoi(line);
         spottings.insert(make_pair(x,Spotting(pagePnt,in)));
     }
-    in>>done>>loose;
-    in>>sentBatchId;
-    in>>sSize;
+    getline(in,line);
+    done= stoi(line);
+    getline(in,line);
+    loose= stoi(line);
+    //getline(in,line);
+    //sentBatchId= stoul(line);
+    getline(in,line);
+    sSize= stoi(line);
     for (int i=0; i<sSize; i++)
     {
-        unsigned long sid;
-        in>>sid;
-        in.get();//burn newline
+        getline(in,line);
+        unsigned long sid=stoi(line);
         string ngram;
         getline(in,ngram);
         harvested.insert(make_pair(sid,ngram));
     }
     getline(in,transcription);
-    in>>sSize;
+    getline(in,line);
+    sSize=stoi(line);
     for (int i=0; i<sSize; i++)
     {
-        unsigned long sid;
-        int sSize2;
-        in>>sid>>sSize2;
+        getline(in,line);
+        unsigned long sid=stoi(line);
+        getline(in,line);
+        int sSize2=stoi(line);
         removedSpottings[sid].resize(sSize2);
         for (int j=0; j<sSize2; j++)
         {

@@ -212,7 +212,6 @@ bool MasterQueue::test_autoBatch()
     return true;
 }*/
 
-#ifndef TEST_MODE_C
 BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
 {
     int ngramQueueCount;
@@ -275,7 +274,6 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
 
     return ret;
 } 
-#endif
 
 SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) 
 {
@@ -649,6 +647,7 @@ void MasterQueue::save(ofstream& out)
     //This is a costly lockdown, but bad things might happen if the queue is changed between writing the two
     pthread_rwlock_rdlock(&semResults);
     pthread_rwlock_rdlock(&semResultsQueue);
+    out<<"MASTERQUEUE"<<endl;
     out<<results.size()<<"\n";
     for (auto p : results)
     {
@@ -683,6 +682,8 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     //ifstream in(loadPrefix);
 
     string line;
+    getline(in,line);
+    assert(line.compare("MASTERQUEUE")==0);
     getline(in,line);
     int rSize = stoi(line);
     for (int i=0; i<rSize; i++)

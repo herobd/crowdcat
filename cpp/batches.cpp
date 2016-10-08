@@ -156,6 +156,7 @@ void TranscribeBatch::setWidth(unsigned int width)
 
 void TranscribeBatch::save(ofstream& out)
 {
+    out<<"TRANSCRIBEBATCH"<<endl;
     out<<origin->getSpottingIndex()<<"\n";
     out<<possibilities.size()<<"\n";
     for (string p : possibilities)
@@ -183,6 +184,8 @@ void TranscribeBatch::save(ofstream& out)
 TranscribeBatch::TranscribeBatch(ifstream& in, CorpusRef* corpusRef)
 {
     string line;
+    getline(in,line);
+    assert(line.compare("TRANSCRIBEBATCH")==0);
     getline(in,line);
     int wid = stoi(line);
     origin = corpusRef->getBackPointer(wid);

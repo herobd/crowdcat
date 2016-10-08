@@ -16,12 +16,10 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
-#ifndef TEST_MODE_C
 #include "BatchWraper.h"
 #include "BatchWraperSpottings.h"
 #include "BatchWraperTranscription.h"
 #include "BatchWraperNewExemplars.h"
-#endif
 #include <fstream>
 
 #include "CorpusRef.h"
@@ -75,9 +73,7 @@ public:
     MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef);
     void save(ofstream& out);
 
-#ifndef TEST_MODE_C
     BatchWraper* getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram);
-#endif
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need=true);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult

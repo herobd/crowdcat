@@ -1,12 +1,13 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS =  -g  -std=c++11 -pthread -DTEST_MODE -DTEST_MODE_C#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  -g  -std=c++11 -pthread -DTEST_MODE -DNO_NAN #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 
 LIBS += -lpthread
 
 LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 LIBS += -L/home/brian/intel_index/EmbAttSpotter -lembattspotter -larmadillo
 LIBS += -L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/ -l:libvl.so
+LIBS += -lb64 -pthread 
 INCLUDE +=-I/home/brian/intel_index/EmbAttSpotter
 PROGRAM_NAME = test
 
@@ -25,7 +26,10 @@ OBJECTS = obj/TranscribeBatchQueue.o \
           obj/AlmazanDataset.o \
           obj/tester.o \
           obj/test.o \
-          obj/CATTSS.o
+          obj/CATTSS.o \
+          obj/BatchWraperNewExemplars.o \
+          obj/BatchWraperSpottings.o \
+          obj/BatchWraperTranscription.o 
           #obj/FacadeSpotter.o \
           #obj/TestQueue.o 
 
@@ -105,6 +109,14 @@ obj/Spotter.o: Spotter.h Spotter.cpp MasterQueue.h Knowledge.h
 obj/FacadeSpotter.o: Spotter.h FacadeSpotter.cpp MasterQueue.h Knowledge.h FacadeSpotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/FacadeSpotter.o FacadeSpotter.cpp $(LIBS)
 
+obj/BatchWraperTranscription.o: BatchWraperTranscription.h BatchWraperTranscription.cpp spotting.h BatchWraper.h batches.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/BatchWraperTranscription.o BatchWraperTranscription.cpp $(LIBS)
+
+obj/BatchWraperNewExemplars.o: BatchWraperNewExemplars.h BatchWraperNewExemplars.cpp BatchWraper.h batches.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/BatchWraperNewExemplars.o BatchWraperNewExemplars.cpp $(LIBS)
+
+obj/BatchWraperSpottings.o: BatchWraperSpottings.h BatchWraperSpottings.cpp spotting.h BatchWraper.h batches.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/BatchWraperSpottings.o BatchWraperSpottings.cpp $(LIBS)
 
 obj/maxflow.o: maxflow/maxflow.cpp maxflow/graph.h maxflow/block.h  maxflow/instances.inc
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/maxflow.o maxflow/maxflow.cpp

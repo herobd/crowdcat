@@ -180,6 +180,7 @@ void TranscribeBatchQueue::checkIncomplete()
 
 void TranscribeBatchQueue::save(ofstream& out)
 {
+    out<<"TRANSCRIBEBATCHQUEUE"<<endl;
     lock();
     //shortcut by saving the returnMap as part of the queue
     out<<(queue.size()+returnMap.size())<<"\n";
@@ -197,6 +198,8 @@ void TranscribeBatchQueue::save(ofstream& out)
 void TranscribeBatchQueue::load(ifstream& in, CorpusRef* corpusRef)
 {
     string line;
+    getline(in,line);
+    assert(line.compare("TRANSCRIBEBATCHQUEUE")==0);
     getline(in,line);
     int qSize = stoi(line);
     for (int i=0; i<qSize; i++)

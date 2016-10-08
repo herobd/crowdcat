@@ -59,6 +59,8 @@ public:
     {
         string line;
         getline(in,line);
+        assert(line.compare("SPOTTING")==0);
+        getline(in,line);
         tlx = stoi(line);
         getline(in,line);
         tly = stoi(line);
@@ -89,6 +91,7 @@ public:
     }
     virtual void save(ofstream& out)
     {
+        out<<"SPOTTING"<<endl;
         out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
         out<<pageId<<"\n";
         out<<ngram<<"\n";

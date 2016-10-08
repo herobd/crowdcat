@@ -34,6 +34,7 @@ BatchWraperNewExemplars::BatchWraperNewExemplars(NewExemplarsBatch* newExemplars
 
     
 }
+#ifndef NO_NAN
 void BatchWraperNewExemplars::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
@@ -68,3 +69,4 @@ void BatchWraperNewExemplars::doCallback(Callback *callback)
 
     callback->Call(8, argv);
 }
+#endif
