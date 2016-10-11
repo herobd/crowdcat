@@ -82,6 +82,8 @@ public:
         getline(in,line);
         type = static_cast<SpottingType>(stoi(line));
         getline(in,line);
+        ngramRank = stoi(line);
+        getline(in,line);
         _id.store( stoul(line));
     }
     //Note the reversal in paramter order, this prevents ambigous overload when passing nullptr

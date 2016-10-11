@@ -13,14 +13,15 @@ void MasterQueue::checkIncomplete()
         SpottingResults* res = ele.second.second;
         sem_wait(sem);
             
-        if (res->checkIncomplete())
+        bool incm = res->checkIncomplete();
+        sem_post(sem);
+        if (incm)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
             resultsQueue[res->getId()] = ele.second;
             pthread_rwlock_unlock(&semResultsQueue);
         }
         
-        sem_post(sem);
             
 
     }
@@ -33,6 +34,9 @@ MasterQueue::MasterQueue() {
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
+#if ROTATE
+    pthread_rwlock_init(&semRotate,NULL);
+#endif
     kill.store(false);
     //atID=0;
     
@@ -283,6 +287,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     //cout<<"got rw lock"<<endl;
 #if ROTATE
     int test_loc=0;
+    pthread_rwlock_rdlock(&semRotate);
 #endif
     for (auto ele : resultsQueue)
     {
@@ -297,16 +302,19 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         if (succ)
         {
             
-            pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             //test
 #if ROTATE
-            pthread_rwlock_wrlock(&semResultsQueue);
-            if (test_rotate++>2*(resultsQueue.size()-1))
+            pthread_rwlock_unlock(&semRotate);
+            int qSize = resultsQueue.size();
+            pthread_rwlock_wrlock(&semRotate);
+            if (test_rotate++>2*(qSize-1))
                 test_rotate=0;
-            pthread_rwlock_unlock(&semResultsQueue);
+            pthread_rwlock_unlock(&semRotate);
 #endif
             //test
+
+            pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             bool done=false;
             //cout << "getBatch   prev:"<<prevNgram<<endl;
@@ -342,6 +350,9 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
 #ifdef TEST_MODE
         cout<<"no spotting batch from MasterQueue, need:"<<need<<endl;
 #endif
+#if ROTATE
+        pthread_rwlock_unlock(&semRotate);
+#endif 
     }
 #ifdef TEST_MODE
     else //test
@@ -436,22 +447,22 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
         //cout <<"res feedback"<<endl;
         ret = res->feedback(&done,ids,userClassifications,resent,remove);
         //cout <<"END res feedback"<<endl;
+        sem_post(sem);
         
         if (done==-1)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
-            resultsQueue[res->getId()] = make_pair(sem,res);
+            resultsQueue[id] = make_pair(sem,res);
             pthread_rwlock_unlock(&semResultsQueue);
             
         }
         else if (done==2)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
-            resultsQueue.erase(res->getId());
+            resultsQueue.erase(id);
             
             pthread_rwlock_unlock(&semResultsQueue);
         }
-        sem_post(sem);
     }
     else
     {
@@ -555,13 +566,13 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             pthread_rwlock_unlock(&semResults);
             sem_wait(sem);
             bool resurrect = res->updateSpottings(spottings);
+            sem_post(sem);
             if (resurrect)
             {
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = results[id];
+                resultsQueue[id] = results[id];
                 pthread_rwlock_unlock(&semResultsQueue);
             }
-            sem_post(sem);
             return id;
         }
         else
@@ -581,17 +592,18 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
         {
             pthread_rwlock_unlock(&semResults);
             bool resurrect = res->updateSpottings(spottings);
+            unsigned long rid = res->getId();
+            sem_post(sem);
             if (resurrect)
             {
 #ifdef TEST_MODE
                 cout<<"Resurrect "<<res->ngram<<endl;
 #endif
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = make_pair(sem,res);
+                resultsQueue[rid] = make_pair(sem,res);
                 pthread_rwlock_unlock(&semResultsQueue);
             }
-            sem_post(sem);
-            return res->getId();
+            return rid;
             
         }
         else

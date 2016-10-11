@@ -38,7 +38,6 @@ class MasterQueue {
 private:
     pthread_rwlock_t semResultsQueue;
     pthread_rwlock_t semResults;
-    
     map<unsigned long, pair<sem_t*,SpottingResults*> > results;
     map<unsigned long, pair<sem_t*,SpottingResults*> > resultsQueue;
     TranscribeBatchQueue transcribeBatchQueue;
@@ -48,9 +47,12 @@ private:
     //map<unsigned long,unsigned long> batchToResults;
     
     //testing stuff
-    //cv::Mat page;
+#if ROTATE
+    pthread_rwlock_t semRotate;
     int testIter;
     int test_rotate;
+#endif
+    //cv::Mat page;
     /*map<string,cv::Mat> pages;
     void addTestSpottings();
     void test_showResults(unsigned long id,string ngram);

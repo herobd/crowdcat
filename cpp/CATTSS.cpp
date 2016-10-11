@@ -449,7 +449,11 @@ void CATTSS::save()
         clock_t t;
         t = clock();
 #endif
-        ofstream out (savePrefix+"_CATTSS.sav");
+        string saveName = savePrefix+"_CATTSS.sav";
+        //In the event of a crash while saveing, keep a backup of the last save
+        rename( saveName.c_str() , (saveName+".bck").c_str() );
+
+        ofstream out (saveName);
 
         Lexicon::instance()->save(out);
         corpus->save(out);

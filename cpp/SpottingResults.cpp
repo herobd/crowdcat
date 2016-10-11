@@ -38,6 +38,7 @@ SpottingResults::SpottingResults(string ngram) :
 }
 
 void SpottingResults::add(Spotting spotting) {
+    assert(spotting.tlx!=-1);
     //sem_wait(&mutexSem);
     allBatchesSent=false;
     instancesById[spotting.id]=spotting;
@@ -73,6 +74,7 @@ void SpottingResults::add(Spotting spotting) {
     //sem_post(&mutexSem);
 }
 void SpottingResults::addTrueNoScore(const SpottingExemplar& spotting) {
+    assert(spotting.tlx!=-1);
     //sem_wait(&mutexSem);
     assert(spotting.score != spotting.score);
     instancesById[spotting.id]=spotting;
@@ -803,6 +805,7 @@ multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting
 //This method is to check to see if we actually have this exemplar already and then prevent is from being re-approved
 void SpottingResults::updateSpottingTrueNoScore(const SpottingExemplar& spotting)
 {
+    assert(spotting.tlx!=-1);
     assert(spotting.score != spotting.score);
 
     //Scan for possibly overlapping (the same) spottings
@@ -847,6 +850,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
     for (Spotting& spotting : *spottings)
     {
+        assert(spotting.tlx!=-1);
         //Update max and min
         if (spotting.score>maxScore)
         {
@@ -949,6 +953,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 
 void SpottingResults::save(ofstream& out)
 {
+    out<<"SPOTTINGRESULTS"<<endl;
     out<<ngram<<"\n";
     out<<numberClassifiedTrue<<"\n";
     out<<numberClassifiedFalse<<"\n";
@@ -968,6 +973,7 @@ void SpottingResults::save(ofstream& out)
     out<<instancesById.size()<<"\n";
     for (auto p : instancesById)
     {
+        assert(p.second.tlx!=-1);
         p.second.save(out);
     }
 
@@ -994,6 +1000,8 @@ void SpottingResults::save(ofstream& out)
 SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
 {
     string line;
+    getline(in,line);
+    assert(line.compare("SPOTTINGRESULTS")==0);
     getline(in,ngram);
     getline(in,line);
     numberClassifiedTrue = stoi(line);
@@ -1016,23 +1024,23 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
     getline(in,line);
     done = stoi(line);
     getline(in,line);
-    trueMean = stof(line);
+    trueMean = stod(line);
     getline(in,line);
-    trueVariance = stof(line);
+    trueVariance = stod(line);
     getline(in,line);
-    falseMean = stof(line);
+    falseMean = stod(line);
     getline(in,line);
-    falseVariance = stof(line);
+    falseVariance = stod(line);
     getline(in,line);
-    lastDifPullFromScore = stof(line);
+    lastDifPullFromScore = stod(line);
     getline(in,line);
-    momentum = stof(line);
+    momentum = stod(line);
     getline(in,line);
-    pullFromScore = stof(line);
+    pullFromScore = stod(line);
     getline(in,line);
-    maxScore = stof(line);
+    maxScore = stod(line);
     getline(in,line);
-    minScore = stof(line);
+    minScore = stod(line);
     getline(in,line);
     numLeftInRange = stoi(line);
 
