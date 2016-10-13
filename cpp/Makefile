@@ -25,11 +25,11 @@ OBJECTS = obj/TranscribeBatchQueue.o \
           obj/AlmazanSpotter.o \
           obj/AlmazanDataset.o \
           obj/tester.o \
-          obj/test.o \
           obj/CATTSS.o \
           obj/BatchWraperNewExemplars.o \
           obj/BatchWraperSpottings.o \
           obj/BatchWraperTranscription.o 
+          #obj/test.o \
           #obj/FacadeSpotter.o \
           #obj/TestQueue.o 
 

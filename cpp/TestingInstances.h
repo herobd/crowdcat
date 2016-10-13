@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <map>
+#include <list>
 #include "BatchWraperSpottings.h"
 #include "BatchWraperTranscription.h"
 #include "spotting.h"
@@ -16,7 +17,12 @@ class TestingInstances: public SpecialInstances
         TestingInstances(const Knowledge::Corpus* corpus);
         ~TestingInstances()
         {
-            for (auto p: spottings)
+            for (auto p: spottingsT)
+            {
+                for (Spotting* s : p.second)
+                    delete s;
+            }
+            for (auto p: spottingsF)
             {
                 for (Spotting* s : p.second)
                     delete s;
@@ -42,9 +48,12 @@ class TestingInstances: public SpecialInstances
         map<int, mutex> ngramsMut;
 
 
-        map<string,vector<Spotting*> > spottings;
-        map<string,vector<bool> > spottingsUsed;
-        map<string,mutex> spottingsMut;
+        map<string,vector<Spotting*> > spottingsT;
+        map<string,vector<bool> > spottingsTUsed;
+        map<string,mutex> spottingsTMut;
+        map<string,vector<Spotting*> > spottingsF;
+        map<string,vector<bool> > spottingsFUsed;
+        map<string,mutex> spottingsFMut;
 
         vector<TranscribeBatch*> trans;
         vector<bool> transUsed;

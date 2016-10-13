@@ -31,30 +31,30 @@ function printErr(err){if (err) console.log(err);}
 //SYSTEM PARAMS
 var lexiconFiles=[  "/home/brian/intel_index/data/wordsEnWithNames.txt",
                     "/home/brian/intel_index/data/wordsEnWithNames.txt",
-                    //"/home/brian/intel_index/data/names_only_f300.txt"
+                    "/home/brian/intel_index/data/names_only_f300.txt"
                  ];
 var pageImageDirs=[ "/home/brian/intel_index/data/gw_20p_wannot",
                     "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
-                    //"/home/brian/intel_index/data/us1930_census/names_only"
+                    "/home/brian/intel_index/data/us1930_census/names_only"
                   ];
 var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test.gtp",
                         "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
-                        //"/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
+                        "/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
                       ];
 var datasetNames=[  'GW',
                     'BENTHAM',
-                    //'NAMES'
+                    'NAMES'
                  ];
 
 
-var datasetNum=1;
+var datasetNum=2;
 var lexiconFile=lexiconFiles[datasetNum];
 var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
-var savePrefix="save/0_BENTHAM";
+var savePrefix="save/0_";
 var numThreadsSpotting=4;
 var numThreadsUpdating=3;
 var showWidth=2500;
@@ -65,6 +65,14 @@ var saveMode=true;
 var timingTestMode=false;
 var trainUsers=true;
 var debug=false;
+
+if (saveMode)
+    savePrefix+=datasetName
+if (timingTestMode)
+{
+    numThreadsSpotting=0;
+    savePrefix+='_tt';
+}
 
 if (timingTestMode)
 {
@@ -392,7 +400,8 @@ var ControllerApp = function(port) {
         });
         
         self.app.get('/xxx/manual*inish', function(req, res) {
-            if (req.user || debug) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
+                
                 spottingaddon.manualFinish(function (err) {
                     if (err) console.log(err);
                     res.send('ok');
@@ -401,8 +410,16 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
+        self.app.get('/xxx/resetAllWords_', function(req, res) {
+            if ((req.user && req.user.id=='herobd@gmail.com' && saveMode) || debug) {
+                spottingaddon.resetAllWords_();
+                res.send('ok, reset');
+            } else {
+                res.redirect('/login');
+            }
+        });
         self.app.get('/xxx/show_results', function(req, res) {
-            if (req.user || debug) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
                 spottingaddon.showCorpus(function (err) {
                     if (err) console.log(err);
                     res.send('ok');

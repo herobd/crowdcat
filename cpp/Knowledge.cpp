@@ -272,15 +272,20 @@ vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId
     //Harvested ngrams should be approved before spotting with them
 }
 
-void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars)
+TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars)
 {
+    TranscribeBatch* newBatch=NULL;
 #ifdef TEST_MODE
         //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
     pthread_rwlock_wrlock(&lock);
     if (!loose)
     {
+        //Given most errors are caused by misalgined ngrams and bad char width predictions
+        //loosening the regex matching might allow the correct word in
         loose=true;
+        //With the loosened constriants, we still may be able to produce a batch
+        newBatch=queryForBatch(newExemplars);
     }
     else
     {
@@ -310,6 +315,7 @@ void Knowledge::Word::error(unsigned long batchId, bool resend, vector< pair<uns
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
+    return newBatch;
 }
 
 TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* newExemplars, bool findBatch)
@@ -1975,7 +1981,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
                 }
                 else
                 {
-                    for (Spotting& s : word->getSpottings())
+                    vector<Spotting> sps = word->getSpottings();
+                    for (Spotting& s : sps)
                         for (int x=s.tlx; x<=s.brx; x++)
                             for (int y=s.tly; y<=s.bry; y++)
                             {
@@ -2594,7 +2601,7 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     for (int i=0; i<sSize; i++)
     {
         getline(in,line);
-        unsigned long sid=stoi(line);
+        unsigned long sid=stoul(line);
         string ngram;
         getline(in,ngram);
         harvested.insert(make_pair(sid,ngram));
@@ -2605,7 +2612,7 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     for (int i=0; i<sSize; i++)
     {
         getline(in,line);
-        unsigned long sid=stoi(line);
+        unsigned long sid=stoul(line);
         getline(in,line);
         int sSize2=stoi(line);
         removedSpottings[sid].resize(sSize2);
@@ -2614,4 +2621,27 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
             removedSpottings.at(sid).at(j)=Spotting(pagePnt,in);
         }
     }
+}
+
+//For data collection, when I deleted all my trans... :(
+vector<TranscribeBatch*> Knowledge::Corpus::resetAllWords_()
+{
+    vector<TranscribeBatch*> ret;
+    vector<Spotting*> newExemplars;
+    for (Word* w : _words)
+    {
+        TranscribeBatch* b = w->reset_(&newExemplars);
+        if (b!=NULL)
+            ret.push_back(b);
+    }
+    return ret;
+}
+
+TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
+{
+    done=false;
+    loose=false;
+    transcription="";
+    query="";
+    return queryForBatch(newExemplars);
 }

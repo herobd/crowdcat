@@ -155,6 +155,10 @@ public:
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,batchId,resend,NULL,newExemplars,toRemoveExemplars);}
     
+    vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
+
+    TranscribeBatch* error(unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
+
     void getBaselines(int* top, int* bot);
     void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
     {
@@ -201,9 +205,6 @@ public:
         pthread_rwlock_unlock(&lock);
     }
 
-    vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
-
-    void error(unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
 
     vector<Spotting> getSpottings() 
     {
@@ -259,6 +260,9 @@ public:
     }
     string getGT() {return gt;}
     void preapproveSpotting(Spotting* spotting);
+
+    //For data collection, when I deleted all my trans... :(
+    TranscribeBatch* reset_(vector<Spotting*>* newExemplars);
 };
 
 class Line
@@ -493,6 +497,9 @@ public:
     Word* getWord(unsigned int i) const;
     CorpusRef* getCorpusRef();
     PageRef* getPageRef();
+
+    //For data collection, when I deleted all my trans... :(
+    vector<TranscribeBatch*> resetAllWords_();
 };
 
 }

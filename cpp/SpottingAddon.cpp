@@ -188,6 +188,9 @@ NAN_METHOD(manualFinish) {
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "manualFinish"));
 }
+NAN_METHOD(resetAllWords_) {
+    cattss->resetAllWords_();
+}
 NAN_METHOD(showCorpus) {
     Callback *callback = new Callback(info[0].As<Function>());
 
@@ -454,6 +457,9 @@ NAN_MODULE_INIT(Init) {
     
     Nan::Set(target, New<v8::String>("start").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(start)).ToLocalChecked());
+
+    Nan::Set(target, New<v8::String>("resetAllWords_").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(resetAllWords_)).ToLocalChecked());
     /*testQueue = new TestQueue();
     
     Nan::Set(target, New<v8::String>("getNextTestBatch").ToLocalChecked(),

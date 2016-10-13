@@ -17,7 +17,7 @@
 #include "tester.h"
 #endif
 
-#define CHECK_SAVE_TIME 3
+#define CHECK_SAVE_TIME 6
 
 #define NEW_EXEMPLAR_TASK 1
 #define TRANSCRIPTION_TASK 2
@@ -132,5 +132,8 @@ class CATTSS
 #ifdef NO_NAN
     friend class Tester;
 #endif
+
+    //For data collection, when I deleted all my trans... :(
+    void resetAllWords_();
 };
 #endif

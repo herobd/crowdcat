@@ -57,6 +57,12 @@ CATTSS::CATTSS( string lexiconFile,
             taskQueue.push_back(new UpdateTask(in));
             sem_post(&semLock);
         }
+        getline(in,line);
+        SpottingsBatch::setIdCounter(stoul(line));
+        getline(in,line);
+        NewExemplarsBatch::setIdCounter(stoul(line));
+        getline(in,line);
+        TranscribeBatch::setIdCounter(stoul(line));
         in.close();
     }
     else
@@ -311,6 +317,13 @@ void CATTSS::stop()
         sem_post(&semLock);
 }
 
+//For data collection, when I deleted all my trans... :(
+void CATTSS::resetAllWords_()
+{
+    vector<TranscribeBatch*> bs = corpus->resetAllWords_();
+    vector<unsigned long> toRemoveBatches;        
+    masterQueue->enqueueTranscriptionBatches(bs,&toRemoveBatches);
+}
 
 void CATTSS::threadLoop()
 {
@@ -467,6 +480,10 @@ void CATTSS::save()
             u->save(out);
         }
         taskQueueLock.unlock();
+
+        out<<SpottingsBatch::getIdCounter()<<"\n";
+        out<<NewExemplarsBatch::getIdCounter()<<"\n";
+        out<<TranscribeBatch::getIdCounter()<<"\n";
         out.close();
 #ifdef TEST_MODE
         t = clock() - t;

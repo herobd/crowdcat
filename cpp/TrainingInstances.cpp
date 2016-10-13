@@ -9,8 +9,8 @@ TrainingInstances::TrainingInstances()
     letsgo= cv::imread("data/trainingImages/letsgo.png", CV_LOAD_IMAGE_GRAYSCALE);
     spotting_0 = Spotting(398,7,435,57,  0,&line,"he",0);
     spotting_1 = Spotting(192,7,225,55,  0,&line,"he",0);
-    spotting_2 = Spotting(547,9,582,53,  0,&line,"he",0);
-    spotting_3 = Spotting(120,4,161,52,  0,&line,"he",0);
+    spotting_2 = Spotting(547,9,585,53,  0,&line,"he",0);
+    spotting_3 = Spotting(130,4,188,52,  0,&line,"he",0);
     spotting_4 = Spotting(587,15,632,63,  0,&line,"or",0);
     spotting_5 = Spotting(207,5,235,54,  0,&line,"or",0);
     spotting_6 = Spotting(628,21,654,62,  0,&line,"in",0);

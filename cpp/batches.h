@@ -107,7 +107,11 @@ public:
     
     virtual ~SpottingsBatch()
     {
-    }    
+    }
+
+    //For saving and loading
+    static unsigned long getIdCounter() {return _batchId.load();}
+    static void setIdCounter(unsigned long id) {_batchId.store(id);}
     
 private:
     static std::atomic_ulong _batchId;
@@ -162,6 +166,10 @@ public:
     bool isManual() {return manual;}
     string getGT() {return gt;}
     double getScale() {return scale;}
+
+    //For saving and loading
+    static unsigned long getIdCounter() {return _id.load();}
+    static void setIdCounter(unsigned long id) {_id.store(id);}
 };
 
 
@@ -186,6 +194,10 @@ public:
     SpottingImage & at(int i) {return instances.at(i);}
     unsigned int size() const { return instances.size();}
     unsigned long getId() {return batchId;}
+    
+    //For saving and loading
+    static unsigned long getIdCounter() {return _batchId.load();}
+    static void setIdCounter(unsigned long id) {_batchId.store(id);}
     
 private:
     static std::atomic_ulong _batchId;

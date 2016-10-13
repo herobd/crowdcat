@@ -1069,4 +1069,5 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
         getline(in,line);
         classById[sid] = stoi(line);
     }
+    tracer = instancesByScore.begin();
 }

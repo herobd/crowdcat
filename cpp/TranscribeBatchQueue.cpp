@@ -87,11 +87,15 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
         if ((transcription[0]=='$' && transcription[transcription.length()-1]=='$') || transcription.length()==0)
         {
             if (transcription.compare("$ERROR$")==0)
-            {//This probably will occur with bad segmentation
-                backPointer->error(id,resend,toRemoveExemplars);//change into manual batch or remove spottings?
-                cout<<"ERROR returned for trans "<<id<<endl;
+            {//This may occur with bad segmentation, but primarily just bad ngram alignments
+                TranscribeBatch* newBatch = backPointer->error(id,resend,&newNgramExemplars,toRemoveExemplars);//change into manual batch or remove spottings?
+                if (newBatch!=NULL)
+                    queue.push_back(newBatch);
                 if (!resend)
+                {
+                    doneMap[id] = backPointer;
                     delete returnMap[id];
+                }
             }
             else if (transcription.length()>9 && transcription.substr(0,8).compare("$REMOVE:")==0)
             {
@@ -191,7 +195,7 @@ void TranscribeBatchQueue::save(ofstream& out)
     for (TranscribeBatch* t : queue)
     {
         t->save(out);
-    } 
+    }
     //we skip the doneMap as it is only used on resends
     unlock();
 }

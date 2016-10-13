@@ -682,6 +682,7 @@ void MasterQueue::save(ofstream& out)
 
     out<<finish.load()<<"\n";
     out<<numCTrue<<"\n"<<numCFalse<<"\n";
+
     //out.close();    
 }
 MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
@@ -689,6 +690,9 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     finish.store(false);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
+#if ROTATE
+    pthread_rwlock_init(&semRotate,NULL);
+#endif
     kill.store(false);
     
     //ifstream in(loadPrefix);

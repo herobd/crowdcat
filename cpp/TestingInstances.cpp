@@ -7,7 +7,7 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
     //s = same ngram spotting (as previous)
     //t = transcription
     //m = manual transcription
-     /*testNumType={  'n',
+     testNumType={  'n',
                     's',
                     's',
                     'n',
@@ -21,6 +21,7 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     's',
                     's',
                     's',
+                    's',
                     'n',
                     't',
                     't',
@@ -31,9 +32,8 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     'm',
                     'm',
                     'm',
-                    'm',
-     };*/
-    testNumType={'t','t','t','t','t','t'};
+     };
+    //testNumType={'t','t','t','t','t','t'};
     //dummyWord = new Knowledge::Word(0,0,0,0,NULL,NULL,NULL,NULL,0);
 }
 
@@ -65,7 +65,10 @@ BatchWraper* TestingInstances::getBatch(int width, int color, string prevNgram, 
 
 void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx, int tly, int brx, int bry)
 {
-    spottings[ngram].push_back(new Spotting(tlx,tly,brx,bry,pageId,corpus->imgForPageId(pageId),ngram,0,label?1:0));
+    if (label)
+        spottingsT[ngram].push_back(new Spotting(tlx,tly,brx,bry,pageId,corpus->imgForPageId(pageId),ngram,0,label?1:0));
+    else
+        spottingsF[ngram].push_back(new Spotting(tlx,tly,brx,bry,pageId,corpus->imgForPageId(pageId),ngram,0,label?1:0));
     //if (ngramList.find(ngram) == ngramList.end())
     //{
     //    ngramList.push_back(ngram);
@@ -102,11 +105,20 @@ void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotti
 
 void TestingInstances::allLoaded()
 {
-    for (auto p : spottings)
+    for (auto p : spottingsT)
     {
+        if (spottingsT.size()>=spottingsF.size())
+            ngramList.push_back(p.first);
+        spottingsTUsed[p.first].resize(p.second.size());
+        spottingsTMut[p.first];
+    }
+    for (auto p : spottingsF)
+    {
+        if (spottingsT.size()<spottingsF.size())
+            ngramList.push_back(p.first);
         ngramList.push_back(p.first);
-        spottingsUsed[p.first].resize(p.second.size());
-        spottingsMut[p.first];
+        spottingsFUsed[p.first].resize(p.second.size());
+        spottingsFMut[p.first];
     }
     for (int n=0; n<testNumType.size(); n++)
     {
@@ -145,11 +157,39 @@ int TestingInstances::getNextIndex(vector<bool>& setUsed, mutex& mutLock)
 BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int color, string prevNgram, int testingNum)
 {
     SpottingsBatch* batch = new SpottingsBatch(ngram,testingNum);
+    //This gives a batches with a uniform distribution as to their T/F ratio,
+    //assuming we have enough True examples of the ngram
+    int numTrue = rand()%min(6, 1+(int)(spottingsT[ngram].size()/2));
+    list<Spotting*> batchInsts;
+    for (int i=0; i<numTrue; i++)
+    {
+        int idx = getNextIndex(spottingsTUsed[ngram], spottingsTMut[ngram]);
+        cout<<"True spot: "<<idx<<" of "<<spottingsT[ngram].size()<<endl;
+        Spotting* spotting = spottingsT[ngram][ idx ];
+        batchInsts.push_back(spotting);
+    }
+    for (int i=numTrue; i<5; i++)
+    {
+        int idx = getNextIndex(spottingsFUsed[ngram], spottingsFMut[ngram]);
+        cout<<"False spot: "<<idx<<" of "<<spottingsF[ngram].size()<<endl;
+        Spotting* spotting = spottingsF[ngram][ idx ];
+        batchInsts.push_back(spotting);
+    }
     for (int i=0; i<5; i++)
     {
-        int idx = getNextIndex(spottingsUsed[ngram], spottingsMut[ngram]);
-        Spotting* spotting = spottings[ngram][ idx ];
-        batch->push_back(SpottingImage(*spotting,width,color,prevNgram));            
+        bool front = rand()%2;
+        Spotting* spotting;
+        if (front)
+        {
+            spotting = batchInsts.front();
+            batchInsts.pop_front();
+        }
+        else
+        {
+            spotting = batchInsts.back();
+            batchInsts.pop_back();
+        }
+        batch->push_back(SpottingImage(*spotting,width,color,prevNgram));        
     }
     BatchWraper* ret = new BatchWraperSpottings(batch);
     return ret;
@@ -158,12 +198,14 @@ BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int co
 BatchWraper* TestingInstances::getTransBatch(int width)
 {
     TranscribeBatch* batch = trans[ getNextIndex(transUsed, transMut) ];
+    cout<<"trans batch: "<<batch->getId()<<" of "<<trans.size()<<endl;
     batch->setWidth(width);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }
 BatchWraper* TestingInstances::getManTransBatch(int width)
 {
     TranscribeBatch* batch = manTrans[ getNextIndex(manTransUsed, manTransMut) ];
+    cout<<"man batch: "<<batch->getId()<<" of "<<manTrans.size()<<endl;
     batch->setWidth(width);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }

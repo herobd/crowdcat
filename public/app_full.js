@@ -223,6 +223,8 @@ function handleTouchMove(evt) {
     if ( ! this.xDown || !swipeOn) {
         return;
     }
+    if (!ondeck)
+        highlightLast();
     
     var xUp;
     if (evt.touches)
@@ -310,6 +312,8 @@ function createInlineLabel(label) {
 }
 
 function undo() {
+    if (!ondeck)
+        highlightLast();
     if (lastRemovedEle.length>0) {
         //countUndos++;
         ondeck.classList.toggle('ondeck');
@@ -820,6 +824,8 @@ function classify(id,word) {
 }
 function classifyR(id,vFunc) {
     return function(ele) {
+        if (!ondeck)
+            highlightLast();
         lastRemovedEle.push(ondeck);
         
         if (lastRemovedEle.length>10) {
@@ -1071,6 +1077,8 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
 }
 
 function pass() {
+    if (!ondeck)
+        highlightLast();
     if (ondeck.classList.contains('transcription')) {
         classify(batchQueue[0].type+batchQueue[0].id,'$PASS$')();
     } else if (ondeck.classList.contains('spotting')) {
@@ -1079,11 +1087,12 @@ function pass() {
 }
 
 function exit() {
-        toBeInQueue=0;
-        while (batchQueue.length>0){
-            pass();
-        }
-        history.go(-1);
+    allReceived=true;
+    toBeInQueue=0;
+    while (batchQueue.length>0){
+        pass();
+    }
+    history.go(-1);
 }
 
 /*window.onbeforeunload = confirmExit;
