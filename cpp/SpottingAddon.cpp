@@ -227,6 +227,7 @@ NAN_METHOD(start) {
     int height = To<int>(info[7]).FromJust();
     int width = To<int>(info[8]).FromJust();
     int milli = To<int>(info[9]).FromJust();
+    int contextPad = To<int>(info[10]).FromJust();
     cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
@@ -236,7 +237,8 @@ NAN_METHOD(start) {
                         numTaskThreads,
                         height,
                         width,
-                        milli);
+                        milli,
+                        contextPad);
                         
 }
 NAN_METHOD(stopSpotting) {

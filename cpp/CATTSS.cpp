@@ -34,10 +34,12 @@ CATTSS::CATTSS( string lexiconFile,
                 int numTaskThreads,
                 int showHeight,
                 int showWidth,
-                int showMilli ) : savePrefix(savePrefix)
+                int showMilli,
+                int contextPad ) : savePrefix(savePrefix)
 {
     cont.store(1);
     sem_init(&semLock, 0, 0);
+    GlobalK::knowledge()->setContextPad(contextPad);
 
     ifstream in (savePrefix+"_CATTSS.sav");
     if (in.good())

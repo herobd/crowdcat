@@ -117,8 +117,10 @@ void TranscribeBatch::setWidth(unsigned int width)
 
     int wordH = wordImg.rows;
     int wordW = wordImg.cols;
+    int topPad = min(GlobalK::knowledge()->getContextPad(), tly);
+    int bottomPad = min(GlobalK::knowledge()->getContextPad(), origImg->rows-(bry+1));
+    int wordHPad = wordH+topPad+bottomPad;
     //int textH= textImg.rows;
-    newWordImg = cv::Mat::zeros(wordH,width,origImg->type());
     //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
     int padLeft = max((((int)width)-wordW)/2,0);
     for (SpottingPoint& sp : spottingPoints)
@@ -126,6 +128,7 @@ void TranscribeBatch::setWidth(unsigned int width)
     scale=1.0;
     if (width>=wordW)
     {
+        newWordImg = cv::Mat::zeros(wordHPad,width,origImg->type());
         if (width>wordW) {
             int cropX = (tlx-padLeft>=0)?tlx-padLeft:0;
             int pasteX = (tlx-padLeft>=0)?0:padLeft-tlx;
@@ -133,20 +136,27 @@ void TranscribeBatch::setWidth(unsigned int width)
             if (cropWidth+cropX>=(*origImg).cols) {
                 cropWidth=(*origImg).cols-cropX;
             }
-            (*origImg)(cv::Rect(cropX,tly,cropWidth,wordH)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordH)));
+            (*origImg)(cv::Rect(cropX,tly-topPad,cropWidth,wordHPad)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordHPad)));
 
         }
         if (newWordImg.type() != CV_8UC3)
             cv::cvtColor(newWordImg,newWordImg,CV_GRAY2RGB);
-        wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, 0, wordW, wordH)));
+        wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(padLeft, topPad, wordW, wordH)));
         //textImg(cv::Rect(0,0,wordW,textH)).copyTo(newTextImg(cv::Rect(padLeft, 0, wordW, textH)));
     }
     else
     {
+        
+        newWordImg = cv::Mat::zeros(wordHPad,wordW,origImg->type());
+        (*origImg)(cv::Rect(tlx,tly-topPad,wordW,wordHPad)).copyTo(newWordImg(cv::Rect(0, 0, wordW, wordHPad)));
+        if (newWordImg.type() != CV_8UC3)
+            cv::cvtColor(newWordImg,newWordImg,CV_GRAY2RGB);
+        wordImg(cv::Rect(0,0,wordW,wordH)).copyTo(newWordImg(cv::Rect(0, topPad, wordW, wordH)));
         scale = width/(0.0+wordW);//we save the scale to allow a proper display of ngram locations
-        cv::resize(wordImg(cv::Rect(0,0,wordW,wordH)), newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
+        cv::resize(newWordImg, newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
         //cv::resize(textImg(cv::Rect(0,0,wordW,textH)), newTextImg, cv::Size(), scale,1, cv::INTER_CUBIC );
     }
+
 #ifdef TEST_MODE_LONG
     //cout <<"transcription word"<<endl;
     //cv::imshow("trans",newWordImg);

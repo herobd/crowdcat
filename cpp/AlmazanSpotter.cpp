@@ -11,16 +11,20 @@ AlmazanSpotter::AlmazanSpotter(const Dataset* corpus, string modelPrefix)
 vector<SpottingResult> AlmazanSpotter::runQuery(SpottingQuery* query) const
 {
     float alpha=ALPHA;
+    float refinePortion=0.15;
     if (query->getImg().cols==0)
+    {
         alpha=0.0;
+        refinePortion=0.25;
+    }
     vector< SubwordSpottingResult > res;
     if (query->getImg().channels()==1)
-       res = spotter->subwordSpot(query->getImg(), query->getNgram(), alpha);
+       res = spotter->subwordSpot(query->getImg(), query->getNgram(), alpha,refinePortion);
     else
     {
         cv::Mat gray;
         cv::cvtColor(query->getImg(),gray,CV_RGB2GRAY);
-        res = spotter->subwordSpot(gray, query->getNgram(), alpha);
+        res = spotter->subwordSpot(gray, query->getNgram(), alpha,refinePortion);
     }
 
     vector <SpottingResult> ret(res.size());

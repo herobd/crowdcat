@@ -66,9 +66,27 @@ BatchWraper* TestingInstances::getBatch(int width, int color, string prevNgram, 
 void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx, int tly, int brx, int bry)
 {
     if (label)
+    {
+        for (const Spotting* s : spottingsT)
+        {
+            if (pageId == s->pageId && ngram.compare(s->ngram)==0 &&
+                abs(tlx-s->tlx)<5 && abs(tly-s->tly)<5 &&
+                abs(brx-s->brx)<5 && abs(bry-s->bry)<5)
+                return;
+        }
         spottingsT[ngram].push_back(new Spotting(tlx,tly,brx,bry,pageId,corpus->imgForPageId(pageId),ngram,0,label?1:0));
+    }
     else
+    {
+        for (const Spotting* s : spottingsF)
+        {
+            if (pageId == s->pageId && ngram.compare(s->ngram)==0 &&
+                abs(tlx-s->tlx)<5 && abs(tly-s->tly)<5 &&
+                abs(brx-s->brx)<5 && abs(bry-s->bry)<5)
+                return;
+        }
         spottingsF[ngram].push_back(new Spotting(tlx,tly,brx,bry,pageId,corpus->imgForPageId(pageId),ngram,0,label?1:0));
+    }
     //if (ngramList.find(ngram) == ngramList.end())
     //{
     //    ngramList.push_back(ngram);
@@ -91,10 +109,22 @@ void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotti
     }
     if (manual)
     {
+        for (const TranscribeBatch* b : manTrans)
+        {
+            if (w == b->getBackPointer())
+                return;
+        }
         manTrans.push_back(new TranscribeBatch(w,poss,corpus->imgForPageId(pageId),&spottings,tlx,tly,brx,bry,label));
     }
     else
     {
+        for (const TranscribeBatch* b : manTrans)
+        {
+            if (w == b->getBackPointer() && 
+                spottings.size()==b->getSpottinPoints().size() && 
+                label.compare(b->getGT())==0)
+                return;
+        }
         multimap<float,string> scored;
         for (int i=0; i< poss.size(); i++)
             scored.insert( make_pair(i,poss[i]) );
@@ -164,14 +194,14 @@ BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int co
     for (int i=0; i<numTrue; i++)
     {
         int idx = getNextIndex(spottingsTUsed[ngram], spottingsTMut[ngram]);
-        cout<<"True spot: "<<idx<<" of "<<spottingsT[ngram].size()<<endl;
+        //cout<<"True spot: "<<idx<<" of "<<spottingsT[ngram].size()<<endl;
         Spotting* spotting = spottingsT[ngram][ idx ];
         batchInsts.push_back(spotting);
     }
     for (int i=numTrue; i<5; i++)
     {
         int idx = getNextIndex(spottingsFUsed[ngram], spottingsFMut[ngram]);
-        cout<<"False spot: "<<idx<<" of "<<spottingsF[ngram].size()<<endl;
+        //cout<<"False spot: "<<idx<<" of "<<spottingsF[ngram].size()<<endl;
         Spotting* spotting = spottingsF[ngram][ idx ];
         batchInsts.push_back(spotting);
     }
@@ -198,14 +228,14 @@ BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int co
 BatchWraper* TestingInstances::getTransBatch(int width)
 {
     TranscribeBatch* batch = trans[ getNextIndex(transUsed, transMut) ];
-    cout<<"trans batch: "<<batch->getId()<<" of "<<trans.size()<<endl;
+    //cout<<"trans batch: "<<batch->getId()<<" of "<<trans.size()<<endl;
     batch->setWidth(width);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }
 BatchWraper* TestingInstances::getManTransBatch(int width)
 {
     TranscribeBatch* batch = manTrans[ getNextIndex(manTransUsed, manTransMut) ];
-    cout<<"man batch: "<<batch->getId()<<" of "<<manTrans.size()<<endl;
+    //cout<<"man batch: "<<batch->getId()<<" of "<<manTrans.size()<<endl;
     batch->setWidth(width);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }

@@ -124,12 +124,12 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
             {
                 queue.push_front(returnMap[id]);
             }
-            else
+            /*else
             {
                 cout << "invalid_argument TranscribeBatchQueue::feedback(#,"<<transcription<<")"<<endl;
                 if (!resend)
                     queue.push_front(returnMap[id]);
-            }
+            }*/
         }
         else
         {

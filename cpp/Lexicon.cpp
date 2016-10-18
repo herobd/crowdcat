@@ -72,7 +72,8 @@ bool Lexicon::readIn(string fileName, string field)
         word = regex_replace (word,notWordChar,"");
         
         //words_lineSeperated+=word+"\n";
-        words.push_back(word);
+        if (find(words.begin(), words.end(), word) == words.end()) //prevent duplicates
+            words.push_back(word);
     }
     in.close();
     return true;
@@ -106,12 +107,15 @@ void Lexicon::load(ifstream& in)
         int wSize;
         in>>wSize;
         in.get();
-        fields[fieldName].resize(wSize);
+        //fields[fieldName].resize(wSize);
+        fields[fieldName];
         for (int j=0; j<wSize; j++)
         {
             string word;
             getline(in,word);
-            fields.at(fieldName).at(j)=word;
+            //prevent dup, so that my change will work with current save file
+            if (find(fields.at(fieldName).begin(), fields.at(fieldName).end(), word) == fields.at(fieldName).end())
+                fields.at(fieldName).push_back(word);
         }
     }
     //in.close();

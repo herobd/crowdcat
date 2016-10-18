@@ -107,9 +107,10 @@ class CATTSS
             string savePrefix,
             int numSpottingThreads,
             int numTaskThreads,
-            int showHeight,
-            int showWidth,
-            int showMilli );
+            int showHeight,     //Height of showProgress image
+            int showWidth,      //Width of showProgress image
+            int showMilli,      //How frequently to save showProgress
+            int contextPad );    //how many pixels to arbitrarly pad to the bottom of images sent to users (for NAMES)
     ~CATTSS()
     {
         delete incompleteChecker;

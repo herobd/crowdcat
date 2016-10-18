@@ -41,10 +41,14 @@ var segmentationFiles=[ "/home/brian/intel_index/EmbAttSpotter/test/queries_test
                         "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
                         "/home/brian/intel_index/data/us1930_census/names_only/seg_names_corpus.gtp"
                       ];
-var datasetNames=[  'GW',
-                    'BENTHAM',
-                    'NAMES'
+var datasetNames=[  'GW',       //0
+                    'BENTHAM',  //1
+                    'NAMES'     //2
                  ];
+var contextPads=[ 0,
+                 0,
+                 15
+               ];
 
 
 var datasetNum=2;
@@ -52,10 +56,10 @@ var lexiconFile=lexiconFiles[datasetNum];
 var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
-
+var contextPad=contextPads[datasetNum];
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
 var savePrefix="save/0_";
-var numThreadsSpotting=4;
+var numThreadsSpotting=5;
 var numThreadsUpdating=3;
 var showWidth=2500;
 var showHeight=1000;
@@ -441,8 +445,7 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
-        
-        self.app.get('/app/nextBatch', function(req, res) {
+        self.nextBatch =  function(req, res) {
             res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1.
             res.setHeader("Pragma", "no-cache"); // HTTP 1.0.
             res.setHeader("Expires", "0"); // Proxies.
@@ -534,12 +537,35 @@ var ControllerApp = function(port) {
                     spottingaddon.getNextBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
                                 if (batchType==='spottings') {
-                                    res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
                                     if (saveMode && req.query.save) {
-                                        for (var index=0; index<arg5.length; index++) {
-                                            var spotting = arg5[index];
-                                            self.saveSpottingsQueue[spotting.id] = {ngram:arg4, loc:loc[index], label:null};
+                                        var tmpSpottings=arg5;
+                                        var arg5=[];
+                                        var doneIds=[];
+                                        var doneLabels=[];
+                                        for (var index=0; index<tmpSpottings.length; index++) {
+                                            var spotting = tmpSpottings[index];
+                                            if (correct[index]=='UNKNOWN')
+                                            {
+                                                self.saveSpottingsQueue[spotting.id] = {ngram:arg4, loc:loc[index], label:null, gt:correct[index]};
+                                                arg5.push(spotting);
+                                            } else {
+                                                doneIds.push(spotting.id);
+                                                doneLabels.push(+correct[index]);
+                                                var toSave = {ngram:arg4, loc:loc[index], label:+correct[index], gt:correct[index]};
+                                                self.database.saveSpotting(datasetName,spotting.id,toSave);
+                                            }
                                         }
+                                        if (doneIds.length>0) {
+                                            console.log('auto completed '+doneIds.length+' '+arg4+' spottings');
+                                            spottingaddon.spottingBatchDone(arg3,doneIds,doneLabels,0,printErr);
+                                        }
+                                        if (arg5.length>0) {
+                                            res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                                        } else {
+                                            self.nextBatch(req,res);
+                                        }
+                                    } else {
+                                        res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
                                     }
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {
@@ -574,7 +600,8 @@ var ControllerApp = function(port) {
             } else {
                 res.redirect('/login');
             }
-        });
+        };
+        self.app.get('/app/nextBatch',self.nextBatch);
         
         
         
@@ -687,9 +714,14 @@ var ControllerApp = function(port) {
                         spottingaddon.spottingBatchDone(req.body.resultsId,req.body.ids,req.body.labels,resend,printErr);
                         if (saveMode && req.query.save) {
                             for (var index=0; index<req.body.ids.length; index++) {
-                                if (req.body.labels[index]!==-1) {
+                                if (req.body.labels[index]!==-1 ) {
                                     if (!self.saveSpottingsQueue[req.body.ids[index]])
                                         self.saveSpottingsQueue[req.body.ids[index]]={};
+                                    else if (self.saveSpottingsQueue[req.body.ids[index]].gt!='UNKNOWN' &&
+                                             (+self.saveSpottingsQueue[req.body.ids[index]].gt)!=req.body.labels[index]) {
+                                         console.log("wrong spotting label, correcting");
+                                         req.body.labels[index] = (+self.saveSpottingsQueue[req.body.ids[index]].gt);
+                                    } 
                                     self.saveSpottingsQueue[req.body.ids[index]].label = req.body.labels[index];
                                     self.database.saveSpotting(datasetName,req.body.ids[index],self.saveSpottingsQueue[req.body.ids[index]]);
                                     self.saveSpottingsQueue[req.body.ids[index]]=null;
@@ -851,7 +883,8 @@ var ControllerApp = function(port) {
                                     numThreadsUpdating,
                                     showHeight,
                                     showWidth,
-                                    showMilli);
+                                    showMilli,
+                                    contextPads[i]);
             }
 
         } else { 
@@ -864,7 +897,8 @@ var ControllerApp = function(port) {
                                 numThreadsUpdating,
                                 showHeight,
                                 showWidth,
-                                showMilli);
+                                showMilli,
+                                contextPad);
         }
 
         self.database=new Database('localhost:27017/cattss', datasetNames, function(database) {

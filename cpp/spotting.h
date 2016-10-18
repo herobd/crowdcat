@@ -133,10 +133,12 @@ public:
     SpottingType type;
     virtual const cv::Mat img() const
     {
+        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
     virtual const cv::Mat ngramImg() const
     {
+        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
     }
     int ngramRank;
@@ -159,15 +161,19 @@ public:
         int sideFromR = (oneSide- (brx-tlx)/2);
         int left = tlx-sideFromR;
         int right = brx+sideFromR-1;
+        int topPad = min(GlobalK::knowledge()->getContextPad(), tly);
+        int bottomPad = min(GlobalK::knowledge()->getContextPad(), s.pagePnt->rows-(bry+1));
+        int heightPad = bry-tly+1+topPad+bottomPad;
         //cout <<"getting image window... sideFromR="<<sideFromR<<", oneSide="<<oneSide<<", tlx="<<tlx<<", brx="<<brx<<", left="<<left<<", right="<<right<<endl;
         if (left>=0 && right<s.pagePnt->cols)
         {   
             //cout <<"normal: "<<left<<" "<<tly<<" "<<right-left<<" "<<bry-tly<<endl;
-            image = ((*s.pagePnt)(cv::Rect(left,tly,right-left,bry-tly))).clone();
+            assert(tly>=0 && bry<s.pagePnt->rows);
+            image = ((*s.pagePnt)(cv::Rect(left,tly-topPad,right-left,heightPad))).clone();
         }
         else
         {
-            image = cv::Mat(bry-tly,maxWidth,s.pagePnt->type());
+            image = cv::Mat(heightPad,maxWidth,s.pagePnt->type());
             if (image.channels()==1)
                 image.setTo(cv::Scalar(10));
             else
@@ -178,7 +184,9 @@ public:
                 right = s.pagePnt->cols-1;
             //cout <<"adjusted from: "<<newLeft<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
             //cout <<"adjusted to: "<<leftOff<<" "<<0<<" "<<right-newLeft<<" "<<bry-tly<<endl;
-            (*s.pagePnt)(cv::Rect(newLeft,tly,right-newLeft,bry-tly)).copyTo(image(cv::Rect(leftOff,0,right-newLeft,bry-tly)));
+            assert(newLeft>=0 && tly-topPad>=0 && right<s.pagePnt->cols && bry+bottomPad<s.pagePnt->rows);
+            assert(leftOff>=0 && right-newLeft<image.cols && heightPad<=image.rows);
+            (*s.pagePnt)(cv::Rect(newLeft,tly-topPad,right-newLeft,heightPad)).copyTo(image(cv::Rect(leftOff,0,right-newLeft,heightPad)));
         }
         //cout <<"done, now coloring..."<<endl;
         if (image.channels()==1)
@@ -193,7 +201,7 @@ public:
         {
             color=(color+1)%5;
         }
-        for (int r=0; r<bry-tly; r++)
+        for (int r=0; r<bry-tly+1; r++)
             for (int c=sideFromR-FUZZY; c<sideFromR+brx-tlx+FUZZY; c++)
             {
                 //if (left==1117 && tly==186 && (r==10 || r==5) && c==300)
@@ -205,7 +213,7 @@ public:
                 //cout.flush();
                 if (c>=0 && c<image.cols)
                 {
-                    cv::Vec3b& pix = image.at<cv::Vec3b>(r,c);
+                    cv::Vec3b& pix = image.at<cv::Vec3b>(r+topPad,c);
                     //cout <<"):";
                     //cout.flush();
                     //cout<<(int)pix[0];

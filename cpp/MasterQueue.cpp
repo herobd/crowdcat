@@ -336,7 +336,12 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             if (batch!=NULL)
                 break;
             else
+            {
                 pthread_rwlock_rdlock(&semResultsQueue);
+#if ROTATE
+                pthread_rwlock_rdlock(&semRotate);
+#endif
+            }
             
         }
         //else

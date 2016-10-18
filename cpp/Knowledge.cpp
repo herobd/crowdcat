@@ -478,11 +478,15 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
 #ifdef TEST_MODE
     cout<<endl;
 #endif
+    if (min==max)
+        return scores;
+
     vector<int> histogram(100);
     for (auto p : scores)
     {
-        int bin = 100*(p.first-min)/(max-min);
-        histogram[bin]++;
+        int bin = 99*(p.first-min)/(max-min);
+        
+        histogram.at(bin)++;
     }
     float thresh = (GlobalK::otsuThresh(histogram)/100)*(max-min)+min;
     
@@ -1928,9 +1932,15 @@ void Knowledge::Corpus::show()
 }
 void Knowledge::Corpus::showProgress(int height, int width)
 {
-    //I'll assume all page images are the same dimensions
-    int pageH=pages.begin()->second->getImg()->rows;
-    int pageW=pages.begin()->second->getImg()->cols;
+    pthread_rwlock_rdlock(&pagesLock);
+    int pageH=0;//pages.begin()->second->getImg()->rows;
+    int pageW=0;//pages.begin()->second->getImg()->cols;
+    for (auto p : pages)
+    {
+        Page* page = p.second;
+        pageH = max(pageH,page->getImg()->rows);
+        pageW = max(pageW,page->getImg()->cols);
+    }
     float resizeScale=.001;
     int nAcross, nDown;
     for (float scale=0.5; scale>.001; scale-=.001)
@@ -1945,7 +1955,6 @@ void Knowledge::Corpus::showProgress(int height, int width)
     }
     cv::Mat draw = cv::Mat::zeros(height,width,CV_8UC3);
     draw = cv::Scalar(100,100,100);
-    pthread_rwlock_rdlock(&pagesLock);
     int xPos=0;
     int yPos=0;
     int across=0;
@@ -1997,6 +2006,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
         //cout <<"page dims: "<<workingIm.rows<<", "<<workingIm.cols<<"  at: "<<xPos<<", "<<yPos<<endl;
         //cv::imshow("test",workingIm);
         //cv::waitKey();
+        assert(xPos>=0 && yPos>=0 && xPos+workingIm.cols<draw.cols && yPos+workingIm.rows<draw.rows);
         workingIm.copyTo(draw(cv::Rect(xPos,yPos,workingIm.cols,workingIm.rows)));
         xPos+=workingIm.cols;
         if (++across >= nAcross)
@@ -2253,12 +2263,24 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
         Knowledge::Word* w = getWord(res[i].imIdx);
         int tlx, tly, brx, bry;
         bool done;
-        int gt=UNKNOWN_GT;
+        int gt=0;//UNKNOWN_GT;
         string wordGT;
         w->getBoundsAndDoneAndGT(&tlx, &tly, &brx, &bry, &done, &wordGT);
-        int posN = wordGT.find_first_of(query->getNgram());
-        if (posN ==  string::npos && wordGT.length()>0)
-            gt=0;
+        //int posN = wordGT.find_first_of(query->getNgram());
+        //if (posN ==  string::npos && wordGT.length()>0)
+        //    gt=0;
+        int endPos=wordGT.length()-(query->getNgram().length());
+        for (int c=0; c<= endPos; c++)
+        {
+            assert(c+query->getNgram().length() <= wordGT.length());
+            if (query->getNgram().compare( wordGT.substr(c,query->getNgram().length()) ) == 0)
+            {
+                //cout <<"found ["<<query->getNgram()<<"] in: "<<wordGT<<endl;
+                gt=UNKNOWN_GT;
+                break;
+            }
+        }
+
         ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score, gt);
         assert(i==0 || ret->at(i).id != ret->at(i-1).id);
         if (done)
