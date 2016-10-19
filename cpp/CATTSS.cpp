@@ -112,7 +112,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 #endif
         bool hard=true;
         if (num==-1) {
-            num=5;
+            num=4;
             hard=false;
 
         }
