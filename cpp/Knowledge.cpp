@@ -386,8 +386,10 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
                 ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
             }
         }
-        else if (matches.size()==0)
+        else if (matches.size()==0 && !loose)
         {
+            loose=true;
+            return queryForBatch(newExemplars);
             //OoV or something is wrong. Return as manual batch.
             //But we'll do it later to keep the state of the Corpus's queue good.
             //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);

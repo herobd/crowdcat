@@ -26,6 +26,7 @@ using namespace v8;
 
 CATTSS* cattss;
 TrainingInstances* trainingInstances;
+map<string, Knowledge::Corpus*> testingCorpi;
 map<string, TestingInstances*> testingInstances;
 
 NAN_METHOD(getNextBatch) {
@@ -228,6 +229,7 @@ NAN_METHOD(start) {
     int width = To<int>(info[8]).FromJust();
     int milli = To<int>(info[9]).FromJust();
     int contextPad = To<int>(info[10]).FromJust();
+    assert(cattss==NULL);
     cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
@@ -247,6 +249,22 @@ NAN_METHOD(stopSpotting) {
     AsyncQueueWorker(new MiscWorker(callback,cattss, "stopSpotting"));
 }
 
+NAN_METHOD(loadTestingCorpus) {
+    v8::String::Utf8Value str0(info[0]->ToString());
+    string datasetName = string(*str0);
+    v8::String::Utf8Value pageImageDirNAN(info[1]);
+    string pageImageDir = string(*pageImageDirNAN);
+    v8::String::Utf8Value segmentationFileNAN(info[2]);
+    string segmentationFile = string(*segmentationFileNAN);
+    int contextPad = To<int>(info[3]).FromJust();
+    GlobalK::knowledge()->setContextPad(contextPad);
+
+    assert(testingCorpi.find(datasetName) == testingCorpi.end());
+    testingCorpi[datasetName] = new Knowledge::Corpus();
+    testingCorpi[datasetName]->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
+    testingInstances[datasetName]=new TestingInstances(testingCorpi[datasetName]);
+}
+
 NAN_METHOD(loadLabeledSpotting) {
     if (info[0]->IsString() && info[1]->IsString())
     {
@@ -261,11 +279,6 @@ NAN_METHOD(loadLabeledSpotting) {
         int x2 = To<int>(info[6]).FromJust();
         int y2 = To<int>(info[7]).FromJust();
         
-        if (testingInstances[datasetName]==NULL)
-        {
-            assert(cattss!=NULL);
-            testingInstances[datasetName]=new TestingInstances(cattss->getCorpus());
-        }
         testingInstances[datasetName]->addSpotting(ngram,label,pageId,x1,y1,x2,y2);    
     }
 }
@@ -334,11 +347,6 @@ NAN_METHOD(loadLabeledTrans) {
         //int y2 = To<int>(info[8]).FromJust();
         bool manual = To<bool>(info[6]).FromJust();
         
-        if (testingInstances[datasetName]==NULL)
-        {
-            assert(cattss!=NULL);
-            testingInstances[datasetName]=new TestingInstances(cattss->getCorpus());
-        }
         testingInstances[datasetName]->addTrans(label,poss,spots,wordIdx,manual);    
     }
 }
@@ -443,6 +451,8 @@ NAN_MODULE_INIT(Init) {
     //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 
+    Nan::Set(target, New<v8::String>("loadTestingCorpus").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(loadTestingCorpus)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("loadLabeledSpotting").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(loadLabeledSpotting)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("loadLabeledTrans").ToLocalChecked(),

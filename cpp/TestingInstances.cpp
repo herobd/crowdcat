@@ -13,12 +13,10 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     'n',
                     's',
                     's',
-                    's',
                     't',
                     't',
                     't',
                     'n',
-                    's',
                     's',
                     's',
                     's',
@@ -27,7 +25,6 @@ TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(cor
                     't',
                     't',
                     't',
-                    'm',
                     'm',
                     'm',
                     'm',
@@ -67,9 +64,9 @@ void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx
 {
     if (label)
     {
-        for (const Spotting* s : spottingsT)
+        for (const Spotting* s : spottingsT[ngram])
         {
-            if (pageId == s->pageId && ngram.compare(s->ngram)==0 &&
+            if (pageId == s->pageId && 
                 abs(tlx-s->tlx)<5 && abs(tly-s->tly)<5 &&
                 abs(brx-s->brx)<5 && abs(bry-s->bry)<5)
                 return;
@@ -78,9 +75,9 @@ void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx
     }
     else
     {
-        for (const Spotting* s : spottingsF)
+        for (const Spotting* s : spottingsF[ngram])
         {
-            if (pageId == s->pageId && ngram.compare(s->ngram)==0 &&
+            if (pageId == s->pageId &&
                 abs(tlx-s->tlx)<5 && abs(tly-s->tly)<5 &&
                 abs(brx-s->brx)<5 && abs(bry-s->bry)<5)
                 return;
@@ -94,6 +91,8 @@ void TestingInstances::addSpotting(string ngram, bool label, int pageId, int tlx
 }
 void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotting> spots, int wordIdx, bool manual)
 {
+    if (wordIdx>=corpus->size())
+        return;
     Knowledge::Word* w = corpus->getWord(wordIdx);
     bool toss;
     int tlx, tly, brx, bry;
@@ -109,7 +108,7 @@ void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotti
     }
     if (manual)
     {
-        for (const TranscribeBatch* b : manTrans)
+        for (TranscribeBatch* b : manTrans)
         {
             if (w == b->getBackPointer())
                 return;
@@ -118,10 +117,10 @@ void TestingInstances::addTrans(string label, vector<string> poss, vector<Spotti
     }
     else
     {
-        for (const TranscribeBatch* b : manTrans)
+        for (TranscribeBatch* b : manTrans)
         {
             if (w == b->getBackPointer() && 
-                spottings.size()==b->getSpottinPoints().size() && 
+                spottings.size()==b->getSpottingPoints().size() && 
                 label.compare(b->getGT())==0)
                 return;
         }
@@ -150,6 +149,43 @@ void TestingInstances::allLoaded()
         spottingsFUsed[p.first].resize(p.second.size());
         spottingsFMut[p.first];
     }
+    
+    //Remove ngrams for which we don't have enough instances
+    for (auto iter=ngramList.begin(); iter!=ngramList.end(); )
+    {
+        string ngram=*iter;
+        if (spottingsT[ngram].size() + spottingsF[ngram].size() < 20)
+        {
+            iter=ngramList.erase(iter);
+            spottingsT.erase(ngram);
+            spottingsF.erase(ngram);
+        }
+        else
+            iter++;
+    }
+
+    int singleC=0;
+    int maxSingle = manTrans.size()*0.2;
+    auto iter = manTrans.begin();
+    while (iter != manTrans.end())
+    {
+        if ((*iter)->getGT().length()==1)
+        {
+            if (singleC<maxSingle)
+            {
+                singleC++;
+                iter++;
+            }
+            else
+            {
+                iter = manTrans.erase(iter);
+            }
+        }
+        else
+            iter++;
+    }
+
+
     for (int n=0; n<testNumType.size(); n++)
     {
         char t = testNumType[n];
@@ -159,6 +195,9 @@ void TestingInstances::allLoaded()
             ngramsMut[n];
         }
     }
+    ngramsUsed[UNDEF_N].resize(ngramList.size());
+    ngramsMut[UNDEF_N];
+
     transUsed.resize(trans.size());
     manTransUsed.resize(manTrans.size());
 }
@@ -243,10 +282,15 @@ BatchWraper* TestingInstances::getManTransBatch(int width)
 
 BatchWraper* TestingInstances::makeInstance(int testingNum, int width,int color, string prevNgram)
 {
+    if (testingNum>=testNumType.size())
+        return NULL;
+
     if (testNumType[testingNum] == 'n') {
         string ngram = ngramList[ getNextIndex(ngramsUsed[testingNum],ngramsMut[testingNum]) ];
         return getSpottingsBatch(ngram,width,color,prevNgram,testingNum);
     } else if (testNumType[testingNum] == 's') {
+        if (spottingsTUsed.find(prevNgram) == spottingsTUsed.end())
+            prevNgram = ngramList[ getNextIndex(ngramsUsed[UNDEF_N],ngramsMut[UNDEF_N]) ];
         return getSpottingsBatch(prevNgram,width,color,prevNgram,testingNum);
     } else if (testNumType[testingNum] == 't') {
         return getTransBatch(width);

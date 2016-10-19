@@ -46,12 +46,12 @@ function menu() {
     m.classList.toggle('show');
 }
 
-function standardQuery() {
+function standardQuery(batchInfo) {
     var query='';
     if (trainingMode)
-        query+='&trainingNum='+trainingNum;
+        query+='&trainingNum='+batchInfo.trainingNum;
     else if (timingTestMode)
-        query+='&testingNum='+testingNum;
+        query+='&testingNum='+batchInfo.testingNum;
     if (save)
         query+='&save=1';
     return query;
@@ -89,12 +89,18 @@ function httpPostAsync(theUrl, theData, callback)
 
 function batchShiftAndSend(batchId,callback) {
     
+    if (trainingMode) {
+        swipeRightGif.hidden=true;
+        swipeLeftGif.hidden=true;
+        tapGif.hidden=true;
+    }
+
     var info = batchQueue[0];
     if (info.type+info.id != batchId) {// && info.id != batchId.substr(1)) {
         console.log("ERROR, not matching ids: "+info.type+info.id+" "+batchId);
         console.log(batchQueue);
     }
-    batchQueue=batchQueue.slice(1)
+    batchQueue=batchQueue.slice(1);
     if (batchQueue.length>0) {
         if (timingTestMode) {
             //This time preserves even if the user undos, thus giving a total time for completion
@@ -116,7 +122,7 @@ function batchShiftAndSend(batchId,callback) {
         
         
         var query='?type=spottings&resend='+batches[batchId].sent;
-        query+=standardQuery();
+        query+=standardQuery(info);
         var labels = [];
         var ids = [];
         for (var id in batches[batchId].spottings){
@@ -151,7 +157,7 @@ function batchShiftAndSend(batchId,callback) {
         if (info.type=='m') {
             query+='Manual';
         }
-        query+=standardQuery();
+        query+=standardQuery(info);
         var toSend = {batchId:info.id,label:info.transcription};
         if (timingTestMode && info.type=='t') {
             toSend.prevWasTrans=false;
@@ -182,7 +188,7 @@ function batchShiftAndSend(batchId,callback) {
     } else if (info.type=='e') {
         
         var query='?type=newExemplars&resend='+batches[batchId].sent;
-        query+=standardQuery();
+        query+=standardQuery(info);
         var labels = [];
         for (var id in batches[batchId].spottings){
             if (batches[batchId].spottings.hasOwnProperty(id)) {
@@ -262,6 +268,8 @@ function handleTouchMove(evt) {
 };
 
 function removeSpotting(OK) {
+    if (!ondeck)
+        highlightLast();
     lastRemovedEle.push(ondeck);
     
     if (lastRemovedEle.length>10) {
@@ -280,10 +288,13 @@ function removeSpotting(OK) {
     
     if (batchQueue[0].type=='e') {
         var header = document.getElementById('h'+ondeck.id);
-        header.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
-        header.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
-        header.classList.toggle('batchHeader');
-        header.classList.toggle('collapserH');
+        if (header)
+        {
+            header.addEventListener("webkitAnimationEnd", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+            header.addEventListener("animationend", function(e){if(e.animationName=='collapseH') theWindow.removeChild(this);}, false);
+            header.classList.toggle('batchHeader');
+            header.classList.toggle('collapserH');
+        }
     }
 
     if (batchQueue[0].type=='e' || batchQueue[0].type=='s') {
@@ -343,7 +354,7 @@ function undo() {
             if (batchQueue[0].type=='s')
                 ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngram),ondeck.childNodes[0]);
             else if (batchQueue[0].type=='e')
-                ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngrams[ondeck.id].ngram),ondeck.childNodes[0]);
+                ondeck.insertBefore(createInlineLabel(batches[ondeck.batch].ngrams[ondeck.id]),ondeck.childNodes[0]);
             ondeck.classList.toggle('redo');
             //colorIndex = (++colorIndex)%headerColors.length;
             ondeck.style.background=spottingColors[ondeck.colorIndex];
@@ -406,6 +417,12 @@ function setup() {
     icons = document.getElementById("icons");
     showX = document.getElementById("showX");
     showCheck = document.getElementById("showCheck");
+    if (trainingMode) {
+        swipeRightGif = document.getElementById("swipeRightGif");
+        swipeleftGif = document.getElementById("swipeLeftGif");
+        tapGif = document.getElementById("tapGif");
+        swipeRightGif.hidden=false;
+    }
     if (trainingMode) {
        instructions=document.getElementById('instructions'); 
        instructionsText=document.getElementById('instructionsText');
@@ -656,14 +673,17 @@ function getNextBatch() {
     }
     var query='';
     var prevNgram='.';
+    var currentNum;
     if (batchQueue.length>0)
         prevNgram=batchQueue[batchQueue.length-1].ngram;
 
     if (trainingMode) {
+        currentNum=trainingNum;
         query+='&trainingNum='+trainingNum;
         trainingNum+=1;
     }
     else if (timingTestMode) {
+        currentNum=testingNum;
         query+='&testingNum='+testingNum;
         testingNum+=1;
     }
@@ -700,6 +720,7 @@ function getNextBatch() {
                     batchQueue[batchQueue.length-1].instructions=jres.instructions;
                     batchQueue[batchQueue.length-1].lastTraining=jres.lastTraining;
                     batchQueue[batchQueue.length-1].correct=jres.correct.toLowerCase();
+                    batchQueue[batchQueue.length-1].trainingNum=currentNum;
 
                     if (fromEmpty)
                         instructionsText.innerHTML=jres.instructions;
@@ -708,6 +729,7 @@ function getNextBatch() {
                 } else if (timingTestMode) {
                     batchQueue[batchQueue.length-1].countUndos=0;
                     batchQueue[batchQueue.length-1].startTime=null;
+                    batchQueue[batchQueue.length-1].testingNum=currentNum;
                     if (fromEmpty) {
                         batchQueue[batchQueue.length-1].startTime=new Date().getTime();
                     }
@@ -809,6 +831,13 @@ function isBatchDone(batchId) {
             if (batchQueue[0].instructions.length>0) {
                 instructions.hidden=false;
                 instructions.style.display='flex';
+            }
+            if (batchQueue[0].trainingNum==0) {
+                swipeRightGif.hidden=false;
+            } else if (batchQueue[0].trainingNum==1) {
+                swipeLeftGif.hidden=false;
+            } else if (batchQueue[0].trainingNum==8) {
+                tapGif.hidden=false;
             }
         } else {
             instructionsText.innerHTML='That was incorrect; use the <b>undo</b> button to correct the error.';

@@ -171,12 +171,36 @@ button {
 }
 
 #rightIcon {
+    float: right;
+    clear: right;
+}
+#leftIcon {
     float: left;
     clear: left;
 }
-#leftIcon {
-    float: right;
-    clear: right;
+
+#gifs {
+    pointer-events: none;
+    touch-action: none;
+}
+
+#tapGif {
+    left: 90px;
+    height: 70px;
+    position: fixed;
+    top: 220px;
+}
+#swipeLeftGif {
+    left: 90px;
+    height: 70px;
+    position: fixed;
+    bottom: 50px;
+}
+#swipeRightGif {
+    left: 90px;
+    height: 70px;
+    position: fixed;
+    bottom: 50px;
 }
 
 #shows{

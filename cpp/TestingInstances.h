@@ -11,6 +11,8 @@
 #include "SpecialInstances.h"
 #include "Knowledge.h"
 
+#define UNDEF_N -1
+
 class TestingInstances: public SpecialInstances
 {
     public:

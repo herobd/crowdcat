@@ -46,9 +46,9 @@ var datasetNames=[  'GW',       //0
                     'NAMES'     //2
                  ];
 var contextPads=[ 0,
-                 0,
-                 15
-               ];
+                  0,
+                  15
+                ];
 
 
 var datasetNum=2;
@@ -65,8 +65,8 @@ var showWidth=2500;
 var showHeight=1000;
 var showMilli=4000;
 
-var saveMode=true;
-var timingTestMode=false;
+var saveMode=false;
+var timingTestMode=true;
 var trainUsers=true;
 var debug=false;
 
@@ -504,7 +504,7 @@ var ControllerApp = function(port) {
                                 
                             });
                 } else if (req.query.testingNum && timingTestMode && req.user.datasetTiming) {
-                    self.spottingaddons[req.user.datasetTiming].getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
+                    spottingaddon.getNextTestingBatch(+req.query.width,+req.query.color,req.query.prevNgram,num,
                             +req.query.testingNum,
                             req.user.datasetTiming,
                             function (err,batchType,batchId,arg3,arg4,arg5,loc,correct) {
@@ -643,7 +643,7 @@ var ControllerApp = function(port) {
                             var undoRatio = req.body.undos/(0.0+req.body.ids.length);
 
                             var info = {userId:req.user.id,
-                                        batchNum:req.body.resultsId,
+                                        batchNum:+req.query.testingNum,
                                         //dataset:req.user.datasetTiming, 
                                         ngram:req.body.ngram, 
                                         prevNgramSame:req.body.prevNgramSame,
@@ -671,6 +671,7 @@ var ControllerApp = function(port) {
                             }
 
                             var info = {userId:req.user.id,
+                                        batchNum:+req.query.testingNum,
                                         batchId:req.body.batchId,
                                         //dataset:req.user.datasetTiming, 
                                         prevWasTrans:req.body.prevWasTrans,
@@ -693,6 +694,7 @@ var ControllerApp = function(port) {
                             if (skipped)
                                 accuracy=null;
                             var info = {userId:req.user.id,
+                                        batchNum:+req.query.testingNum,
                                         batchId:req.body.batchId,
                                         //dataset:req.user.datasetTiming, 
                                         prevWasManual:req.body.prevWasManual,
@@ -836,7 +838,7 @@ var ControllerApp = function(port) {
             else
             {
                 labeledSpottings.forEach(function(s) {
-                    self.spottingaddons[dataN].loadLabeledSpotting(dataN,s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
+                    spottingaddon.loadLabeledSpotting(dataN,s.ngram,s.label,s.loc.page,s.loc.x1,s.loc.y1,s.loc.x2,s.loc.y2);
                 });
                 database.getLabeledTrans(dataN,function(err,labeledTrans){
                     if (err)
@@ -850,9 +852,9 @@ var ControllerApp = function(port) {
                                 ngrams.push(n.ngram);
                                 ngramLocs.push([n.loc.x1,n.loc.y1,n.loc.x2,n.loc.y2, n.id]);
                             });
-                            self.spottingaddons[dataN].loadLabeledTrans(dataN,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
+                            spottingaddon.loadLabeledTrans(dataN,t.label,t.poss,ngrams,ngramLocs,+t.loc.wordIndex,t.manual);
                         });
-                        self.spottingaddons[dataN].testingLabelsAllLoaded(dataN);
+                        spottingaddon.testingLabelsAllLoaded(dataN);
                         console.log('Loaded all labels for testing: '+dataN);
                         self.loadLabeled(database,i+1);
                     }
@@ -869,21 +871,14 @@ var ControllerApp = function(port) {
         self.populateCache();
         self.setupTerminationHandlers();
         if (timingTestMode) {
-            self.spottingaddons={};
+            //spottingaddons={};
             for (var i=1; i<datasetNames.length; i++)
             {
-                self.spottingaddons[datasetNames[i]]=require("./cpp/build/Debug/spottingaddon");
-                self.spottingaddons[datasetNames[i]].start(
-                                    lexiconFiles[i],
+                //spottingaddons[datasetNames[i]]=require("./cpp/build/Debug/spottingaddon");
+                spottingaddon.loadTestingCorpus(
+                                    datasetNames[i],
                                     pageImageDirs[i],
                                     segmentationFiles[i],
-                                    spottingModelPrefix+datasetNames[i],
-                                    '',
-                                    numThreadsSpotting,
-                                    numThreadsUpdating,
-                                    showHeight,
-                                    showWidth,
-                                    showMilli,
                                     contextPads[i]);
             }
 

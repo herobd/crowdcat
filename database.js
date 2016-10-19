@@ -330,32 +330,32 @@ module.exports =  function() {
         //self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, multi:false, w:1}, callback);
         //console.log('saveTimingTrans '+dataName);
         //console.log(self.timingTransCollection);
-        self.timingTransCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
-        //self.timingTransCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        self.timingTransCollection[dataName].findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
+        //self.timingTransCollection.findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
             if (err) {
                 callback(err);
             } else if (item==null) {
                 self.timingTransCollection[dataName].insert(info, {w:1}, callback);
                 //self.timingTransCollection.insert(info, {w:1}, callback);
             } else {
-                self.timingTransCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
-                //self.timingTransCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                self.timingTransCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
+                //self.timingTransCollection.update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
             }
         });
     }
     Database.prototype.saveTimingTestManual = function(dataName,info,callback) {
         var self=this;
-        //self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{upsert:1, w:1}, callback);
-        self.timingManualCollection[dataName].findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
-        //self.timingManualCollection.findOne({userId:info.userId, batchId:info.batchId}, function(err, item) {
+        //self.timingManualCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{upsert:1, w:1}, callback);
+        self.timingManualCollection[dataName].findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
+        //self.timingManualCollection.findOne({userId:info.userId, batchNum:info.batchNum}, function(err, item) {
             if (err) {
                 callback(err);
             } else if (item==null) {
                 self.timingManualCollection[dataName].insert(info, {w:1}, callback);
                 //self.timingManualCollection.insert(info, {w:1}, callback);
             } else {
-                self.timingManualCollection[dataName].update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
-                //self.timingManualCollection.update({userId:info.userId, batchId:info.batchId},{$set:info},{w:1}, callback);
+                self.timingManualCollection[dataName].update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
+                //self.timingManualCollection.update({userId:info.userId, batchNum:info.batchNum},{$set:info},{w:1}, callback);
             }
         });
     }
