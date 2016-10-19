@@ -66,8 +66,8 @@ var showHeight=1000;
 var showMilli=4000;
 
 var saveMode=false;
-var timingTestMode=true;
-var trainUsers=true;
+var timingTestMode=false;
+var trainUsers=false;
 var debug=false;
 
 if (saveMode)

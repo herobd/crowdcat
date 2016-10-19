@@ -2036,6 +2036,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     //std::getline(in,line);
     //float initSplit=0;//stof(line);//-0.52284769;
     //regex nonNum ("[^\\d]");
+    numWordsReadIn=0;
     pthread_rwlock_wrlock(&pagesLock);
     while(std::getline(in,line))
     {
@@ -2049,7 +2050,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             strV.push_back(item);
         }
         
-        
+        numWordsReadIn++;
         
         string imageFile = strV[0];
         string pageName = (strV[0]);
@@ -2250,6 +2251,9 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
                 _wordImgs.push_back(word->getImg());
                 _gt.push_back(word->getGT());
             }
+
+            //We assume no more words are added at the moment
+            assert(_words.size()==numWordsReadIn);
         }
     }
     if (lockPages)
@@ -2374,6 +2378,7 @@ void Knowledge::Corpus::save(ofstream& out)
     {
         out<<p.first<<"\n"<<p.second<<"\n";
     }
+    out<<numWordsReadIn<<"\n";
     pthread_rwlock_unlock(&pagesLock);
 
     pthread_rwlock_rdlock(&spottingsMapLock);
@@ -2436,7 +2441,10 @@ Knowledge::Corpus::Corpus(ifstream& in)
         int pageId = stoi(line);
         pageIdMap[s]=pageId;
     }
+    getline(in,line);
+    numWordsReadIn=stoi(line);
     recreateDatasetVectors(false);
+
     getline(in,line);
     int spottingsToWordsSize=stoi(line);
     for (int i=0; i<spottingsToWordsSize; i++)
