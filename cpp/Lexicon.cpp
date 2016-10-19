@@ -3,19 +3,27 @@
 
 Lexicon* Lexicon::self=NULL;
 
-vector<string> Lexicon::search(string query, Meta meta)
+vector<string> Lexicon::search(string query, SearchMeta meta) const
 {
-    
-    
     vector<string> ret1;//, ret2;
+
+    auto iter = fields.find(meta.field);
+    if (iter == fields.end())
+        return ret1;
+    
     
     //clock_t start = clock();
     regex q(query);
+    const vector<string>& words = iter->second;
     for (const string& word : words)
     {
     
         if (regex_match (word, q ))
+        {
             ret1.push_back(word);
+            if (meta.max>0 && ret1.size()>meta.max)
+                break;
+        }
     }
     /*clock_t time1 = clock()-start;
     
@@ -39,26 +47,77 @@ vector<string> Lexicon::search(string query, Meta meta)
     {
         assert(ret1[i].compare(ret2[i])==0);
     }*/
+#ifdef TEST_MODE
     cout << query <<": ";
-    for (string s : ret1)
-        cout<<s<<", ";
+    if (meta.max>0 && ret1.size()>meta.max)
+        cout<<" MAXED";
+    else
+        for (string s : ret1)
+            cout<<s<<", ";
     cout<<endl;
+#endif
     return ret1;
 }
 
-bool Lexicon::readIn(string fileName)
+bool Lexicon::readIn(string fileName, string field)
 {
     
     ifstream in(fileName);
     string word;
     regex notWordChar ("[^\\w]");
+    vector<string>& words = fields[field];
+    
     while(getline(in,word))
     {
         word = regex_replace (word,notWordChar,"");
         
-        words_lineSeperated+=word+"\n";
-        words.push_back(word);
+        //words_lineSeperated+=word+"\n";
+        if (find(words.begin(), words.end(), word) == words.end()) //prevent duplicates
+            words.push_back(word);
     }
     in.close();
     return true;
 }
+
+void Lexicon::save(ofstream& out)
+{
+    //ofstream out(savePrefix+"_Lexicon.sav");
+    out<<fields.size()<<"\n";
+    for (auto p : fields)
+    {
+        out<<p.first<<"\n";
+        out<<p.second.size()<<"\n";
+        for (string s : p.second)
+        {
+            out<<s<<"\n";
+        }
+    }
+    //out.close();
+}
+void Lexicon::load(ifstream& in)
+{
+    //ifstream in (loadPrefix+"_Lexicon.sav");
+    int fSize;
+    in>>fSize;
+    in.get();
+    for (int i=0; i<fSize; i++)
+    {
+        string fieldName;
+        getline(in,fieldName);
+        int wSize;
+        in>>wSize;
+        in.get();
+        //fields[fieldName].resize(wSize);
+        fields[fieldName];
+        for (int j=0; j<wSize; j++)
+        {
+            string word;
+            getline(in,word);
+            //prevent dup, so that my change will work with current save file
+            if (find(fields.at(fieldName).begin(), fields.at(fieldName).end(), word) == fields.at(fieldName).end())
+                fields.at(fieldName).push_back(word);
+        }
+    }
+    //in.close();
+}
+

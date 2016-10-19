@@ -1,20 +1,10 @@
 #include "MasterQueue.h"
 
-void checkIncompleteSleeper(MasterQueue* q)
-{
-    //this_thread::sleep_for(chrono::hours(1));
-    //cout <<"kill is "<<q->kill.load()<<endl;
-    while(!q->kill.load()) {
-        //cout <<"begin sleep"<<endl;
-        this_thread::sleep_for(chrono::hours(1));
-        q->checkIncomplete();
-    }
-}
 
 void MasterQueue::checkIncomplete()
 {
     transcribeBatchQueue.checkIncomplete();    
-    
+    newExemplarsBatchQueue.checkIncomplete();    
     pthread_rwlock_rdlock(&semResults);
     for (auto ele : results)
     {
@@ -23,14 +13,15 @@ void MasterQueue::checkIncomplete()
         SpottingResults* res = ele.second.second;
         sem_wait(sem);
             
-        if (res->checkIncomplete())
+        bool incm = res->checkIncomplete();
+        sem_post(sem);
+        if (incm)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
             resultsQueue[res->getId()] = ele.second;
             pthread_rwlock_unlock(&semResultsQueue);
         }
         
-        sem_post(sem);
             
 
     }
@@ -38,13 +29,15 @@ void MasterQueue::checkIncomplete()
 }
 
 MasterQueue::MasterQueue() {
+    finish.store(false);
     //sem_init(&semResultsQueue,false,1);
     //sem_init(&semResults,false,1);
     pthread_rwlock_init(&semResultsQueue,NULL);
     pthread_rwlock_init(&semResults,NULL);
+#if ROTATE
+    pthread_rwlock_init(&semRotate,NULL);
+#endif
     kill.store(false);
-    incompleteChecker = new thread(checkIncompleteSleeper,this);//This could be done by a thread for each sr
-    incompleteChecker->detach();
     //atID=0;
     
     ///testing
@@ -113,8 +106,8 @@ MasterQueue::MasterQueue() {
     testIter=0;	
     test_rotate=0;
     //addTestSpottings();
-    accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
-    done=0;
+    //accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
+    //done=0;
     numCFalse=numCTrue=0;
 
     
@@ -123,7 +116,7 @@ MasterQueue::MasterQueue() {
 
 
 
-void MasterQueue::addTestSpottings()
+/*void MasterQueue::addTestSpottings()
 {
     string pageLocation = "/home/brian/intel_index/data/gw_20p_wannot/";
     
@@ -221,9 +214,8 @@ bool MasterQueue::test_autoBatch()
     if (tmp!=NULL)
         delete tmp;
     return true;
-}
+}*/
 
-#ifndef TEST_MODE_C
 BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram)
 {
     int ngramQueueCount;
@@ -232,48 +224,60 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     pthread_rwlock_unlock(&semResultsQueue);
 
     BatchWraper* ret=NULL;
+    if (finish.load())
+    {
+        TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
+        if (batch!=NULL) 
+            ret = new BatchWraperTranscription(batch);
+    }
+    else
+    {
 
-    if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
-    {
-        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
-        if (batch!=NULL)
-            ret = new BatchWraperNewExemplars(batch);
-    }
-    if (ret==NULL && ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD)
-    {
-        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
-        if (batch!=NULL)
-            ret = new BatchWraperTranscription(batch);
-    }
-    if (ret==NULL)
-    {
-        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,false);
-        if (batch!=NULL)
-            ret = new BatchWraperSpottings(batch);
-    }
-    //a second pass without conditions
-    if (ret==NULL)
-    {
-        TranscribeBatch* batch = getTranscriptionBatch(maxWidth);
-        if (batch!=NULL)
-            ret = new BatchWraperTranscription(batch);
-    }
-    if (ret == NULL)
-    {
-        NewExemplarsBatch* batch=getNewExemplarsBatch(numberOfInstances,maxWidth,color);
-        if (batch!=NULL)
-            ret = new BatchWraperNewExemplars(batch);
-    }
-    if (ret==NULL)
-    {
-        SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
-        if (batch!=NULL)
-            ret = new BatchWraperSpottings(batch);
+        if (ngramQueueCount < NGRAM_Q_COUNT_THRESH_NEW)
+        {
+            NewExemplarsBatch* batch=newExemplarsBatchQueue.dequeue(numberOfInstances,maxWidth,color);
+            if (batch!=NULL)
+                ret = new BatchWraperNewExemplars(batch);
+        }
+        if (ret==NULL && (ngramQueueCount < NGRAM_Q_COUNT_THRESH_WORD))// || transcribeBatchQueue.size()>TRANS_READY_THRESH)
+        {
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
+            if (batch!=NULL) {
+                ret = new BatchWraperTranscription(batch);
+#ifdef TEST_MODE
+//                finish=true;
+#endif
+            }
+        }
+        if (ret==NULL)
+        {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,false);
+            if (batch!=NULL)
+                ret = new BatchWraperSpottings(batch);
+        }
+        //a second pass without conditions
+        if (ret==NULL)
+        {
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
+            if (batch!=NULL)
+                ret = new BatchWraperTranscription(batch);
+        }
+        if (ret==NULL)
+        {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
+            if (batch!=NULL)
+                ret = new BatchWraperSpottings(batch);
+        }
+        if (ret == NULL)
+        {
+            NewExemplarsBatch* batch=newExemplarsBatchQueue.dequeue(numberOfInstances,maxWidth,color,true);
+            if (batch!=NULL)
+                ret = new BatchWraperNewExemplars(batch);
+        }
     }
 
     return ret;
 } 
-#endif
 
 SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) 
 {
@@ -283,11 +287,12 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     //cout<<"got rw lock"<<endl;
 #if ROTATE
     int test_loc=0;
+    pthread_rwlock_rdlock(&semRotate);
 #endif
     for (auto ele : resultsQueue)
     {
 #if ROTATE
-        if (test_loc++<test_rotate/2)
+        if (test_loc++<test_rotate/2) //TODO add var to control
             continue;
 #endif
         
@@ -297,16 +302,19 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         if (succ)
         {
             
-            pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             //test
 #if ROTATE
-            pthread_rwlock_wrlock(&semResultsQueue);
-            if (test_rotate++>2*(resultsQueue.size()-1))
+            pthread_rwlock_unlock(&semRotate);
+            int qSize = resultsQueue.size();
+            pthread_rwlock_wrlock(&semRotate);
+            if (test_rotate++>2*(qSize-1))
                 test_rotate=0;
-            pthread_rwlock_unlock(&semResultsQueue);
+            pthread_rwlock_unlock(&semRotate);
 #endif
             //test
+
+            pthread_rwlock_unlock(&semResultsQueue);//I'm going to break out of the loop, so I'll release control
             
             bool done=false;
             //cout << "getBatch   prev:"<<prevNgram<<endl;
@@ -328,7 +336,12 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             if (batch!=NULL)
                 break;
             else
+            {
                 pthread_rwlock_rdlock(&semResultsQueue);
+#if ROTATE
+                pthread_rwlock_rdlock(&semRotate);
+#endif
+            }
             
         }
         //else
@@ -340,8 +353,11 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     {
         pthread_rwlock_unlock(&semResultsQueue);//just in case
 #ifdef TEST_MODE
-        cout<<"nno spotting batch from MasterQueue, need:"<<need<<endl;
+        cout<<"no spotting batch from MasterQueue, need:"<<need<<endl;
 #endif
+#if ROTATE
+        pthread_rwlock_unlock(&semRotate);
+#endif 
     }
 #ifdef TEST_MODE
     else //test
@@ -360,7 +376,7 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     return batch;
 }
 
-void MasterQueue::test_finish()
+/*void MasterQueue::test_finish()
 {
     if (resultsQueue.size()==0)
     {
@@ -419,7 +435,7 @@ vector<Spotting>* MasterQueue::test_feedback(unsigned long id, const vector<stri
     if (results.find(id)==results.end())
         test_showResults(id,"");
     return res;
-}
+}*/
 
 vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long, string> >* remove)
 {
@@ -436,22 +452,22 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
         //cout <<"res feedback"<<endl;
         ret = res->feedback(&done,ids,userClassifications,resent,remove);
         //cout <<"END res feedback"<<endl;
+        sem_post(sem);
         
         if (done==-1)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
-            resultsQueue[res->getId()] = make_pair(sem,res);
+            resultsQueue[id] = make_pair(sem,res);
             pthread_rwlock_unlock(&semResultsQueue);
             
         }
         else if (done==2)
         {
             pthread_rwlock_wrlock(&semResultsQueue);
-            resultsQueue.erase(res->getId());
+            resultsQueue.erase(id);
             
             pthread_rwlock_unlock(&semResultsQueue);
         }
-        sem_post(sem);
     }
     else
     {
@@ -481,7 +497,7 @@ void MasterQueue::addSpottingResults(SpottingResults* res, bool hasSemResults, b
 }
 
 
-void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
+void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings)
 {
 
 #ifdef TEST_MODE_LONG
@@ -507,10 +523,10 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
                 cout<<"update for new ex: "<<spotting->ngram<<endl;
 #endif
                 //pthread_rwlock_unlock(&semResults);
-                vector<Spotting>* toUpdate = new vector<Spotting>(1);
-                toUpdate->at(0)=*(Spotting*)spotting;
-                bool resurrect = res->updateSpottings(toUpdate);
-                if (resurrect)
+                //vector<Spotting>* toUpdate = new vector<Spotting>(1);
+                //toUpdate->at(0)=*(Spotting*)spotting;
+                res->updateSpottingTrueNoScore(*spotting);
+                /*if (resurrect)
                 {
 #ifdef TEST_MODE
                     cout<<"Resurrect "<<res->ngram<<endl;
@@ -518,7 +534,7 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
                     pthread_rwlock_wrlock(&semResultsQueue);
                     resultsQueue[res->getId()] = make_pair(sem,res);
                     pthread_rwlock_unlock(&semResultsQueue);
-                }
+                }*/
             }
 
             
@@ -532,7 +548,7 @@ void MasterQueue::updateSpottingsMix(vector<SpottingExemplar*>* spottings)
             cout <<"Creating SpottingResults for "<<spotting->ngram<<endl;
 #endif
             SpottingResults *n = new SpottingResults(spotting->ngram);
-            n->addTrueNoScore(spotting);
+            n->addTrueNoScore(*spotting);
             addSpottingResults(n,true,false);
         }
 
@@ -555,13 +571,13 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             pthread_rwlock_unlock(&semResults);
             sem_wait(sem);
             bool resurrect = res->updateSpottings(spottings);
+            sem_post(sem);
             if (resurrect)
             {
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = results[id];
+                resultsQueue[id] = results[id];
                 pthread_rwlock_unlock(&semResultsQueue);
             }
-            sem_post(sem);
             return id;
         }
         else
@@ -581,17 +597,18 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
         {
             pthread_rwlock_unlock(&semResults);
             bool resurrect = res->updateSpottings(spottings);
+            unsigned long rid = res->getId();
+            sem_post(sem);
             if (resurrect)
             {
 #ifdef TEST_MODE
                 cout<<"Resurrect "<<res->ngram<<endl;
 #endif
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[res->getId()] = make_pair(sem,res);
+                resultsQueue[rid] = make_pair(sem,res);
                 pthread_rwlock_unlock(&semResultsQueue);
             }
-            sem_post(sem);
-            return res->getId();
+            return rid;
             
         }
         else
@@ -605,20 +622,121 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     cout <<"Creating SpottingResults for "<<spottings->front().ngram<<endl;
 #endif
     SpottingResults *n = new SpottingResults(spottings->front().ngram);
+    assert(spottings->size()>1);
     for (Spotting& s : *spottings)
+    {
         n->add(s);
+        //cout <<"added spotting : "<<s.id<<endl;
+    }
     delete spottings;
+    unsigned long ret = n->getId();
     addSpottingResults(n,true);
     pthread_rwlock_unlock(&semResults);
-    return n->getId();
+    return ret;
 }
 
 void MasterQueue::transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars) 
 {
+    if (transcription.find('\n') != string::npos)
+        transcription="$PASS$";
     vector<Spotting*> newExemplars = transcribeBatchQueue.feedback(id, transcription, toRemoveExemplars);
 
     //enqueue these for approval
     //if (newExemplars.size()>0)
         newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
     //delete newExemplars;
+}
+void MasterQueue::enqueueNewExemplars(const vector<Spotting*>& newExemplars, vector<pair<unsigned long, string> >* toRemoveExemplars)
+{
+    newExemplarsBatchQueue.enqueue(newExemplars,toRemoveExemplars);
+}
+
+void MasterQueue::needExemplar(string ngram)
+{
+    newExemplarsBatchQueue.needExemplar(ngram);
+}
+
+
+void MasterQueue::save(ofstream& out)
+{
+    //ofstream out(savePrefix);
+
+    //This is a costly lockdown, but bad things might happen if the queue is changed between writing the two
+    pthread_rwlock_rdlock(&semResults);
+    pthread_rwlock_rdlock(&semResultsQueue);
+    out<<"MASTERQUEUE"<<endl;
+    out<<results.size()<<"\n";
+    for (auto p : results)
+    {
+        out<<p.first<<"\n";
+        sem_wait(p.second.first);
+        p.second.second->save(out);
+        sem_post(p.second.first);
+    }
+
+    out<<resultsQueue.size()<<"\n";
+    for (auto p : resultsQueue)
+    {
+        out<<p.first<<"\n";
+    }
+    pthread_rwlock_unlock(&semResultsQueue);
+    pthread_rwlock_unlock(&semResults);
+        
+    transcribeBatchQueue.save(out);
+    newExemplarsBatchQueue.save(out);
+
+    out<<finish.load()<<"\n";
+    out<<numCTrue<<"\n"<<numCFalse<<"\n";
+
+    //out.close();    
+}
+MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
+{
+    finish.store(false);
+    pthread_rwlock_init(&semResultsQueue,NULL);
+    pthread_rwlock_init(&semResults,NULL);
+#if ROTATE
+    pthread_rwlock_init(&semRotate,NULL);
+#endif
+    kill.store(false);
+    
+    //ifstream in(loadPrefix);
+
+    string line;
+    getline(in,line);
+    assert(line.compare("MASTERQUEUE")==0);
+    getline(in,line);
+    int rSize = stoi(line);
+    for (int i=0; i<rSize; i++)
+    {
+        getline(in,line);
+        unsigned long id = stoul(line);
+        SpottingResults* res = new SpottingResults(in,pageRef);
+        assert(id==res->getId());
+        sem_t* sem = new sem_t();
+        sem_init(sem,false,1);
+        auto p = make_pair(sem,res);
+        results[res->getId()] = p;
+    }
+    getline(in,line);
+    rSize = stoi(line);
+    for (int i=0; i<rSize; i++)
+    {
+        getline(in,line);
+        unsigned long id = stoul(line);
+        resultsQueue[results[id].second->getId()] = results[id];
+    }
+    transcribeBatchQueue.load(in,corpusRef);
+    newExemplarsBatchQueue.load(in,pageRef);
+
+    getline(in,line);
+    finish.store(stoi(line));
+ 
+    getline(in,line);
+    numCTrue = stoi(line);
+    getline(in,line);
+    numCFalse = stoi(line);
+
+    //in.close();
+    delete corpusRef;
 }

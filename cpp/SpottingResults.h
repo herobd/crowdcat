@@ -1,3 +1,4 @@
+
 #ifndef SPOTTINGRESULTS_H
 #define SPOTTINGRESULTS_H
 
@@ -10,8 +11,10 @@
 #include <chrono>
 
 #include <iostream>
+#include "batches.h"
+#include "Global.h"
+#include "PageRef.h"
 
-#define FUZZY 12
 #define UPDATE_OVERLAP_THRESH 0.4
 #define UPDATE_OVERLAP_THRESH_TIGHT 0.7
 
@@ -19,225 +22,6 @@ using namespace std;
 
 
 
-#define SPOTTING_TYPE_NONE 1
-#define SPOTTING_TYPE_APPROVED 2
-#define SPOTTING_TYPE_THRESHED 3
-#define SPOTTING_TYPE_EXEMPLAR 4
-
-class Spotting {
-public:
-    Spotting() :
-        tlx(-1), tly(-1), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
-    Spotting(int tlx, int tly, int brx, int bry) :
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
-    Spotting(int tlx, int tly) :
-        tlx(tlx), tly(tly), brx(-1), bry(-1), pageId(-1), pagePnt(NULL), ngram(""), score(nan("")), id(-1), type(SPOTTING_TYPE_NONE), ngramRank(-1) {}
-    
-    Spotting(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score) : 
-        tlx(tlx), tly(tly), brx(brx), bry(bry), pageId(pageId), pagePnt(pagePnt), ngram(ngram), score(score), type(SPOTTING_TYPE_NONE), ngramRank(-1)
-    {
-        id = ++_id;
-    }
-    
-    Spotting(const Spotting& s) : 
-        tlx(s.tlx), tly(s.tly), brx(s.brx), bry(s.bry), pageId(s.pageId), pagePnt(s.pagePnt), ngram(s.ngram), score(s.score), type(s.type), ngramRank(s.ngramRank)
-    {
-        id = s.id;
-    }
-    virtual ~Spotting() {}
-    
-    int tlx, tly, brx, bry, pageId;
-    const cv::Mat* pagePnt;
-    string ngram;
-    float score;
-    unsigned long id;
-    unsigned char type;
-    virtual cv::Mat img()
-    {
-        return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
-    }
-    virtual cv::Mat ngramImg() const
-    {
-        return (*pagePnt)(cv::Rect(tlx,tly,1+brx-tlx,1+bry-tly));
-    }
-    int ngramRank;
-
-protected:
-    static unsigned long _id;
-};
-
-class SpottingImage : public Spotting 
-{
-public:
-    SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram="") : 
-        Spotting(s) 
-    {
-        ngramImage = s.ngramImg();
-        assert(ngramImage.cols>0);
-        if (maxWidth<0)
-            return;
-        int oneSide = maxWidth/2;
-        int sideFromR = (oneSide- (brx-tlx)/2);
-        int left = tlx-sideFromR;
-        int right = brx+sideFromR-1;
-        //cout <<"getting image window... sideFromR="<<sideFromR<<", oneSide="<<oneSide<<", tlx="<<tlx<<", brx="<<brx<<", left="<<left<<", right="<<right<<endl;
-        if (left>=0 && right<s.pagePnt->cols)
-        {   
-            //cout <<"normal: "<<left<<" "<<tly<<" "<<right-left<<" "<<bry-tly<<endl;
-            image = ((*s.pagePnt)(cv::Rect(left,tly,right-left,bry-tly))).clone();
-        }
-        else
-        {
-            image = cv::Mat(bry-tly,maxWidth,s.pagePnt->type());
-            if (image.channels()==1)
-                image.setTo(cv::Scalar(10));
-            else
-                image.setTo(cv::Scalar(10,10,10));
-            int leftOff = left>=0?0 : -1*(left+1);
-            int newLeft=left<0?0:left;
-            if (right>=s.pagePnt->cols)
-                right = s.pagePnt->cols-1;
-            //cout <<"adjusted from: "<<newLeft<<" "<<tly<<" "<<right-newLeft<<" "<<bry-tly<<endl;
-            //cout <<"adjusted to: "<<leftOff<<" "<<0<<" "<<right-newLeft<<" "<<bry-tly<<endl;
-            (*s.pagePnt)(cv::Rect(newLeft,tly,right-newLeft,bry-tly)).copyTo(image(cv::Rect(leftOff,0,right-newLeft,bry-tly)));
-        }
-        //cout <<"done, now coloring..."<<endl;
-        if (image.channels()==1)
-            cv::cvtColor(image, image, CV_GRAY2RGB);
-        
-        //if (left==1117 && tly==186)
-        //{
-         //   cv::imshow("rer", image);
-          //  cv::waitKey();
-        //}
-        if (prevNgram.compare(ngram)!=0)
-        {
-            color=(color+1)%5;
-        }
-        for (int r=0; r<bry-tly; r++)
-            for (int c=sideFromR-FUZZY; c<sideFromR+brx-tlx+FUZZY; c++)
-            {
-                //if (left==1117 && tly==186 && (r==10 || r==5) && c==300)
-                //{
-                  //  cv::imshow("rer", image);
-                  //  cv::waitKey(1);
-                //}
-                //cout <<" ("<<r<<" "<<c;
-                //cout.flush();
-                if (c>=0 && c<image.cols)
-                {
-                    cv::Vec3b& pix = image.at<cv::Vec3b>(r,c);
-                    //cout <<"):";
-                    //cout.flush();
-                    //cout<<(int)pix[0];
-                    //cout.flush();
-                    //image.at<cv::Vec3b>(r,c) = cv::Vec3b(pix[0]*0.75,min(20+(int)(pix[1]*1.05),255),pix[2]*0.75);
-                    float fuzzyMult = 1;
-                    if (c<sideFromR+FUZZY)
-                        fuzzyMult=(c-sideFromR+FUZZY)/(2.0*FUZZY);
-                    else if (c>sideFromR+brx-tlx-FUZZY)
-                        fuzzyMult=(sideFromR+brx-tlx+FUZZY-c)/(2.0*FUZZY);
-                    
-                    if (color%3!=1)//red is a bad color for highlighting
-                    {
-                        pix[color%3]*=1.0-0.25*fuzzyMult;
-                        pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
-                        pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
-                    }
-                    else
-                    {
-                        pix[color%3]=min((int)(20*fuzzyMult+(pix[(color)%3]*(1.0+fuzzyMult*0.05))),255);
-                        pix[(color+1)%3] =min((int)(20*fuzzyMult+(pix[(color+1)%3]*(1.0+fuzzyMult*0.05))),255);
-                        pix[(color+2)%3]*=1.0-0.25*fuzzyMult;
-                    }
-                }
-            }
-        //cout<<endl;
-        //cout <<"done"<<endl;
-    }
-    
-    SpottingImage(const SpottingImage& s) : Spotting(s)
-    {
-        image=s.image;
-        ngramImage=s.ngramImage;
-    }
-    virtual ~SpottingImage() {}
-    
-    virtual cv::Mat img()
-    {
-        return image;
-    }
-    cv::Mat ngramImg() const
-    {
-        assert(ngramImage.cols>0);
-        return ngramImage; //(*pagePnt)(cv::Rect(tlx,tly,brx-tlx,bry-tly));
-    }
-    int classified;
-private:
-    cv::Mat image;
-    cv::Mat ngramImage;
-};
-
-class SpottingExemplar : public Spotting
-{
-public:
-    SpottingExemplar(int tlx, int tly, int brx, int bry, int pageId, const cv::Mat* pagePnt, string ngram, float score, cv::Mat ngramImage) : Spotting(tlx,tly,brx,bry,pageId,pagePnt,ngram,score) , ngramImage(ngramImage)
-    {
-        id = _id++;
-        type=SPOTTING_TYPE_EXEMPLAR;
-    }
-    SpottingExemplar(const SpottingImage& s) : Spotting(s) , ngramImage(s.ngramImg())
-    {
-        type=SPOTTING_TYPE_EXEMPLAR;
-    }
-    SpottingExemplar(const SpottingExemplar& s) : Spotting(s) , ngramImage(s.ngramImg())
-    {
-        type=SPOTTING_TYPE_EXEMPLAR;
-    }
-    virtual ~SpottingExemplar() {}
-
-    cv::Mat ngramImg() const
-    {
-#ifdef TEST_MODE
-        cout <<"### SpottingExemplar ngramImg called"<<endl;
-#endif
-        return ngramImage; 
-    }
-private:
-    cv::Mat ngramImage;
-};
-
-
-
-
-class SpottingsBatch {
-public:
-    
-    SpottingsBatch(string ngram, unsigned long spottingResultsId) : 
-        ngram(ngram), spottingResultsId(spottingResultsId)
-    {
-        batchId = _batchId++;
-    }
-    string ngram;
-    unsigned long batchId;
-    unsigned long spottingResultsId;
-    
-    
-    void push_back(SpottingImage im) {
-        if (im.img().cols>0)
-		instances.push_back(im);
-    }
-    SpottingImage operator [](int i) const    {return instances[i];}
-    SpottingImage & operator [](int i) {return instances[i];}
-    SpottingImage at(int i) const    {return instances.at(i);}
-    SpottingImage & at(int i) {return instances.at(i);}
-    unsigned int size() const { return instances.size();}
-    
-    
-private:
-    static unsigned long _batchId;
-    vector<SpottingImage> instances;
-};
 
 
 class scoreComp
@@ -285,6 +69,9 @@ public:
 class SpottingResults {
 public:
     SpottingResults(string ngram);
+    SpottingResults(ifstream& in, PageRef* pageRef);
+    void save(ofstream& out);
+
     string ngram;
     
     ~SpottingResults() 
@@ -308,12 +95,18 @@ public:
         return id;
     }
     
+    //For use when creating SpottingResult
     void add(Spotting spotting);
-    void addTrueNoScore(Spotting* spotting);
 
-    bool updateSpottings(vector<Spotting>* spottings);
+    //For use when creating SpottingResult Adds a spotting which is a new exemplar. We just want to prevent a future redundant classification of it.
+    void addTrueNoScore(const SpottingExemplar& spotting);
+
     //This will either replace the spottings or add new ones if it can't find any close enough. spottings is consumed.
     //The return value merely indicates whether this needs "resurrected" (Put back into the MasterQueue).
+    bool updateSpottings(vector<Spotting>* spottings);
+    
+    //This accpets a spotting which is a new exemplar. We just want to prevent a future redundant classification of it.
+    void updateSpottingTrueNoScore(const SpottingExemplar& spotting);
 
     SpottingsBatch* getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth,int color,string prevNgram, bool need=true);
     
@@ -322,7 +115,7 @@ public:
     bool checkIncomplete();
     
 private:
-    static unsigned long _id;
+    static atomic_ulong _id;
     
     unsigned long id;
     double acceptThreshold;
@@ -335,9 +128,13 @@ private:
     float trueVariance;
     float falseMean;
     float falseVariance;
+
+    //float lastDifAcceptThreshold;
+    //float lastDifRejectThreshold;
+    float lastDifPullFromScore; //The delta for the monentum
+    float momentum;
     
-    float pullFromScore;
-    float delta;
+    float pullFromScore; //The choosen score from which batches are pulled (around the score, alternatively grt than and less than).
     
     float maxScore;
     float minScore;
@@ -345,10 +142,10 @@ private:
     int numLeftInRange; //This actually has the count from the round previous, for efficency
 
     //This multiset orders the spotting results to ease the extraction of batches
-    multiset<Spotting*,scoreComp> instancesByScore;
-    multiset<Spotting*,tlComp> instancesByLocation;
-    map<unsigned long,Spotting> instancesById;
-    map<unsigned long,bool> classById;
+    multiset<Spotting*,scoreComp> instancesByScore; //This holds Spottings yet to be classified
+    multiset<Spotting*,tlComp> instancesByLocation; //This is a convienince holder of all Spottings
+    map<unsigned long,Spotting> instancesById; //This is all the Spottings
+    map<unsigned long,bool> classById; //This is the classifications of Spottings
     
     map<unsigned long, chrono::system_clock::time_point > starts;
    
@@ -366,7 +163,11 @@ private:
     //This uses expectation maximization (one iteration each call) to produce new appect/reject thresholds. It assumes a bimodal gaussian distribution, one for positive spottings and one for negative.
     //returns (and sets allBatchesSent) whether we are now done (all spottings lie outside the thresholds)
     //It uses an Otsu threshold to be used to estimate some initail parameters on the first run.
-    bool EMThresholds();
+    bool EMThresholds(int swing=0);
+
+    //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
+    //It returns instancesByLocation.end() if none is found.
+    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting) const;
 };
 
 #endif

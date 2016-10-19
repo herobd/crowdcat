@@ -28,16 +28,16 @@ button {
   float:left;
 }
 #undoButton {
-  color: #ffffff;
+  color: #fffff0;
   background: #a15757;
 }
 #menuButton {
-  color: #ffffff;
+  color: #fffff0;
   background: #380B61;
 }
 #passButton {
-  color: #ffffff;
-  background: #F4D03F;
+  color: #fffff0;
+  background: #9980b3;
 }
 
 .menuItem {
@@ -47,6 +47,8 @@ button {
     min-height: 50px;
     margin: auto;
     left:0;
+    font-size: 20px;
+    margin-left: 10%;
 }
 
 #menu {
@@ -156,14 +158,56 @@ button {
     pointer-events: none;
     touch-action: none;
     
-    /*-moz-column-count: 2;
-    -moz-column-gap: 80%;
-    -webkit-column-count: 2;
-    -webkit-column-gap: 80%;
-    column-count: 2;
-    column-gap: 80%;*/
+    margin: auto;  
+      left:0;
+      right: 0;
+      max-width: 700px;
+}
+
+#icons .icon {
+    max-width: 100%;
+    max-height: 100%;
+    opacity: 0.7;
+}
+
+#rightIcon {
+    float: right;
+    clear: right;
+}
+#leftIcon {
+    float: left;
+    clear: left;
+}
+
+.gif {
+    height: 70px;
+    opacity: 0.45;
+    left:0;
+    right: 0;
+    margin: auto;
+}
+
+#tapGif {
+    top: 220px;
+    position: fixed;
+    right: 70px;
+    pointer-events: none;
+    touch-action: none;
+}
+.swipeGif {
+    bottom: 10px;
+    position: absolute;
+}
+
+#shows{
+    height:115px;
+    /*position: fixed;*/
+    position: absolute;
+    width:92%;
+    bottom: 90px;
     
-    /*z-index: -1;*/
+    pointer-events: none;
+    touch-action: none;
     
     margin: auto;  
       left:0;
@@ -171,21 +215,34 @@ button {
       max-width: 700px;
 }
 
-#icons img {
-    /*display: inline-block;*/
+#shows img {
     max-width: 100%;
     max-height: 100%;
-    opacity: 0.7;
-    /*margin: -5px, 5px;*/
+    opacity: 0;
 }
 
-#rightIcon {
+#showCheck {
+    float: right;
+    clear: right;
+}
+#showX {
     float: left;
     clear: left;
 }
-#leftIcon {
-    float: right;
-    clear: right;
+
+.fadeOut {
+    -webkit-transition:opacity 0.75s;
+    -moz-transition:opacity 0.75s;
+    -ms-transition:opacity 0.75s;
+    -o-transition:opacity 0.75s;
+    transition:opacity 0.75s;
+}
+.fadeGray {
+    -webkit-transition:background 0.75s;
+    -moz-transition:background 0.75s;
+    -ms-transition:background 0.75s;
+    -o-transition:background 0.75s;
+    transition:background 0.75s;
 }
 
 
@@ -201,13 +258,16 @@ button {
 
 #overlay {
   pointer-events: none;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, .9), rgba(0, 0, 0, 0) 40%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0) 45%);
   width:100%;
   height:100%;
   position: fixed;
   z-index:    4;
   top:        0; 
   left:       0;
+  right:      0;
+  margin:  auto;
+  max-width: 700px;
 }
 
 #instructions {
@@ -339,6 +399,7 @@ div.transcription {
 
 .transcription .meat {
     display: none;
+    clear: left;
 }
 .transcription.ondeck .meat {
     display: block;
@@ -374,14 +435,31 @@ div.selection {
     padding: 5px;
 }
 
-div.selection.error {
-    font-size: 22px;
-    color: #ffffff;
+.starter.ondeck {
+    border-width: 90px 0px 0px 0px;
 }
 
-.selection.error div {
-    background: #a15757;
+.starter div.selection {
+    background:#085405;
 }
+.starter .selection div {
+    background:#0E9209;
+    color:#fafaeb;
+}
+
+div.selection.error {
+    font-size: 22px;
+    color: #a15757;
+}
+
+.starter div.selection.error {
+    visibility:hidden;
+}
+
+/*.selection.error div {
+    background: #a15757;
+}*/
+
 @keyframes expand {
     from {max-height:0px;
           min-height:0px;}
@@ -464,7 +542,7 @@ div.selection.error {
     color: #0E0E0E;
     height:140px;
     border-width:20px 0px;
-    border-color: #FFFF77;
+    border-color: #200020;
     border-style: solid;
 }
 
@@ -477,6 +555,7 @@ div.selection.error {
 
 .spotting.ondeck.redo {
     background: #F9966B !important;
+    margin-bottom: 80px;
 }
 
 .spotting.ondeck.redo img {
@@ -500,7 +579,7 @@ div.selection.error {
   border-top: 1.1em solid rgba(255, 255, 255, 0.2);
   border-right: 1.1em solid rgba(255, 255, 255, 0.2);
   border-bottom: 1.1em solid rgba(255, 255, 255, 0.2);
-  border-left: 1.1em solid #ffffff;
+  border-left: 1.1em solid #fffff0;
   -webkit-transform: translateZ(0);
   -ms-transform: translateZ(0);
   transform: translateZ(0);
@@ -619,51 +698,18 @@ div.selection.error {
   }
 }
 
-@keyframes flyRed {
-  0% {
-  }
-  50% {
-    opacity:0.7;
-  }
-  100% {
-    opacity:1;
-    left: 0px;
-    bottom: 150px;
-  }
+.transInput {
+    float: left;
+    width: 80%;
+    font-size: 29px;
+    margin-left: 2%;
+    background: #cefdce;
 }
-@keyframes flyGreen {
-  0% {
-  }
-  50% {
-    opacity:0.7;
-  }
-  100% {
-    opacity:1;
-    right: 0px;
-    bottom: 150px;
-  }
-}
-@keyframes flyRedLow {
-  0% {
-  }
-  50% {
-    opacity:0.7;
-  }
-  100% {
-    opacity:1;
-    left: 0px;
-    bottom: 90px;
-  }
-}
-@keyframes flyGreenLow {
-  0% {
-  }
-  50% {
-    opacity:0.7;
-  }
-  100% {
-    opacity:1;
-    right: 0px;
-    bottom: 90px;
-  }
+.transSubmit {
+    float: left;
+    width: 15%;
+    background: darkgreen;
+    height: 40px;
+    font-size: 35px;
+    color: #fffff0;
 }

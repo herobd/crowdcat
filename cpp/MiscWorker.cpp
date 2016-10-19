@@ -20,7 +20,8 @@ class MiscWorker : public AsyncWorker {
 
 
         void Execute () {
-            cattss->misc(task);
+            if (cattss!=NULL)
+                cattss->misc(task);
         }
 
         // We have the results, and we're back in the event loop.

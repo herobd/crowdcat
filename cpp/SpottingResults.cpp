@@ -3,9 +3,8 @@
 #include <ctime>
 
 
-unsigned long Spotting::_id=0;
-unsigned long SpottingsBatch::_batchId=0;
-unsigned long SpottingResults::_id=0;
+atomic_ulong Spotting::_id;
+atomic_ulong SpottingResults::_id;
 
 SpottingResults::SpottingResults(string ngram) : 
     ngram(ngram)
@@ -34,16 +33,30 @@ SpottingResults::SpottingResults(string ngram) :
     done=false;
 
     //pullFromScore=splitThreshold;
-    delta=0;
-    //haveRe
+    momentum=1.2;
+    lastDifPullFromScore=0;
 }
 
 void SpottingResults::add(Spotting spotting) {
+    assert(spotting.tlx!=-1);
     //sem_wait(&mutexSem);
     allBatchesSent=false;
     instancesById[spotting.id]=spotting;
     assert(spotting.score==spotting.score);
-    instancesByScore.insert(&instancesById[spotting.id]);
+    if (spotting.type==SPOTTING_TYPE_TRANS_TRUE)
+    {
+        classById[spotting.id]=true;
+        numberClassifiedTrue++;
+    }
+    else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
+    {
+        classById[spotting.id]=false;
+        numberClassifiedFalse++;
+    }
+    else
+    {
+        instancesByScore.insert(&instancesById[spotting.id]);
+    }
     instancesByLocation.insert(&instancesById[spotting.id]);
     tracer = instancesByScore.begin();
     if (spotting.score>maxScore)
@@ -60,13 +73,14 @@ void SpottingResults::add(Spotting spotting) {
     }
     //sem_post(&mutexSem);
 }
-void SpottingResults::addTrueNoScore(Spotting* spotting) {
+void SpottingResults::addTrueNoScore(const SpottingExemplar& spotting) {
+    assert(spotting.tlx!=-1);
     //sem_wait(&mutexSem);
-    assert(spotting->score != spotting->score);
-    instancesById[spotting->id]=*spotting;
-    instancesById[spotting->id].type=SPOTTING_TYPE_APPROVED;
-    instancesByLocation.insert(&instancesById[spotting->id]);
-    classById[spotting->id]=true;
+    assert(spotting.score != spotting.score);
+    instancesById[spotting.id]=spotting;
+    instancesById[spotting.id].type=SPOTTING_TYPE_APPROVED;
+    instancesByLocation.insert(&instancesById[spotting.id]);
+    classById[spotting.id]=true;
     //sem_post(&mutexSem);
 }
 /*SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, unsigned int maxWidth) {
@@ -102,9 +116,11 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if (!need && numLeftInRange<12 && starts.size()>1)
         return NULL;
 
-    //cout <<"getBatch, from:"<<pullFromScore<<endl;
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
+#ifdef TEST_MODE
+    cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
+#endif
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     
@@ -212,12 +228,12 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
     cout<<endl;*/
     
     vector<Spotting>* ret = new vector<Spotting>();
-    
+    int swing=0;
     for (unsigned int i=0; i< ids.size(); i++)
     {
         unsigned long id = stoul(ids[i]);
         int check = starts.erase(id);
-        assert(check==1 || resent);
+        //assert(check==1 || resent);
 
         //In the event this spotting has been updated
         while (updateMap.find(id)!=updateMap.end())
@@ -227,9 +243,13 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             //instancesById.erase(oldId);
         }
 
+        auto iterClass = classById.find(id);
+        if (!resent && iterClass!=classById.end())
+            continue;//we'll skip processing if they waited to long and it got done. Unreliable
+
         if (resent)
         {
-            if (classById[id])
+            if (iterClass->second)
                 numberClassifiedTrue--;
             else
                 numberClassifiedFalse--;
@@ -239,8 +259,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         // adjust threshs
         if (userClassifications[i]>0)
         {
+            swing++;
             numberClassifiedTrue++;
-            if (!resent || !classById[id])
+            if (!resent || !iterClass->second)
             {
                 ret->push_back(instancesById.at(id)); //otherwise we've already sent it
             }
@@ -248,8 +269,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         }
         else if (userClassifications[i]==0)
         {
+            swing--;
             numberClassifiedFalse++;
-            if (resent && (retRemove && classById[id]))
+            if (resent && (retRemove && iterClass->second))
             {
                 retRemove->push_back(make_pair(id,instancesById.at(id).ngram));
             }
@@ -268,7 +290,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         return ret;
     }
     bool allWereSent = allBatchesSent; 
-    EMThresholds();
+    EMThresholds(swing);
   
 
 
@@ -327,7 +349,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
    
     
 
-bool SpottingResults::EMThresholds()
+bool SpottingResults::EMThresholds(int swing)
 {
     assert(instancesById.size()>1);
     assert(maxScore!=-999999);
@@ -337,7 +359,8 @@ bool SpottingResults::EMThresholds()
      *initailly. This should be fine as we sample from the middle of
      *the thresholds outward.
      */
-     
+    
+#ifdef TEST_MODE 
     //test
     int displayLen=90;
     vector<int> histogramCP(displayLen);
@@ -345,18 +368,19 @@ bool SpottingResults::EMThresholds()
     vector<int> histogramGP(displayLen);
     vector<int> histogramGN(displayLen);
     //test
+#endif
     
     if (init)
     {
         //we initailize our split with Otsu, as we are assuming two distributions.
         //make histogram
         vector<int> histogram(256);
-        int total = 0;//instancesById.size();
+        //int total = 0;//instancesById.size();
         for (auto p : instancesById)
         {
             if (p.second.score==p.second.score)
             {
-                total++;
+                //total++;
                 unsigned long id = p.first;
                 int bin = 255*(instancesById.at(id).score-minScore)/(maxScore-minScore);
                 if (bin<0) bin=0;
@@ -365,43 +389,8 @@ bool SpottingResults::EMThresholds()
             }
         }
         
-        //otsu
-        double sum =0;
-        for (int i = 1; i < 256; ++i)
-                sum += i * histogram[i];
-        double sumB = 0;
-        double wB = 0;
-        double wF = 0;
-        double mB;
-        double mF;
-        double max = 0.0;
-        double between = 0.0;
-        double threshold1 = 0.0;
-        double threshold2 = 0.0;
-        for (int i = 0; i < 256; ++i)
-        {
-            wB += histogram[i];
-            if (wB == 0)
-                continue;
-            wF = total - wB;
-            if (wF == 0)
-                break;
-            sumB += i * histogram[i];
-            mB = sumB / (wB*1.0);
-            mF = (sum - sumB) / (wF*1.0);
-            between = wB * wF * pow(mB - mF, 2);
-            if ( between >= max )
-            {
-                threshold1 = i;
-                if ( between > max )
-                {
-                    threshold2 = i;
-                }
-                max = between; 
-            }
-        }
         
-        double thresh = ( threshold1 + threshold2 ) / 2.0;
+        double thresh = GlobalK::otsuThresh(histogram);//( threshold1 + threshold2 ) / 2.0;
         pullFromScore = (thresh/256)*(maxScore-minScore)+minScore;
 #ifdef TEST_MODE_LONG
         if (ngram.compare("te")==0)
@@ -413,6 +402,7 @@ bool SpottingResults::EMThresholds()
     //bool initV=init;
     //while (1)
     //{
+#ifdef TEST_MODE
         for (int i=0; i<displayLen; i++)
         {
             histogramCP[i]=0;
@@ -420,6 +410,7 @@ bool SpottingResults::EMThresholds()
             histogramCN[i]=0;
             histogramGN[i]=0;;
         }
+#endif        
         
         //map<unsigned long, bool> expected;
         vector<float> expectedTrue;
@@ -429,22 +420,10 @@ bool SpottingResults::EMThresholds()
         
         
         
-#ifdef TEST_MODE
-        bool noTest=true;
-        unsigned long ttt;
-#endif        
         
         numLeftInRange=0;
         for (auto p : instancesById)
         {
-#ifdef TEST_MODE
-            bool isTest = ngram.compare("he")==0 && p.second.tlx<527 && p.second.brx>527 && p.second.tly<2419 && p.second.bry>2419;
-            assert((isTest && noTest) || !isTest);
-            if (isTest) {
-                noTest=false;
-                ttt=p.first;
-            }
-#endif
             if (p.second.score!=p.second.score)
                 continue; 
             unsigned long id = p.first;
@@ -526,6 +505,8 @@ bool SpottingResults::EMThresholds()
         float rejectThreshold1 = trueMean+numStdDevs*sqrt(trueVariance);
         float acceptThreshold2 = trueMean-numStdDevs*sqrt(trueVariance);
         float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
+        //float prevAcceptThreshold=acceptThreshold;
+        //float prevRejectThreshold=rejectThreshold;
         if (falseVariance!=0 && trueVariance!=0)
         {
             acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
@@ -541,6 +522,25 @@ bool SpottingResults::EMThresholds()
             rejectThreshold = rejectThreshold2;
             acceptThreshold = falseMean-2*numStdDevs*sqrt(falseVariance);
         }
+
+        /*if (!init)
+        {
+            float difAcceptThreshold = acceptThreshold-prevAcceptThreshold;
+            if ( (difAcceptThreshold>0 && lastDifAcceptThreshold>0) || (difAcceptThreshold<0 && lastDifAcceptThreshold<0) )
+            {
+                acceptThreshold+=momentum*lastDifAcceptThreshold;
+                difAcceptThreshold = acceptThreshold-prevAcceptThreshold;
+            }
+            lastDifAcceptThreshold=difAcceptThreshold;
+
+            float difRejectThreshold = rejectThreshold-prevRejectThreshold;
+            if ( (difRejectThreshold>0 && lastDifRejectThreshold>0) || (difRejectThreshold<0 && lastDifRejectThreshold<0) )
+            {
+                rejectThreshold+=momentum*lastDifRejectThreshold;
+                difRejectThreshold = rejectThreshold-prevRejectThreshold;
+            }
+            lastDifRejectThreshold=difRejectThreshold;
+        }*/
 #ifdef TEST_MODE
         cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std devs of: f:"<<sqrt(falseVariance)<<", t:"<<sqrt(trueVariance)<<endl;
 #endif        
@@ -553,32 +553,66 @@ bool SpottingResults::EMThresholds()
             initV=false;
         pullFromScore = trueMean;*/
     //}
+    float prevPullFromScore = pullFromScore;
     pullFromScore = trueMean-sqrt(trueVariance);
-    
-    //cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
-    //cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
-    
-    
-    //cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
-    /*//a historgram visualization
-    
-    int falseMeanBin=(displayLen-1)*(falseMean-minScore)/(maxScore-minScore);
-    int falseVarianceBin1=(displayLen-1)*(falseMean-sqrt(falseVariance)-minScore)/(maxScore-minScore);
-    int falseVarianceBin2=(displayLen-1)*(falseMean+sqrt(falseVariance)-minScore)/(maxScore-minScore);
-    int trueMeanBin=(displayLen-1)*(trueMean-minScore)/(maxScore-minScore);
-    int trueVarianceBin1=(displayLen-1)*(trueMean-sqrt(trueVariance)-minScore)/(maxScore-minScore);
-    int trueVarianceBin2=(displayLen-1)*(trueMean+sqrt(trueVariance)-minScore)/(maxScore-minScore);
-    int acceptThresholdBin=(displayLen-1)*(acceptThreshold-minScore)/(maxScore-minScore);
-    int rejectThresholdBin=(displayLen-1)*(rejectThreshold-minScore)/(maxScore-minScore);
-    int pullFromScoreBin=(displayLen-1)*(pullFromScore-minScore)/(maxScore-minScore);
-    for (int bin=0; bin<displayLen; bin++)
+    if (!init)
     {
-        if (falseMeanBin==bin)
-            cout <<"F";
-        else
-            cout <<" ";
-        if (falseVarianceBin1==bin || falseVarianceBin2==bin)
-            cout <<"f";
+        float difPullFromScore = pullFromScore-prevPullFromScore;
+#ifdef TEST_MODE
+        cout<<"orig pull dif="<<difPullFromScore<<",  ";
+#endif
+        //if ( (pull>0 && lastDifPullFromScore>0) || (difPullFromScore<0 && lastDifPullFromScore<0) )
+        //{
+        //    pullFromScore+=momentum*lastDifPullFromScore;
+        //    difPullFromScore = pullFromScore-prevPullFromScore;
+        //}
+        if ((swing>0 && difPullFromScore<0) || (swing<0 && difPullFromScore>0))
+            pullFromScore=prevPullFromScore;
+        if ((swing>0 && lastDifPullFromScore>0) || (swing<0 && lastDifPullFromScore<0))
+        {
+            pullFromScore+=momentum*lastDifPullFromScore;
+        }
+        else 
+        {
+            pullFromScore+= (swing/10.0)*fabs(difPullFromScore+lastDifPullFromScore);
+        }
+        difPullFromScore = pullFromScore-prevPullFromScore;
+#ifdef TEST_MODE
+        cout<<"final pull dif="<<difPullFromScore<<",  swing="<<swing<<",  lastDif="<<lastDifPullFromScore<<endl;
+#endif
+        lastDifPullFromScore=difPullFromScore;
+    }
+
+    //safe gaurd
+    if (pullFromScore>rejectThreshold)
+        pullFromScore=rejectThreshold;
+    else if (pullFromScore<acceptThreshold)
+        pullFromScore=acceptThreshold;
+
+//cout <<"true mean "<<trueMean<<" true var "<<trueVariance<<endl;
+//cout <<"false mean "<<falseMean<<" false var "<<falseVariance<<endl;
+
+
+//cout <<"adjusted threshs, now "<<acceptThreshold<<" <> "<<rejectThreshold<<"    computed with std dev of: "<<numStdDevs<<endl;
+/*//a historgram visualization
+
+int falseMeanBin=(displayLen-1)*(falseMean-minScore)/(maxScore-minScore);
+int falseVarianceBin1=(displayLen-1)*(falseMean-sqrt(falseVariance)-minScore)/(maxScore-minScore);
+int falseVarianceBin2=(displayLen-1)*(falseMean+sqrt(falseVariance)-minScore)/(maxScore-minScore);
+int trueMeanBin=(displayLen-1)*(trueMean-minScore)/(maxScore-minScore);
+int trueVarianceBin1=(displayLen-1)*(trueMean-sqrt(trueVariance)-minScore)/(maxScore-minScore);
+int trueVarianceBin2=(displayLen-1)*(trueMean+sqrt(trueVariance)-minScore)/(maxScore-minScore);
+int acceptThresholdBin=(displayLen-1)*(acceptThreshold-minScore)/(maxScore-minScore);
+int rejectThresholdBin=(displayLen-1)*(rejectThreshold-minScore)/(maxScore-minScore);
+int pullFromScoreBin=(displayLen-1)*(pullFromScore-minScore)/(maxScore-minScore);
+for (int bin=0; bin<displayLen; bin++)
+{
+    if (falseMeanBin==bin)
+        cout <<"F";
+    else
+        cout <<" ";
+    if (falseVarianceBin1==bin || falseVarianceBin2==bin)
+        cout <<"f";
         else
             cout <<" ";
         if (trueMeanBin==bin)
@@ -687,9 +721,10 @@ bool SpottingResults::checkIncomplete()
 {
     bool incomp=false;
     //cout <<"checkIncomplete, starts is "<<starts.size()<<endl;
-    vector<unsigned long> toRemove;
-    for (auto start : starts)
+    //vector<unsigned long> toRemove;
+    for (auto iter=starts.begin(); iter!=starts.end(); iter++)
     {
+        auto start = *iter;
         chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         //cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
@@ -698,12 +733,19 @@ bool SpottingResults::checkIncomplete()
             instancesByScore.insert(&instancesById[start.first]);
             tracer = instancesByScore.begin();
             incomp=true;
-            toRemove.push_back(start.first);
-            
+            //toRemove.push_back(start.first);
+#ifdef TEST_MODE
+            cout<<"Timeout ("<<pass.count()<<") on batch "<<start.first<<endl;
+#endif     
+            iter = starts.erase(iter);
+            if (iter!=starts.begin())
+                iter--;
+            if (iter==starts.end())
+                break;
         }
     }
-    for (unsigned long id : toRemove)
-        starts.erase(id);
+    //for (unsigned long id : toRemove)
+    //    starts.erase(id);
     if (incomp && allBatchesSent)
     {
         allBatchesSent=false;
@@ -712,24 +754,104 @@ bool SpottingResults::checkIncomplete()
     return false;
 }
 
+
+multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting& spotting) const
+{
+    bool updated=false;
+    int width = spotting.brx-spotting.tlx;
+    int height = spotting.bry-spotting.tly;
+    //Spotting* bestSoFar=NULL;
+    auto bestSoFarIter = instancesByLocation.end();
+    int bestOverlap=0;
+    double spottingArea = (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly);
+    for (int tlx=spotting.tlx-width*(1-UPDATE_OVERLAP_THRESH); tlx<spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH); tlx++)
+    {
+        //Find all spottings for given tlx
+        Spotting lb(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH));
+        Spotting ub(tlx,spotting.tly+height*(1-UPDATE_OVERLAP_THRESH));
+        auto itLow = instancesByLocation.lower_bound(&lb);
+        auto itHigh = instancesByLocation.upper_bound(&ub);
+
+
+        for (;itLow!=itHigh; itLow++)
+        {
+            int overlapArea = ( min(spotting.brx,(*itLow)->brx) - max(spotting.tlx,(*itLow)->tlx) ) * ( min(spotting.bry,(*itLow)->bry) - max(spotting.tly,(*itLow)->tly) );
+            double thresh = UPDATE_OVERLAP_THRESH;
+            bool updateWhenInBatch = (*itLow)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(*itLow)==instancesByScore.end();
+            if (updateWhenInBatch)
+                thresh=UPDATE_OVERLAP_THRESH_TIGHT;
+            if (overlapArea/spottingArea > thresh)
+            {
+                if (overlapArea > bestOverlap)
+                {
+                    bestOverlap=overlapArea;
+                    //bestSoFar=*itLow;
+                    bestSoFarIter=itLow;
+                }
+                else
+                {
+                    tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
+                    break;
+                }
+
+
+                
+            }
+        }
+    }
+    return bestSoFarIter;
+}
+
+//This method is to check to see if we actually have this exemplar already and then prevent is from being re-approved
+void SpottingResults::updateSpottingTrueNoScore(const SpottingExemplar& spotting)
+{
+    assert(spotting.tlx!=-1);
+    assert(spotting.score != spotting.score);
+
+    //Scan for possibly overlapping (the same) spottings
+    Spotting* best=NULL;
+    auto bestIter = findOverlap(spotting);
+    if (bestIter != instancesByLocation.end())
+        best=*bestIter;
+    if (best!=NULL)
+    {
+
+        bool updateWhenInBatch = (best)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(best)==instancesByScore.end();
+        if (updateWhenInBatch)
+            updateMap[best->id]=spotting.id;
+#ifdef TEST_MODE
+        else
+            testUpdateMap[best->id]=spotting.id;
+#endif
+        //Add this spotting
+        instancesById[spotting.id]=spotting;
+        instancesById[spotting.id].type=SPOTTING_TYPE_APPROVED;
+        instancesById[spotting.id].score=best->score;//we replace the score so that we contribute to the thresholding
+        instancesByLocation.insert(&instancesById[spotting.id]);
+        classById[spotting.id]=true;
+        instancesByLocation.erase(bestIter); //erase by iterator
+
+        //remove the old one
+        int removed = instancesByScore.erase(best); //erase by value (pointer)
+        if (removed)
+        {
+            tracer = instancesByScore.begin();
+        }
+        instancesById.erase(best->id);
+    }
+    else
+    {
+        addTrueNoScore(spotting);
+    }
+}
+
 //combMin
 bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 {
-#ifdef TEST_MODE
-    bool noTest=true;
-    unsigned long ttt;
-#endif
     for (Spotting& spotting : *spottings)
     {
-#ifdef TEST_MODE
-        bool isTest = ngram.compare("he")==0 && spotting.tlx<527 && spotting.brx>527 && spotting.tly<2419 && spotting.bry>2419;
-        assert((isTest && noTest) || !isTest);
-        if (isTest) {
-            noTest=false;
-            ttt=spotting.id;
-            cout <<"###!!! updateSpottings hit ngram of interest"<<endl;
-        }
-#endif
+        assert(spotting.tlx!=-1);
+        //Update max and min
         if (spotting.score>maxScore)
         {
             if (falseMean==maxScore && falseVariance==1.0)
@@ -742,103 +864,72 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                 trueMean=spotting.score;
             minScore=spotting.score;
         }
-        bool updated=false;
-        int width = spotting.brx-spotting.tlx;
-        int height = spotting.bry-spotting.tly;
-        Spotting* bestSoFar=NULL;
-        auto bestSoFarIter = instancesByLocation.end();
-        int bestOverlap=0;
-        for (int tlx=spotting.tlx-width*(1-UPDATE_OVERLAP_THRESH); tlx<spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH); tlx++)
+
+        if (spotting.type==SPOTTING_TYPE_TRANS_TRUE)
         {
-            Spotting lb(tlx,spotting.tly-height*(1-UPDATE_OVERLAP_THRESH));
-            Spotting ub(tlx,spotting.tly+height*(1-UPDATE_OVERLAP_THRESH));
-            auto itLow = instancesByLocation.lower_bound(&lb);
-            auto itHigh = instancesByLocation.upper_bound(&ub);
-            for (;itLow!=itHigh; itLow++)
-            {
-                int overlapArea = ( min(spotting.brx,(*itLow)->brx) - max(spotting.tlx,(*itLow)->tlx) ) * ( min(spotting.bry,(*itLow)->bry) - max(spotting.tly,(*itLow)->tly) );
-#ifdef TEST_MODE
-                bool isTest2 = (*itLow)->tlx<527 && (*itLow)->brx>527 && (*itLow)->tly<2419 && (*itLow)->bry>2419;
-                if (isTest && isTest2)
-                    cout<<"###!!! ngram of interest, overlap: "<<overlapArea<<", did update: "<<(overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>UPDATE_OVERLAP_THRESH)<<endl;
-#endif
-                double thresh = UPDATE_OVERLAP_THRESH;
-                bool updateWhenInBatch = (*itLow)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(*itLow)==instancesByScore.end();
-                if (updateWhenInBatch)
-                    thresh=UPDATE_OVERLAP_THRESH_TIGHT;
-                if (overlapArea/(0.0+ (spotting.brx-spotting.tlx)*(spotting.bry-spotting.tly))>thresh)
-                {
-                    if (overlapArea > bestOverlap)
-                    {
-                        bestOverlap=overlapArea;
-                        bestSoFar=*itLow;
-                        bestSoFarIter=itLow;
-                    }
-                    else
-                    {
-                        tlx=spotting.tlx+width*(1-UPDATE_OVERLAP_THRESH);
-                        break;
-                    }
-
-
-                    
-                }
-            }
-        }
-        if (bestSoFar!=NULL)
-        {
-            updated=true;
-
-            if (spotting.score < (bestSoFar)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
-            {
-                bool updateWhenInBatch = (bestSoFar)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(bestSoFar)==instancesByScore.end();
-                if (updateWhenInBatch)
-                    updateMap[bestSoFar->id]=spotting.id;
-#ifdef TEST_MODE
-                else
-                    testUpdateMap[bestSoFar->id]=spotting.id;
-#endif
-                instancesById[spotting.id]=spotting;
-                instancesByLocation.insert(&instancesById[spotting.id]);
-                instancesByLocation.erase(bestSoFarIter); //erase by iterator
-                int removed = instancesByScore.erase(bestSoFar); //erase by value (pointer)
-                if (removed)
-                {
-#ifdef TEST_MODE
-                    if (isTest) {
-                        cout<<"###!!! replacing ngram of interest1"<<endl;
-                    }
-#endif
-                    //add
-                    instancesByScore.insert(&instancesById[spotting.id]);
-                    tracer = instancesByScore.begin();
-                }
-                else if ((bestSoFar)->type==SPOTTING_TYPE_THRESHED && classById[(bestSoFar)->id]==false)
-                {//This occurs after being resurrected. We'll give a better score another chance.
-#ifdef TEST_MODE
-                    if (isTest)
-                        cout<<"###!!! replacing ngram of interest2"<<endl;
-#endif
-                    //cout<<"{} replaced false spotting "<<spotting.score<<endl;
-                    //(bestSoFar)->type=SPOTTING_TYPE_NONE;
-                    classById.erase((bestSoFar)->id);
-                    instancesByScore.insert(&instancesById[spotting.id]);
-                    tracer = instancesByScore.begin();
-                }
-                instancesById.erase(bestSoFar->id);
-            }
-        }
-
-        if (!updated)
-        {
-#ifdef TEST_MODE
-            if (isTest)
-                cout<<"###!!! ngram of interest, no intersections found"<<endl;
-#endif
+            classById[spotting.id]=true;
+            numberClassifiedTrue++;
             instancesById[spotting.id]=spotting;
-            instancesByScore.insert(&instancesById[spotting.id]);
             instancesByLocation.insert(&instancesById[spotting.id]);
-            tracer = instancesByScore.begin();
+        }
+        else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
+        {
+            classById[spotting.id]=false;
+            numberClassifiedFalse++;
+            instancesById[spotting.id]=spotting;
+            instancesByLocation.insert(&instancesById[spotting.id]);
+        }
+        else
+        {
+
+            //Scan for possibly overlapping (the same) spottings
+            Spotting* best=NULL;
+            auto bestIter = findOverlap(spotting);
+            if (bestIter != instancesByLocation.end())
+                best=*bestIter;
+            if (best!=NULL)
+            {
+
+                if (spotting.score < (best)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
+                {
+                    bool updateWhenInBatch = (best)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(best)==instancesByScore.end();
+                    if (updateWhenInBatch)
+                        updateMap[best->id]=spotting.id;
+#ifdef TEST_MODE
+                    else
+                        testUpdateMap[best->id]=spotting.id;
+#endif
+                    //Add this spotting
+                    instancesById[spotting.id]=spotting;
+                    instancesByLocation.insert(&instancesById[spotting.id]);
+                    instancesByLocation.erase(bestIter); //erase by iterator
+
+                    //remove the old one
+                    int removed = instancesByScore.erase(best); //erase by value (pointer)
+                    if (removed)
+                    {
+                        //add
+                        instancesByScore.insert(&instancesById[spotting.id]);
+                        tracer = instancesByScore.begin();
+                    }
+                    else if ((best)->type==SPOTTING_TYPE_THRESHED && classById[(best)->id]==false)
+                    {//This occurs after being resurrected. We'll give a better score another chance.
+                        //cout<<"{} replaced false spotting "<<spotting.score<<endl;
+                        //(best)->type=SPOTTING_TYPE_NONE;
+                        classById.erase((best)->id);
+                        instancesByScore.insert(&instancesById[spotting.id]);
+                        tracer = instancesByScore.begin();
+                    }
+                    instancesById.erase(best->id);
+                }
+            }
+            else
+            {
+                instancesById[spotting.id]=spotting;
+                instancesByScore.insert(&instancesById[spotting.id]);
+                instancesByLocation.insert(&instancesById[spotting.id]);
+                tracer = instancesByScore.begin();
+            }
         }
     }
     delete spottings;
@@ -858,4 +949,125 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
         //Else, add it in normally
         //All non-intersected old ones need to have their score not count anymore (but save in case of later resurrection)
     return false;
+}
+
+void SpottingResults::save(ofstream& out)
+{
+    out<<"SPOTTINGRESULTS"<<endl;
+    out<<ngram<<"\n";
+    out<<numberClassifiedTrue<<"\n";
+    out<<numberClassifiedFalse<<"\n";
+    out<<numberAccepted<<"\n";
+    out<<numberRejected<<"\n";
+    out<<_id.load()<<"\n";
+    out<<id<<"\n";
+    out<<acceptThreshold<<"\n"<<rejectThreshold<<"\n";
+    out<<allBatchesSent<<"\n"<<done<<"\n";
+    out<<trueMean<<"\n"<<trueVariance<<"\n";
+    out<<falseMean<<"\n"<<falseVariance<<"\n";
+    out<<lastDifPullFromScore<<"\n"<<momentum<<"\n";
+    out<<pullFromScore<<"\n";
+    out<<maxScore<<"\n"<<minScore<<"\n";
+    out<<numLeftInRange<<"\n";
+
+    out<<instancesById.size()<<"\n";
+    for (auto p : instancesById)
+    {
+        assert(p.second.tlx!=-1);
+        p.second.save(out);
+    }
+
+    out<<instancesByScore.size()+starts.size()<<"\n";
+    for (Spotting* s : instancesByScore)
+    {
+        out<<s->id<<"\n";
+    }
+    for (auto p : starts)
+    {
+        out<<p.first<<"\n";
+    }
+
+    out<<classById.size()<<"\n";
+    for (auto p : classById)
+    {
+        out<<p.first<<"\n";
+        out<<p.second<<"\n";
+    }
+    //skip updateMap as no feedback will be recieved.
+    //skip tracer as we will just refind it
+}
+
+SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
+{
+    string line;
+    getline(in,line);
+    assert(line.compare("SPOTTINGRESULTS")==0);
+    getline(in,ngram);
+    getline(in,line);
+    numberClassifiedTrue = stoi(line);
+    getline(in,line);
+    numberClassifiedFalse = stoi(line);
+    getline(in,line);
+    numberAccepted = stoi(line);
+    getline(in,line);
+    numberRejected = stoi(line);
+    getline(in,line);
+    _id.store(stoul(line));
+    getline(in,line);
+    id = stoul(line);
+    getline(in,line);
+    acceptThreshold = stod(line);
+    getline(in,line);
+    rejectThreshold = stod(line);
+    getline(in,line);
+    allBatchesSent = stoi(line);
+    getline(in,line);
+    done = stoi(line);
+    getline(in,line);
+    trueMean = stod(line);
+    getline(in,line);
+    trueVariance = stod(line);
+    getline(in,line);
+    falseMean = stod(line);
+    getline(in,line);
+    falseVariance = stod(line);
+    getline(in,line);
+    lastDifPullFromScore = stod(line);
+    getline(in,line);
+    momentum = stod(line);
+    getline(in,line);
+    pullFromScore = stod(line);
+    getline(in,line);
+    maxScore = stod(line);
+    getline(in,line);
+    minScore = stod(line);
+    getline(in,line);
+    numLeftInRange = stoi(line);
+
+    getline(in,line);
+    int size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        Spotting s(in,pageRef);
+        instancesById[s.id]=s;
+        instancesByLocation.insert(&instancesById[s.id]);
+    }
+    getline(in,line);
+    size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        getline(in,line);
+        unsigned long sid = stoul(line);
+        instancesByScore.insert(&instancesById[sid]);
+    }
+    getline(in,line);
+    size = stoi(line);
+    for (int i=0; i<size; i++)
+    {
+        getline(in,line);
+        unsigned long sid = stoul(line);
+        getline(in,line);
+        classById[sid] = stoi(line);
+    }
+    tracer = instancesByScore.begin();
 }

@@ -37,3 +37,82 @@ int GlobalK::getNgramRank(string ngram)
 }
 
 
+double GlobalK::otsuThresh(vector<int> histogram)
+{
+    double sum =0;
+    int total=0;
+    for (int i = 1; i < histogram.size(); ++i)
+    {
+        total+=histogram[i];
+        sum += i * histogram[i];
+    }
+    double sumB = 0;
+    double wB = 0;
+    double wF = 0;
+    double mB;
+    double mF;
+    double max = 0.0;
+    double between = 0.0;
+    double threshold1 = 0.0;
+    double threshold2 = 0.0;
+    for (int i = 0; i < histogram.size(); ++i)
+    {
+        wB += histogram[i];
+        if (wB == 0)
+            continue;
+        wF = total - wB;
+        if (wF == 0)
+            break;
+        sumB += i * histogram[i];
+        mB = sumB / (wB*1.0);
+        mF = (sum - sumB) / (wF*1.0);
+        between = wB * wF * pow(mB - mF, 2);
+        if ( between >= max )
+        {
+            threshold1 = i;
+            if ( between > max )
+            {
+                threshold2 = i;
+            }
+            max = between;
+        }
+    }
+
+    return ( threshold1 + threshold2 ) / 2.0;
+}
+void GlobalK::saveImage(const cv::Mat& im, ofstream& out)
+{
+    if (im.cols==0)
+    {
+        out<<"X"<<endl;
+    }
+    else
+    {
+        bool color=im.channels()==3;
+        vector<unsigned char> encoded;
+        cv::imencode(".png",im,encoded);
+        out<<color<<"\n";
+        out<<encoded.size()<<"\n";
+        for (unsigned char c : encoded)
+            out<<c;
+        out<<"\n";
+    }
+}
+void GlobalK::loadImage(cv::Mat& im, ifstream& in)
+{
+    string line;
+    getline(in,line);
+    if (line[0]!='X')
+    {
+        bool color=stoi(line);
+        getline(in,line);
+        int size = stoi(line);
+        vector<unsigned char> encoded(size);
+        for (int i=0; i<size; i++)
+        {
+            encoded[i]=in.get();
+        }
+        assert('\n'==in.get());
+        im=cv::imdecode(encoded,color?CV_LOAD_IMAGE_COLOR:CV_LOAD_IMAGE_GRAYSCALE);
+    }
+}

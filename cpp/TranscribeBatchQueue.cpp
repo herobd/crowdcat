@@ -13,7 +13,6 @@ TranscribeBatchQueue::TranscribeBatchQueue()
 }*/
 void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches, vector<unsigned long>* remove)
 {
-    cout <<"enqueueAll"<<endl;
     lock();
     for (TranscribeBatch* b :  batches)
     {
@@ -45,7 +44,6 @@ void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches, vector<u
         }
     }
     unlock();
-    cout <<"END enqueueAll"<<endl;
 }
 
 TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
@@ -69,15 +67,35 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
 {
     vector<Spotting*> newNgramExemplars;
     lock();
+    WordBackPointer* backPointer=NULL;
+    bool resend=false;
     if (returnMap.find(id) != returnMap.end())
     {
-        if (transcription[0]=='$' && transcription[transcription.length()-1]=='$')
+        backPointer=returnMap[id]->getBackPointer();
+    }
+    else if (doneMap.find(id) != doneMap.end())
+    {
+        //This occurs on a resend
+        backPointer=doneMap[id];
+        resend=true;
+        //if (transcription.length()!=0 && transcription.compare("$PASS$")!=0)
+        //    newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+    }
+
+    if (backPointer!=NULL)
+    {
+        if ((transcription[0]=='$' && transcription[transcription.length()-1]=='$') || transcription.length()==0)
         {
             if (transcription.compare("$ERROR$")==0)
-            {//This probably will occur with bad segmentation
-                returnMap[id]->getBackPointer()->error(toRemoveExemplars);//change into manual batch or remove spottings?
-                cout<<"ERROR returned for trans "<<id<<endl;
-                delete returnMap[id];
+            {//This may occur with bad segmentation, but primarily just bad ngram alignments
+                TranscribeBatch* newBatch = backPointer->error(id,resend,&newNgramExemplars,toRemoveExemplars);//change into manual batch or remove spottings?
+                if (newBatch!=NULL)
+                    queue.push_back(newBatch);
+                if (!resend)
+                {
+                    doneMap[id] = backPointer;
+                    delete returnMap[id];
+                }
             }
             else if (transcription.length()>9 && transcription.substr(0,8).compare("$REMOVE:")==0)
             {
@@ -86,7 +104,7 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //{
                     sid= stoul(transcription.substr(8,transcription.length()-9));
 
-                    TranscribeBatch* newBatch = returnMap[id]->getBackPointer()->removeSpotting(sid,&newNgramExemplars,toRemoveExemplars);
+                    TranscribeBatch* newBatch = backPointer->removeSpotting(sid,id,resend,&newNgramExemplars,toRemoveExemplars);
                     if (newBatch!=NULL)
                         queue.push_back(newBatch);
                 //}
@@ -96,32 +114,45 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
                 //    cout << ia.what() << endl;
                 //    assert(false);
                 //}
-                delete returnMap[id];
+                if (!resend)
+                {
+                    doneMap[id] = backPointer;
+                    delete returnMap[id];
+                }
             }
-            else if (transcription.compare("$PASS$")==0)
+            else if (!resend && (transcription.length()==0 || transcription.compare("$PASS$")==0))
             {
                 queue.push_front(returnMap[id]);
             }
-            else
+            /*else
             {
                 cout << "invalid_argument TranscribeBatchQueue::feedback(#,"<<transcription<<")"<<endl;
-            }
+                if (!resend)
+                    queue.push_front(returnMap[id]);
+            }*/
         }
         else
         {
-            newNgramExemplars=returnMap[id]->getBackPointer()->result(transcription,toRemoveExemplars);
-            doneMap[id] = returnMap[id]->getBackPointer();
-            delete returnMap[id];
+            newNgramExemplars=backPointer->result(transcription,id,resend,toRemoveExemplars);
+            if (!resend)
+            {
+                doneMap[id] = backPointer;
+                delete returnMap[id];
+            }
         }
-        returnMap.erase(id);
-        timeMap.erase(id);
+
+        if (!resend)
+        {
+            returnMap.erase(id);
+            timeMap.erase(id);
+        }
     }
     else
     {
-        //This occurs on a resend
-        
-        if (transcription.compare("$PASS$")!=0)
-            newNgramExemplars=doneMap[id]->result(transcription,toRemoveExemplars);
+        cout <<"ERROR: TranscribeBatchQueue::feedback unrecogized id: "<<id<<"   for trans: "<<transcription<<endl;
+#ifdef TEST_MODE
+//        assert(false);
+#endif
     }
     unlock();
     return newNgramExemplars;
@@ -130,18 +161,53 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
 void TranscribeBatchQueue::checkIncomplete()
 {
     lock();
-    for (auto start : timeMap)
+    for (auto iter=timeMap.begin(); iter!=timeMap.end(); iter++)
     {
-        unsigned long id = start.first;
-        chrono::system_clock::duration d = chrono::system_clock::now()-start.second;
+        unsigned long id = iter->first;
+        chrono::system_clock::duration d = chrono::system_clock::now()-iter->second;
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed
         {
             queue.push_front(returnMap[id]);
 
             returnMap.erase(id);
-            timeMap.erase(id);
+            iter = timeMap.erase(iter);
+            if (iter!=timeMap.begin())
+                iter--;
+
+            if (iter==timeMap.end())
+                break;
         }
     }
     unlock();
+}
+
+void TranscribeBatchQueue::save(ofstream& out)
+{
+    out<<"TRANSCRIBEBATCHQUEUE"<<endl;
+    lock();
+    //shortcut by saving the returnMap as part of the queue
+    out<<(queue.size()+returnMap.size())<<"\n";
+    for (auto p : returnMap) //returnmap goes first
+    {
+        p.second->save(out);
+    }
+    for (TranscribeBatch* t : queue)
+    {
+        t->save(out);
+    }
+    //we skip the doneMap as it is only used on resends
+    unlock();
+}
+void TranscribeBatchQueue::load(ifstream& in, CorpusRef* corpusRef)
+{
+    string line;
+    getline(in,line);
+    assert(line.compare("TRANSCRIBEBATCHQUEUE")==0);
+    getline(in,line);
+    int qSize = stoi(line);
+    for (int i=0; i<qSize; i++)
+    {
+        queue.push_back(new TranscribeBatch(in,corpusRef));
+    }
 }

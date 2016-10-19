@@ -167,6 +167,16 @@ function getNextBatch(window,toload) {
 }*/
 /////////////////////////
 
+function standardQuery() {
+    var query='';
+    if (trainingMode)
+        query+='&trainingNum='+trainingNum;
+    else if (timingTestMode)
+        query+='&testingNum='+testingNum;
+    if (save)
+        query+='&save=1';
+    return query;
+}
 
 //pink,green, orange, pink, blue
 var headerColors = ['#E0B0FF','#7fb13d','#CD7F32','#C5908E','#95B9C7'];
@@ -180,8 +190,8 @@ function httpGetAsync(theUrl, callback)
     xmlHttp.onreadystatechange = function() { 
         if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
             callback(xmlHttp.responseText);
-        else if (xmlHttp.readyState == 4)
-            callback(xmlHttp.status);
+        //else if (xmlHttp.readyState == 4)
+        //    callback(xmlHttp.status);
             
     }
     xmlHttp.open("GET", theUrl, true); // true for asynchronous 
@@ -207,14 +217,17 @@ var lastRemovedBatchInfo=[];
 function batchShiftAndSend(batchId,callback) {
     
     var info = batchQueue[0];
-    if (info.id != batchId && info.id != batchId.substr(1)) {
-        console.log("ERROR, not matching ids: "+info.id+" "+batchId);
+    if (info.type+info.id != batchId) {// && info.id != batchId.substr(1)) {
+        console.log("ERROR, not matching ids: "+info.type+info.id+" "+batchId);
         console.log(batchQueue);
     }
     batchQueue=batchQueue.slice(1)
     if (batchQueue.length>0) {
-        
-        var next = document.getElementById('b'+batchQueue[0].id);
+        if (timingTestMode) {
+            //This time preserves even if the user undos, thus giving a total time for completion
+            batchQueue[0].startTime=new Date().getTime();
+        }   
+        var next = document.getElementById('s'+batchQueue[0].id);
         if (next)
             next.hidden=false;
             //document.getElementById('b'+batchQueue[0].id).classList.toggle('show');
@@ -223,16 +236,14 @@ function batchShiftAndSend(batchId,callback) {
         spinner.hidden=false;
     }
     lastRemovedBatchInfo.push(info);
+
     if (info.type=='s') {
         var ngram = info.ngram;
         var resultsId = info.rid;
         
         
-        
-        
         var query='?type=spottings&resend='+batches[batchId].sent;
-        if (testMode)
-            query+='&test='+testNum;
+        query+=standardQuery();
         var labels = [];
         var ids = [];
         for (var id in batches[batchId].spottings){
@@ -242,37 +253,63 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,resultsId:resultsId,labels:labels,ids:ids,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        var toSend = {batchId:info.id,resultsId:resultsId,labels:labels,ids:ids}; //,undos:countUndos};
+        if (timingTestMode) {
+            toSend.ngram=ngram;
+            toSend.prevNgramSame=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].ngram==ngram)
+                toSend.prevNgramSame=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
-            console.log(jres);
-            if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else (!testMode || !allReceived)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
         batches[batchId].sent=true;
-    } else if (info.type=='t') {
+    } else if (info.type=='t' || info.type=='m') {
         var query='?type=transcription';
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,label:info.transcription,time:new Date().getTime()-startTime},function (res){
+        if (info.type=='m') {
+            query+='Manual';
+        }
+        query+=standardQuery();
+        var toSend = {batchId:info.id,label:info.transcription};
+        if (timingTestMode && info.type=='t') {
+            toSend.prevWasTrans=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='t')
+                toSend.prevWasTrans=true;
+            toSend.numPossible=info.numPossible;
+            toSend.positionCorrect=info.positionCorrect;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        } else if (timingTestMode && info.type=='m') {
+            toSend.prevWasManual=false;
+            if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='m')
+                toSend.prevWasManual=true;
+            toSend.batchTime=new Date().getTime()-info.startTime;
+            toSend.undos=info.countUndos;
+        }
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
-            console.log(jres);
-            if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else (!testMode || !allReceived)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
 
     } else if (info.type=='e') {
         
         var query='?type=newExemplars&resend='+batches[batchId].sent;
-        if (testMode)
-            query+='&test='+testNum;
+        query+=standardQuery();
         var labels = [];
         for (var id in batches[batchId].spottings){
             if (batches[batchId].spottings.hasOwnProperty(id)) {
@@ -280,15 +317,15 @@ function batchShiftAndSend(batchId,callback) {
                 labels.push(label);
             }
         }
-        httpPostAsync('/app/submitBatch'+query,{batchId:info.id,labels:labels,undos:countUndos,time:new Date().getTime()-startTime},function (res){
+        var toSend = {batchId:info.id,labels:labels};
+        httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
-            console.log(jres);
-            if (testMode && jres.done) {
-                //console.log(batchQueue.length);
+            //console.log(jres);
+            if (timingTestMode && allReceived) {
                 if (batchQueue.length==0)
-                    window.location.href = "/app-test-"+(testNum+1);
-            } else (!testMode || !allReceived)
+                    window.location.href = "/thankyou";
+            } else (!timingTestMode || !allReceived)
                 callback();
         });
         batches[batchId].sent=true;

@@ -7,10 +7,15 @@
 #include "TranscribeBatchQueue.h"
 #include <assert.h>
 #include <iostream>
-#include "FacadeSpotter.h"
+//#include "FacadeSpotter.h"
+#include "spotting.h"
+#include "tester.h"
 
 int main() {
     //TEST
+    Tester tester;
+    tester.testSave();
+
 /**/
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     
@@ -153,10 +158,10 @@ int main() {
     newBatches0 = c0->updateSpottings(&sb05,NULL,NULL,&newEx0,&toRemoveExemplars);
     assert(newBatches0.size()==1 && newEx0.size()==0 && toRemoveExemplars.size()==0);
     
-    newEx0 = newBatches0[0]->getBackPointer()->result("rests",&toRemoveExemplars);
+    newEx0 = newBatches0[0]->getBackPointer()->result("rests",0,false,&toRemoveExemplars);
     assert(newEx0.size()==2 && toRemoveExemplars.size()==0);
     
-    newEx0 = newBatches0[0]->getBackPointer()->result("rest",&toRemoveExemplars);
+    newEx0 = newBatches0[0]->getBackPointer()->result("rest",0,false,&toRemoveExemplars);
     assert(newEx0.size()==1 && toRemoveExemplars.size()==2);
     toRemoveExemplars.clear();
 
@@ -185,7 +190,7 @@ int main() {
     //assert(newEx0.size()==1 && toRemoveExemplars.size()==0);
     
     newEx0r.clear();
-    TranscribeBatch* newb0  = newBatches0[0]->getBackPointer()->removeSpotting(s05.id,&newEx0r,&toRemoveExemplars);
+    TranscribeBatch* newb0  = newBatches0[0]->getBackPointer()->removeSpotting(s05.id,0,false,&newEx0r,&toRemoveExemplars);
     assert(newb0==NULL && newEx0r.size()==0 && toRemoveExemplars.size()==0);
 
 
@@ -221,7 +226,7 @@ int main() {
 
 
     //Test Spotters functionality
-    TestMasterQueue tq;//This has the test results in it
+    /*TestMasterQueue tq;//This has the test results in it
     FacadeSpotter spotter(&tq,&c,"");
 
 #pragma omp parallel sections num_threads(2)

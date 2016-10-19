@@ -1,19 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS <% if (testMode) { %>user study alpha part <%= testNum %><% } else { %>demo app [swipe]<% } %></title>
+<title>CATTSS <% if (testMode) { %>user study beta <% } else { %>demo app<% } %></title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+<script src="https://jsconsole.com/js/remote.js?9d7cf7bc-ae44-48d9-be30-62696b46cf53"></script>
 
 <link href="app_hardcore.css" rel="stylesheet" type="text/css" />
 <script> 
     <% if (testMode) { %>
-    testMode=true; 
-    testNum=<%= testNum %>;
+    timingTestMode=true; 
     <% } else { %>
-    testMode=false; 
-    testNum=-1;
+    timingTestMode=false; 
+    <% } %>
+    <% if (trainMode) { %>
+    trainingMode=true;
+    <% } else { %>
+    trainingMode=false;
+    <% } %>
+    <% if (save) { %>
+    save=true;
+    <% } else { %>
+    save=false;
     <% } %>
 </script>
 </head>
@@ -30,11 +39,9 @@
     </div>-->
     <button type="button" id="undoButton" onclick="undo()">undo</button>
     <button type="button" id="menuButton" onclick="menu()">menu</button>
-    <button type="button" id="passButton" onclick="pass()">pass</button>
+    <button type="button" id="passButton" onclick="pass()">skip</button>
     <div id="menu" class="hidden">
-        <div class="menuItem">a menu item</div>
-        <div class="menuItem">another menu item</div>
-        <div class="menuItem">and another menu item</div>
+        <button class="menuItem" id="exitButton" onclick="exit()">EXIT</button>
     </div>
 </div>
 <noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
@@ -45,6 +52,11 @@
         <div id="spinner" class="loader">Loading...</div>
     </div>
     
+    <div id="shows">
+        <img src='/X.png' id='showX'>
+        <img src='/check.png' id='showCheck'>
+        
+    </div>
     <div id="icons">
         <img src='/leftIcon.png' id='leftIcon'>
         <img src='/rightIcon.png' id='rightIcon'>
@@ -52,10 +64,8 @@
     </div>
 </div>
 <div id='overlay'></div>
-<% if (testMode) { %><div id='instructions'><div>
-    <p><b>Version <%= testNum %></b></p>
-    <p>Swipe right if the highlighted part of the handwriting matches the letters at the bottom, otherwise swipe left.</p>
-    <p>Tap to start!</p>
+<% if (trainMode) { %><div id='instructions'><div id='instructionsText'>
+        Training
 </div></div><% } %>
 </body>
 </html>

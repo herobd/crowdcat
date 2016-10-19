@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>CATTSS Home</title>
+<title>CATTSS Test Home</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -9,10 +9,29 @@
 </head>
 <body>
 <div class="container">
-    <div id="title"><h1>Welcome</h1></div>
+    <div id="title"><h1>Welcome</h1> <%= id %></div>
+    <p>Thank you for voluteering your time. This is an expirement to characterize how fast and accurate people are at using the CATTSS app. It should take less than 10 minutes.</p>
+    <p>You will begin by being briefly trained on using the app before completing a series of tasks.</p>
     <p id=user_specific_message"><%= message %></p>
-    <a class="button" href="/app">Begin</a>
+    <div id='apps'>
+        <a href="/app-test">Go to app</a> <br><br>
+        <% if (id=='herobd@gmail.com') { %>
+        <a href="/app-label">Labeling</a> <br><br>
+        <a href="/app-false-label">Don't (false) label</a> <br><br>
+        <% } %>
+    </div>
     
 </div>
+<br>
+
+<form action="/logout" method="post">
+    <input type="submit" value="Log out"/>
+</form>
+<br>
+<h2>How CATTSS works</h2> 
+<p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself. It passes the results it has meduim confidence for to the users. Based on their feedback it increases in its descriminative power, eventually reaching a point it can make a decision about the rest of them.</p>
+<p>The subwords form a partail transcription of words. Comparing these to a lexicon, the system determines the possible transcriptions for a partail transcribed word. If this list is reasonibly small the system passes the list to a user to select the correct one.</p>
+<p>The system additionally uses the subwords approved by users, and the now known letters of user transcribed words to enhance its ability to find subwords.</p>
+<p>For this experiment the system isn't running. The data was taken from a single run of the system so that the results are more consistent and there are ground truth labels for the data.</p>
 </body>
 </html>

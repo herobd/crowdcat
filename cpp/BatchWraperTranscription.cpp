@@ -5,7 +5,7 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     base64::encoder E;
     vector<int> compression_params={CV_IMWRITE_PNG_COMPRESSION,9};
     
-
+    manual = batch->isManual();
     batchId=to_string(batch->getId());
     vector<uchar> outBuf;
     cv::imencode(".png",batch->getImage(),outBuf,compression_params);
@@ -26,7 +26,11 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     retPoss = batch->getPossibilities();
     spottings = batch->getSpottingPoints();
     //delete batch;
+    wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
+    gt=batch->getGT();
+    scale=batch->getScale();
 }
+#ifndef NO_NAN
 void BatchWraperTranscription::doCallback(Callback *callback)
 {
     Nan:: HandleScope scope;
@@ -39,20 +43,40 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 	v8::Local<v8::Object> obj = Nan::New<v8::Object>();
 	Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New(spottings[index].getId()).ToLocalChecked());
 	Nan::Set(obj, Nan::New("x").ToLocalChecked(), Nan::New(spottings[index].getX()).ToLocalChecked());
+	Nan::Set(obj, Nan::New("scale").ToLocalChecked(), Nan::New(scale)); //for convienence this is here
 	Nan::Set(obj, Nan::New("ngram").ToLocalChecked(), Nan::New(spottings[index].getNgram()).ToLocalChecked());
 	Nan::Set(obj, Nan::New("color").ToLocalChecked(), Nan::New(spottings[index].getColor()).ToLocalChecked());
+
+        v8::Local<v8::Object> locNgram = Nan::New<v8::Object>();
+        locNgram->Set(Nan::New("page").ToLocalChecked(), Nan::New(spottings[index].page));
+        locNgram->Set(Nan::New("x1").ToLocalChecked(), Nan::New(spottings[index].x1));
+        locNgram->Set(Nan::New("y1").ToLocalChecked(), Nan::New(spottings[index].y1));
+        locNgram->Set(Nan::New("x2").ToLocalChecked(), Nan::New(spottings[index].x2));
+        locNgram->Set(Nan::New("y2").ToLocalChecked(), Nan::New(spottings[index].y2));
+        Nan::Set(obj, Nan::New("loc").ToLocalChecked(), locNgram);
+
 	Nan::Set(spottingsArr, index, obj);
     }
+    v8::Local<v8::Object> loc = Nan::New<v8::Object>();
+    Nan::Set(loc, Nan::New("wordIndex").ToLocalChecked(), Nan::New(wordIndex).ToLocalChecked());
+    string batchType;
+    if (manual)
+       batchType = "manual";
+    else
+       batchType = "transcription";
     Local<Value> argv[] = {
 	Nan::Null(),
-	Nan::New("transcription").ToLocalChecked(),
+	Nan::New(batchType).ToLocalChecked(),
 	Nan::New(batchId).ToLocalChecked(),
 	Nan::New(wordImgStr).ToLocalChecked(),
 	//Nan::New(ngramImgStr).ToLocalChecked(),
 	Nan::New(spottingsArr),
-	Nan::New(possibilities)
+	Nan::New(possibilities),
+        Nan::New(loc),
+        Nan::New(gt).ToLocalChecked()
     };
     
 
-    callback->Call(6, argv);
+    callback->Call(8, argv);
 }
+#endif
