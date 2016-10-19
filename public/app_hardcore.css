@@ -188,7 +188,7 @@ button {
 }
 
 #tapGif {
-    top: 220px;
+    top: 200px;
     position: fixed;
     right: 70px;
     pointer-events: none;

@@ -56,7 +56,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
     if (trainingNum==0){//spotting right he*/
             
         SpottingsBatch* batch = new SpottingsBatch("he",0);
-        SpottingImage spottingImage(spotting_0,width,color);
+        SpottingImage spottingImage(spotting_0,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
@@ -66,7 +66,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==1) {//spotting wrong (not he)
         SpottingsBatch* batch = new SpottingsBatch("he",0);
-        SpottingImage spottingImage(spotting_1,width,color);
+        SpottingImage spottingImage(spotting_1,width,0,color);
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions =
@@ -74,7 +74,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==2) {//spotting bad BB (right) he
         SpottingsBatch* batch = new SpottingsBatch("he",0);
-        SpottingImage spottingImage(spotting_3,width,color);
+        SpottingImage spottingImage(spotting_3,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
@@ -82,7 +82,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==3) {//bad BB (wrong) he
         SpottingsBatch* batch = new SpottingsBatch("he",0);
-        SpottingImage spottingImage(spotting_2,width,color);
+        SpottingImage spottingImage(spotting_2,width,0,color);
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions =
@@ -91,7 +91,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==4) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
-        SpottingImage spottingImage(spotting_4,width,color);
+        SpottingImage spottingImage(spotting_4,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
@@ -100,21 +100,21 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==5) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
-        SpottingImage spottingImage(spotting_5,width,color);
+        SpottingImage spottingImage(spotting_5,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions ="";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==6) {//p spotting wrong in
         SpottingsBatch* batch = new SpottingsBatch("in",0);
-        SpottingImage spottingImage(spotting_6,width,color);
+        SpottingImage spottingImage(spotting_6,width,0,color);
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions ="";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==7) {//p spotting right in
         SpottingsBatch* batch = new SpottingsBatch("in",0);
-        SpottingImage spottingImage(spotting_7,width,color);
+        SpottingImage spottingImage(spotting_7,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions ="";
@@ -128,7 +128,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(507,spotting_8a) );
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,511,12,563,54,"the",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="the";
         string instructions =
                 "<p>When the system has gotten enough subwords for a word, it will show you the second type of task.</p>"
@@ -143,7 +143,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(398,spotting_0) );
         spottings.insert( make_pair(429,spotting_9b) );//id:10
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,383,5,465,59, "there",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="$REMOVE:"+to_string(spotting_9b.id)+"$";
         string instructions =
                 "<p>Sometimes a subword will have been classified incorrectly, meaning the correct transcription won't be shown.</p>"
@@ -158,7 +158,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(120,spotting_3) );
         spottings.insert( make_pair(150,spotting_10b) );
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,85,2,252,56, "Theadore",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="$ERROR$";
         string instructions =
                 "<p>If the subwords are all correct, but the correct transcription is not available, just tap the <b>[None / Error]</b> button at the bottom of the transcription list.</p>";
@@ -174,7 +174,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(275,spotting_11a) );//oi
         spottings.insert( make_pair(301,spotting_7) );//in
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,261,13,368,65, "joined",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="joined";
         string instructions =
             "<p>Here's a couple more to practice on.</p>";
@@ -193,7 +193,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(572,spotting_12a) );//mo
         spottings.insert( make_pair(655,spotting_12b) );//ng
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&line,&spottings,570,19,691,65, "morning",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="morning";
         string instructions ="";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
@@ -203,7 +203,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         spottings.insert( make_pair(120,spotting_3) );//he
         spottings.insert( make_pair(150,spotting_10b) );//ea
         TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,85,2,252,56, "Theadore",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="Theadore";
         string instructions =
             "<p>When the system recognizes it won't be able to do any more for a word, you will have to manually type in the transcription.</p>"
@@ -230,7 +230,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         multimap<int,Spotting> spottings;
         spottings.insert( make_pair(398,spotting_0) );
         TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,383,5,465,59, "there",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="there";
         string instructions =
             "<p>It will try and help you by providing an intelligent autocomplete.<p>";
@@ -239,13 +239,13 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         vector<string> prunedDictionary;
         multimap<int,Spotting> spottings;
         TranscribeBatch* batch = new TranscribeBatch(word,prunedDictionary,&line,&spottings,7,8,73,59, "he",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="he";
         string instructions ="";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));*/
     } else if (trainingNum==15) {//p spotting right or
         /*SpottingsBatch* batch = new SpottingsBatch("[start]",0);
-        SpottingImage spottingImage(spotting_GO,width,color);
+        SpottingImage spottingImage(spotting_GO,width,0,color);
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions ="";
@@ -254,7 +254,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         scored.insert( make_pair(-1,"[start]") );
         multimap<int,Spotting> spottings;
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&letsgo,&spottings,11,6,211,63, "[start]",0);
-        batch->setWidth(width);
+        batch->setWidth(width,0);
         string correct="[start]";
         string instructions ="";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,true));

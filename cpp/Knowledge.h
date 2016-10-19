@@ -458,7 +458,7 @@ private:
     void recreateDatasetVectors(bool lockPages);
 
 public:
-    Corpus();
+    Corpus(int contextPad);
     Corpus(ifstream& in);
     void save(ofstream& out);
     ~Corpus()

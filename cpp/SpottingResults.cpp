@@ -6,8 +6,8 @@
 atomic_ulong Spotting::_id;
 atomic_ulong SpottingResults::_id;
 
-SpottingResults::SpottingResults(string ngram) : 
-    ngram(ngram)
+SpottingResults::SpottingResults(string ngram, int contextPad) : 
+    ngram(ngram), contextPad(contextPad)
 {
     id = ++_id;
     //sem_init(&mutexSem,false,1);
@@ -148,7 +148,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         tracer--;
     
     for (unsigned int i=0; i<toRet && !*done; i++) {
-        SpottingImage tmp(**tracer,maxWidth,color,prevNgram);
+        SpottingImage tmp(**tracer,maxWidth,contextPad,color,prevNgram);
         ret->push_back(tmp);
         
         tracer = instancesByScore.erase(tracer);
@@ -995,6 +995,7 @@ void SpottingResults::save(ofstream& out)
     }
     //skip updateMap as no feedback will be recieved.
     //skip tracer as we will just refind it
+    out<<contextPad<<"\n";
 }
 
 SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
@@ -1070,4 +1071,6 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
         classById[sid] = stoi(line);
     }
     tracer = instancesByScore.begin();
+    getline(in,line);
+    contextPad = stoi(line);
 }
