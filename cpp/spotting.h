@@ -150,7 +150,7 @@ protected:
 class SpottingImage : public Spotting 
 {
 public:
-    SpottingImage(const Spotting& s, int maxWidth, int color, string prevNgram="") : 
+    SpottingImage(const Spotting& s, int maxWidth, int contextPad, int color, string prevNgram="") : 
         Spotting(s) 
     {
         ngramImage = s.ngramImg();
@@ -161,8 +161,8 @@ public:
         int sideFromR = (oneSide- (brx-tlx)/2);
         int left = tlx-sideFromR;
         int right = brx+sideFromR-1;
-        int topPad = min(GlobalK::knowledge()->getContextPad(), tly);
-        int bottomPad = min(GlobalK::knowledge()->getContextPad(), s.pagePnt->rows-(bry+1));
+        int topPad = min(contextPad, tly);
+        int bottomPad = min(contextPad, s.pagePnt->rows-(bry+1));
         int heightPad = bry-tly+1+topPad+bottomPad;
         //cout <<"getting image window... sideFromR="<<sideFromR<<", oneSide="<<oneSide<<", tlx="<<tlx<<", brx="<<brx<<", left="<<left<<", right="<<right<<endl;
         if (left>=0 && right<s.pagePnt->cols)

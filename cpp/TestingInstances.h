@@ -16,7 +16,7 @@
 class TestingInstances: public SpecialInstances
 {
     public:
-        TestingInstances(const Knowledge::Corpus* corpus);
+        TestingInstances(const Knowledge::Corpus* corpus, int contextPad);
         ~TestingInstances()
         {
             for (auto p: spottingsT)
@@ -65,6 +65,7 @@ class TestingInstances: public SpecialInstances
         mutex manTransMut;
 
         const Knowledge::Corpus* corpus;
+        int contextPad;
 
         int getNextIndex(vector<bool>& setUsed, mutex& mutLock);
         BatchWraper* getSpottingsBatch(string ngram, int width, int color, string prevNgram, int testingNum);

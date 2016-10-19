@@ -70,8 +70,11 @@ private:
     atomic_bool finish;
     int numCTrue, numCFalse;
     void updateSpottingsMix(const vector<SpottingExemplar*>* spottings);
+
+    int contextPad;
+
 public:
-    MasterQueue();
+    MasterQueue(int contextPad);
     MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef);
     void save(ofstream& out);
 

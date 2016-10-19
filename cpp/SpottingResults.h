@@ -68,7 +68,7 @@ public:
  */
 class SpottingResults {
 public:
-    SpottingResults(string ngram);
+    SpottingResults(string ngram, int contextPad);
     SpottingResults(ifstream& in, PageRef* pageRef);
     void save(ofstream& out);
 
@@ -168,6 +168,9 @@ private:
     //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
     //It returns instancesByLocation.end() if none is found.
     multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting) const;
+
+    //How much to pad (top and bottom) images sent to users
+    int contextPad;
 };
 
 #endif

@@ -161,7 +161,7 @@ public:
     //cv::Mat getTextImage() { if (newTextImg.cols!=0) return newTextImg; return textImg;}
     unsigned long getId() {return id;}
     WordBackPointer* getBackPointer() {return origin;}
-    void setWidth(unsigned int width);
+    void setWidth(unsigned int width, int contextPad);
     vector<SpottingPoint> getSpottingPoints() {return spottingPoints;}
     bool isManual() {return manual;}
     string getGT() {return gt;}
@@ -181,7 +181,7 @@ public:
         batchId = _batchId++;
         for (Spotting* s : exes)
         {
-            instances.push_back(SpottingImage(*s,maxWidth,color));
+            instances.push_back(SpottingImage(*s,maxWidth,0,color));
             delete s;
         }
 

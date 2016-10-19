@@ -39,7 +39,6 @@ CATTSS::CATTSS( string lexiconFile,
 {
     cont.store(1);
     sem_init(&semLock, 0, 0);
-    GlobalK::knowledge()->setContextPad(contextPad);
 
     ifstream in (savePrefix+"_CATTSS.sav");
     if (in.good())
@@ -70,9 +69,9 @@ CATTSS::CATTSS( string lexiconFile,
     else
     {
     
-        masterQueue = new MasterQueue();
+        masterQueue = new MasterQueue(contextPad);
         Lexicon::instance()->readIn(lexiconFile);
-        corpus = new Knowledge::Corpus();
+        corpus = new Knowledge::Corpus(contextPad);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         corpus->loadSpotter(spottingModelPrefix);
         spottingQueue = new SpottingQueue(masterQueue,corpus);
