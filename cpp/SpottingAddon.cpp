@@ -257,12 +257,12 @@ NAN_METHOD(loadTestingCorpus) {
     v8::String::Utf8Value segmentationFileNAN(info[2]);
     string segmentationFile = string(*segmentationFileNAN);
     int contextPad = To<int>(info[3]).FromJust();
-    GlobalK::knowledge()->setContextPad(contextPad);
+    //GlobalK::knowledge()->setContextPad(contextPad);
 
     assert(testingCorpi.find(datasetName) == testingCorpi.end());
-    testingCorpi[datasetName] = new Knowledge::Corpus();
+    testingCorpi[datasetName] = new Knowledge::Corpus(contextPad);
     testingCorpi[datasetName]->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
-    testingInstances[datasetName]=new TestingInstances(testingCorpi[datasetName]);
+    testingInstances[datasetName]=new TestingInstances(testingCorpi[datasetName],contextPad);
 }
 
 NAN_METHOD(loadLabeledSpotting) {

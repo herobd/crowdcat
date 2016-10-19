@@ -112,13 +112,13 @@ void TranscribeBatch::init(WordBackPointer* origin, const cv::Mat* origImg, cons
 
 }
 
-void TranscribeBatch::setWidth(unsigned int width) 
+void TranscribeBatch::setWidth(unsigned int width, int contextPad) 
 {
 
     int wordH = wordImg.rows;
     int wordW = wordImg.cols;
-    int topPad = min(GlobalK::knowledge()->getContextPad(), tly);
-    int bottomPad = min(GlobalK::knowledge()->getContextPad(), origImg->rows-(bry+1));
+    int topPad = min(contextPad, tly);
+    int bottomPad = min(contextPad, origImg->rows-(bry+1));
     int wordHPad = wordH+topPad+bottomPad;
     //int textH= textImg.rows;
     //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);

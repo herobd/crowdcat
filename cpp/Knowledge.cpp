@@ -3,13 +3,14 @@
 
 int Knowledge::Page::_id=0;
 
-Knowledge::Corpus::Corpus() 
+Knowledge::Corpus::Corpus(int contextPad) 
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
     averageCharWidth=30;
     countCharWidth=0;
     threshScoring= 1.0;
+    manQueue.setContextPad(contextPad);
 }
 void Knowledge::Corpus::loadSpotter(string modelPrefix)
 {

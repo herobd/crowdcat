@@ -28,7 +28,8 @@ void MasterQueue::checkIncomplete()
     pthread_rwlock_unlock(&semResults);
 }
 
-MasterQueue::MasterQueue() {
+MasterQueue::MasterQueue(int contextPad) : contextPad(contextPad)
+{
     finish.store(false);
     //sem_init(&semResultsQueue,false,1);
     //sem_init(&semResults,false,1);
@@ -38,6 +39,9 @@ MasterQueue::MasterQueue() {
     pthread_rwlock_init(&semRotate,NULL);
 #endif
     kill.store(false);
+
+    transcribeBatchQueue.setContextPad(contextPad);
+
     //atID=0;
     
     ///testing
@@ -547,7 +551,7 @@ void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings
 #ifdef TEST_MODE
             cout <<"Creating SpottingResults for "<<spotting->ngram<<endl;
 #endif
-            SpottingResults *n = new SpottingResults(spotting->ngram);
+            SpottingResults *n = new SpottingResults(spotting->ngram,contextPad);
             n->addTrueNoScore(*spotting);
             addSpottingResults(n,true,false);
         }
@@ -621,7 +625,7 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
 #ifdef TEST_MODE
     cout <<"Creating SpottingResults for "<<spottings->front().ngram<<endl;
 #endif
-    SpottingResults *n = new SpottingResults(spottings->front().ngram);
+    SpottingResults *n = new SpottingResults(spottings->front().ngram,contextPad);
     assert(spottings->size()>1);
     for (Spotting& s : *spottings)
     {
@@ -687,7 +691,7 @@ void MasterQueue::save(ofstream& out)
 
     out<<finish.load()<<"\n";
     out<<numCTrue<<"\n"<<numCFalse<<"\n";
-
+    out<<contextPad<<"\n";
     //out.close();    
 }
 MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
@@ -737,6 +741,8 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     getline(in,line);
     numCFalse = stoi(line);
 
+    getline(in,line);
+    contextPad = stoi(line);
     //in.close();
     delete corpusRef;
 }

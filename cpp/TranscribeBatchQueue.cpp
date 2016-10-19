@@ -2,7 +2,7 @@
 
 TranscribeBatchQueue::TranscribeBatchQueue()
 {
-
+    contextPad=0;
 }
 
 /*void TranscribeBatchQueue::enqueue(TranscribeBatch* batch)
@@ -53,7 +53,7 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     if (queue.size()>0)
     {
         ret = queue.front();
-        ret->setWidth(maxWidth);
+        ret->setWidth(maxWidth,contextPad);
         queue.pop_front();
 
         returnMap[ret->getId()]=ret;
@@ -196,6 +196,7 @@ void TranscribeBatchQueue::save(ofstream& out)
     {
         t->save(out);
     }
+    out<<contextPad<<"\n";
     //we skip the doneMap as it is only used on resends
     unlock();
 }
@@ -210,4 +211,6 @@ void TranscribeBatchQueue::load(ifstream& in, CorpusRef* corpusRef)
     {
         queue.push_back(new TranscribeBatch(in,corpusRef));
     }
+    getline(in,line);
+    contextPad = stoi(line);
 }

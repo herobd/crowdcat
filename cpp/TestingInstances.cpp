@@ -1,7 +1,7 @@
 #include "TestingInstances.h"
 
 
-TestingInstances::TestingInstances(const Knowledge::Corpus* corpus) : corpus(corpus)
+TestingInstances::TestingInstances(const Knowledge::Corpus* corpus, int contextPad) : corpus(corpus), contextPad(contextPad)
 {
     //n = new ngram spotting
     //s = same ngram spotting (as previous)
@@ -258,7 +258,7 @@ BatchWraper* TestingInstances::getSpottingsBatch(string ngram, int width, int co
             spotting = batchInsts.back();
             batchInsts.pop_back();
         }
-        batch->push_back(SpottingImage(*spotting,width,color,prevNgram));        
+        batch->push_back(SpottingImage(*spotting,width,contextPad,color,prevNgram));        
     }
     BatchWraper* ret = new BatchWraperSpottings(batch);
     return ret;
@@ -268,14 +268,14 @@ BatchWraper* TestingInstances::getTransBatch(int width)
 {
     TranscribeBatch* batch = trans[ getNextIndex(transUsed, transMut) ];
     //cout<<"trans batch: "<<batch->getId()<<" of "<<trans.size()<<endl;
-    batch->setWidth(width);
+    batch->setWidth(width,contextPad);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }
 BatchWraper* TestingInstances::getManTransBatch(int width)
 {
     TranscribeBatch* batch = manTrans[ getNextIndex(manTransUsed, manTransMut) ];
     //cout<<"man batch: "<<batch->getId()<<" of "<<manTrans.size()<<endl;
-    batch->setWidth(width);
+    batch->setWidth(width,contextPad);
     return (BatchWraper*) (new BatchWraperTranscription(batch));
 }
     
