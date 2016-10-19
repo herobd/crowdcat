@@ -5,7 +5,7 @@ var maxImgWidth=700;
 var OK_THRESH=85;
 var BAD_THRESH=-85;
 
-var toBeInQueue=3;
+var toBeInQueue=4;
 
 var batches={};
 var batchQueue=[]
@@ -93,6 +93,9 @@ function batchShiftAndSend(batchId,callback) {
         swipeRightGif.hidden=true;
         swipeLeftGif.hidden=true;
         tapGif.hidden=true;
+        swipeRightGif.toShow=false;
+        swipeLeftGif.toShow=false;
+        tapGif.toShow=false;
     }
 
     var info = batchQueue[0];
@@ -323,6 +326,14 @@ function createInlineLabel(label) {
 }
 
 function undo() {
+    if (trainingMode) {
+        swipeRightGif.hidden=true;
+        swipeLeftGif.hidden=true;
+        tapGif.hidden=true;
+        swipeRightGif.toShow=false;
+        swipeLeftGif.toShow=false;
+        tapGif.toShow=false;
+    }
     if (!ondeck)
         highlightLast();
     if (lastRemovedEle.length>0) {
@@ -421,11 +432,9 @@ function setup() {
         swipeRightGif = document.getElementById("swipeRightGif");
         swipeleftGif = document.getElementById("swipeLeftGif");
         tapGif = document.getElementById("tapGif");
-        swipeRightGif.hidden=false;
-    }
-    if (trainingMode) {
-       instructions=document.getElementById('instructions'); 
-       instructionsText=document.getElementById('instructionsText');
+        swipeRightGif.toShow=true;
+        instructions=document.getElementById('instructions'); 
+        instructionsText=document.getElementById('instructionsText');
     } 
     
     var containers = document.getElementsByClassName('container');
@@ -498,6 +507,18 @@ function setup() {
             //this.parentNode.removeChild(this);
             this.hidden=true;
             this.style.display='none';
+
+            if (swipeRightGif.toShow)
+                swipeRightGif.hidden=false;
+            if (swipeLeftGif.toShow)
+                swipeLeftGif.hidden=false;
+            if (tapGif.toShow)
+                tapGif.hidden=false;
+
+            if (batchQueue[0].type=='m') {
+                var input = document.getElementById('in_'+ondeck.batch);
+                input.focus();
+            }
         }, false);
     }
 
@@ -768,8 +789,10 @@ function highlightLast() {
             
         }
         else if (batchQueue[0].type=='m') {
-            var input = document.getElementById('in_'+ondeck.batch);
-            input.focus();
+            if (!trainingMode) {
+                var input = document.getElementById('in_'+ondeck.batch);
+                input.focus();
+            }
         }
     }
 }
@@ -832,12 +855,15 @@ function isBatchDone(batchId) {
                 instructions.hidden=false;
                 instructions.style.display='flex';
             }
+
+
+            //This is ridged, but was easy
             if (batchQueue[0].trainingNum==0) {
-                swipeRightGif.hidden=false;
+                swipeRightGif.toShow=true;
             } else if (batchQueue[0].trainingNum==1) {
-                swipeLeftGif.hidden=false;
+                swipeLeftGif.toShow=true;
             } else if (batchQueue[0].trainingNum==8) {
-                tapGif.hidden=false;
+                tapGif.toShow=true;
             }
         } else {
             instructionsText.innerHTML='That was incorrect; use the <b>undo</b> button to correct the error.';

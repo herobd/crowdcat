@@ -164,7 +164,7 @@ button {
       max-width: 700px;
 }
 
-#icons img {
+#icons .icon {
     max-width: 100%;
     max-height: 100%;
     opacity: 0.7;
@@ -179,33 +179,30 @@ button {
     clear: left;
 }
 
-#gifs {
-    pointer-events: none;
-    touch-action: none;
+.gif {
+    height: 70px;
+    opacity: 0.45;
+    left:0;
+    right: 0;
+    margin: auto;
 }
 
 #tapGif {
-    left: 90px;
-    height: 70px;
-    position: fixed;
     top: 220px;
-}
-#swipeLeftGif {
-    left: 90px;
-    height: 70px;
     position: fixed;
-    bottom: 50px;
+    right: 70px;
+    pointer-events: none;
+    touch-action: none;
 }
-#swipeRightGif {
-    left: 90px;
-    height: 70px;
-    position: fixed;
-    bottom: 50px;
+.swipeGif {
+    bottom: 10px;
+    position: absolute;
 }
 
 #shows{
     height:115px;
-    position: fixed;
+    /*position: fixed;*/
+    position: absolute;
     width:92%;
     bottom: 90px;
     
@@ -268,6 +265,9 @@ button {
   z-index:    4;
   top:        0; 
   left:       0;
+  right:      0;
+  margin:  auto;
+  max-width: 700px;
 }
 
 #instructions {
@@ -432,6 +432,10 @@ div.selection {
     width: 93%;
     margin:auto;
     padding: 5px;
+}
+
+.starter.ondeck {
+    border-width: 90px 0px 0px 0px;
 }
 
 .starter div.selection {

@@ -60,7 +60,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
-                "<p>The first type of task you will do is approving the systems subword spotting results.</p>"
+                "<p>The first type of task you will do is approving the system's subword spotting results.</p>"
                 "<p>If the highlighted region of the bottom image matches the text at the bottom, swipe right.</p>"
                 "<p><i>(tap the screen to continue)</i></p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
@@ -78,7 +78,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
-                "<p>If the highlighted region isn't perfectly aligned to the letters, but reasonibly close, the system can handle it, so swipe right.</p>";
+                "<p>The system can handle some inaccuracy, so if the highlighted region isn't perfectly aligned to the letters, but reasonibly close, swipe right still.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==3) {//bad BB (wrong) he
         SpottingsBatch* batch = new SpottingsBatch("he",0);
@@ -86,8 +86,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions =
-                "<p>If the highlighted region is significantly off the desired letters, it's wrong, so swipe left.</p>"
-                "<p>The system uses the location and size of the region in it's prediction process.</p>";
+                "<p>If the highlighted region is significantly misaligned with the desired letters, it's wrong, so swipe left.</p>"
+                "<p>The system uses both the location and size of the region in it's prediction process.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==4) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
@@ -95,8 +95,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
-                "<p>Do these next few subwords.</p>"
-                "<p>You will see a tab of a different color when your target subword (the letters that should be hilighted) changes.</p>";
+                "<p>Do these next few subwords for practice.</p>"
+                "<p>You will see a tab of a different color when your target subword (the letters that should be highlighted) changes.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==5) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
