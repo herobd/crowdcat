@@ -458,7 +458,24 @@ function getRandomTime() {
 }
 
 function setup() {
-    window.addEventListener( "touchmove", function ( e ) {e.preventDefault();} );
+    //from http://stackoverflow.com/a/30811794/1018830
+    //Prevents swipe navigation on browers that to that
+    window.addEventListener( "touchmove", function ( event ) {
+        var touch = event.originalEvent.touches[ 0 ];
+        oldX = xPos;
+        oldY = yPos;
+        xPos = touch.pageX;
+        yPos = touch.pageY;
+        if ( oldX == null && oldY == null ) {
+            return false;
+        }
+        else {
+            if ( Math.abs( oldX-xPos ) > Math.abs( oldY-yPos ) ) {
+                event.preventDefault();
+                return false;
+            }
+        }
+    } );
     window.addEventListener("keydown", handleKeyPress);
     spinner = document.getElementById("spinner");
     var windows = document.getElementsByClassName('window');
@@ -886,7 +903,7 @@ function isBatchDone(batchId) {
         if (batchQueue[0].lastTraining) {
             trainingMode=false;
             allReceived=false;
-            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on real instances. Work fast and accurately. If an instance is particularly challenging, feel free to use the <b>skip</b> button in the top-right.</p><p>Good luck!</p>";
+            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on some tasks from a some actual historical documents. Work quickly and accurately. If an instance is particularly challenging, feel free to use the <b>skip</b> button in the top-right.</p><p>Good luck!</p>";
 
             instructions.hidden=false;
             instructions.style.display='flex';
@@ -909,7 +926,7 @@ function isBatchDone(batchId) {
                 tapGif.toShow=true;
             }
         } else {
-            instructionsText.innerHTML='That was incorrect; use the <b>undo</b> button to correct the error.';
+            instructionsText.innerHTML='<p>That was incorrect. :(</p><Use the <b>undo</b> button to correct the error.</p>';
 
             instructions.hidden=false;
             instructions.style.display='flex';

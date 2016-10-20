@@ -58,7 +58,7 @@ var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 var contextPad=contextPads[datasetNum];
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
-var savePrefix="save/1_";
+var savePrefix="save/2_";
 var numThreadsSpotting=5;
 var numThreadsUpdating=3;
 var showWidth=2500;
@@ -66,8 +66,8 @@ var showHeight=1000;
 var showMilli=4000;
 
 var saveMode=false;
-var timingTestMode=false;
-var trainUsers=false;
+var timingTestMode=true;
+var trainUsers=true;
 var debug=false;
 
 if (saveMode)
