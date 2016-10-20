@@ -2253,9 +2253,9 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
             }
 
             //We assume no more words are added at the moment
-            assert(_words.size()==numWordsReadIn);
         }
     }
+    assert(_words.size()==numWordsReadIn);
     if (lockPages)
         pthread_rwlock_unlock(&pagesLock);
     
