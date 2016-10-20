@@ -421,6 +421,7 @@ function getRandomTime() {
 }
 
 function setup() {
+    window.addEventListener( "touchmove", function ( e ) {e.preventDefault();} );
     spinner = document.getElementById("spinner");
     var windows = document.getElementsByClassName('window');
     theWindow=windows[0];
