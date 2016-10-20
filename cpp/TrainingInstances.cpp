@@ -62,6 +62,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string instructions =
                 "<p>The first type of task you will do is approving the system's subword spotting results.</p>"
                 "<p>If the highlighted region of the bottom image matches the text at the bottom, swipe right.</p>"
+                "<p>Note that the systen is agnostic to capitalization.<p>";
                 "<p><i>(tap the screen to continue)</i></p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==1) {//spotting wrong (not he)
