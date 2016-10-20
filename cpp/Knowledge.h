@@ -444,6 +444,9 @@ private:
     
     map<int,Page*> pages;
     map<string,int> pageIdMap;
+
+    int numWordsReadIn;
+
     map<unsigned long, vector<Word*> > spottingsToWords;
     Spotter* spotter;
     TranscribeBatchQueue manQueue;
