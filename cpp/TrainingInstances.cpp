@@ -62,7 +62,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string instructions =
                 "<p>The first type of task you will do is approving the system's subword spotting results.</p>"
                 "<p>If the highlighted region of the bottom image matches the text at the bottom, swipe right.</p>"
-                "<p>Note that the systen is agnostic to capitalization.<p>";
+                "<p>Alternate keyboard controls available under the <b>menu</b>.</p>"
                 "<p><i>(tap the screen to continue)</i></p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==1) {//spotting wrong (not he)
@@ -178,7 +178,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->setWidth(width,0);
         string correct="joined";
         string instructions =
-            "<p>Here's a couple more to practice on.</p>";
+            "<p>Here's a couple more to practice on.</p>"
+            "<p>Note that the system is agnostic to capitalization in all tasks.<p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==12) {//p transcribe (tap) morning (scroll down)
         multimap<float,string> scored;
