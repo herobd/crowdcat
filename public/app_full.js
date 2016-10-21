@@ -22,8 +22,10 @@ var instructions;
 var instructionsText;
 
 var swipeOn=true;
+var tapMode=false;
 
 var screenHeight;
+var screenWidth;
 var imgWidth=null;
 
 var countUndos=0;
@@ -221,15 +223,28 @@ function handleTouchStart(evt) {
         this.xDown = evt.touches[0].clientX;  
     else
            this.xDown = evt.clientX;                                 
-                                         
-    theWindow.classList.remove('fadeGray');
-    showX.classList.remove('fadeOut');
-    showCheck.classList.remove('fadeOut');
+         
+    if (swipeOn) {
+        if (tapMode) {
+            var dif = this.xDown-(screenWidth/2);
+
+            if (dif<BAD_THRESH) {
+                classifySpotting(false);
+            } else if (dif>OK_THRESH) {
+                classifySpotting(true);
+            }
+        }
+        else {
+            theWindow.classList.remove('fadeGray');
+            showX.classList.remove('fadeOut');
+            showCheck.classList.remove('fadeOut');
+        }
+    }
 };
 
 
 function handleTouchMove(evt) {
-    if ( ! this.xDown || !swipeOn) {
+    if ( ! this.xDown || !swipeOn || tapMode) {
         return;
     }
     if (!ondeck)
@@ -272,7 +287,7 @@ function handleTouchMove(evt) {
 
 
 function handleTouchEnd(evt) {
-    if (!swipeOn)
+    if (!swipeOn || tapMode)
         return;
     //var xUp = evt.touches[0].clientX;    
     //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
@@ -298,34 +313,38 @@ function handleTouchEnd(evt) {
     this.xDiff=0;
 }
 
+function classifySpotting(yes) {
+    theWindow.classList.remove('fadeGray');
+    showX.classList.remove('fadeOut');
+    showCheck.classList.remove('fadeOut');
+
+    //setTimeout(function() {
+        if (!yes) {
+            theWindow.style.background='hsl(350,100%,40%)';
+            showX.style.opacity='1';
+            showCheck.style.opacity='0';
+            removeSpotting(false);
+        } else {
+            theWindow.style.background='hsl(130,100%,30%)';
+            showCheck.style.opacity='1';
+            showX.style.opacity='0';
+            removeSpotting(true);
+        }
+        setTimeout(function() {
+            theWindow.classList.add('fadeGray');
+            showX.classList.add('fadeOut');
+            showCheck.classList.add('fadeOut');
+            theWindow.style.background='hsl(350,0%,35%)';
+            showX.style.opacity='0';
+            showCheck.style.opacity='0';
+        }, 95);
+    //}, 15);
+}
+
 function handleKeyPress(evt) {
     var charCode = (evt.which) ? evt.which : event.keyCode;
     if (swipeOn && (charCode == 37 || charCode == 39)) { //left or right
-        theWindow.classList.remove('fadeGray');
-        showX.classList.remove('fadeOut');
-        showCheck.classList.remove('fadeOut');
-
-        //setTimeout(function() {
-            if (charCode==37) {
-                theWindow.style.background='hsl(350,100%,40%)';
-                showX.style.opacity='1';
-                showCheck.style.opacity='0';
-                removeSpotting(false);
-            } else {
-                theWindow.style.background='hsl(130,100%,30%)';
-                showCheck.style.opacity='1';
-                showX.style.opacity='0';
-                removeSpotting(true);
-            }
-            setTimeout(function() {
-                theWindow.classList.add('fadeGray');
-                showX.classList.add('fadeOut');
-                showCheck.classList.add('fadeOut');
-                theWindow.style.background='hsl(350,0%,35%)';
-                showX.style.opacity='0';
-                showCheck.style.opacity='0';
-            }, 95);
-        //}, 15);
+        classifySpotting(charCode == 39);
     } else if (charCode==40) { //down (undo)
         undo();
     } else if (charCode==38) { //up (skip)
@@ -503,8 +522,11 @@ function setup() {
     x = w.innerWidth || e.clientWidth || g.clientWidth,
     y = w.innerHeight|| e.clientHeight|| g.clientHeight;
     screenHeight=y;
+    screenWidth=x;
     if (screenHeight>700)
         toBeInQueue=7;
+    else
+        toBeInQueue=4;
     while (!imgWidth)
         imgWidth=Math.min(x,maxImgWidth);
     //console.log(imgWidth);
@@ -515,8 +537,11 @@ function setup() {
         y = w.innerHeight|| e.clientHeight|| g.clientHeight;
         var dif = y-screenHeight;
         screenHeight=y;
+        screenWidth=x;
         if (screenHeight>700)
             toBeInQueue=7;
+        else
+            toBeInQueue=4;
         imgWidth=Math.min(x,maxImgWidth);
         //console.log('resize: '+x+', '+y);
         //SHould this be for all transcriptions, and not just ondeck?
@@ -561,7 +586,7 @@ function setup() {
     
     
     if (trainingMode) {
-        instructions.addEventListener('mouseup', function(e){
+        instructions.addEventListener('mousedown', function(e){
             e.preventDefault(); 
             startTime = new Date().getTime();
             //this.parentNode.removeChild(this);
@@ -903,13 +928,9 @@ function isBatchDone(batchId) {
         if (batchQueue[0].lastTraining) {
             trainingMode=false;
             allReceived=false;
-            instructionsText.innerHTML="<p>Got that?</p><p>Now you'll be doing this on some tasks from a some actual historical documents. Work quickly and accurately. If an instance is particularly challenging, feel free to use the <b>skip</b> button in the top-right.</p><p>Good luck!</p>";
-
-            instructions.hidden=false;
-            instructions.style.display='flex';
-            //getNextBatch(2);
             batchQueue[0].type='x';
-        } else if (right) {
+        }
+        if (right || batchQueue[0].lastTraining) {
             instructionsText.innerHTML=batchQueue[0].instructions;
             if (batchQueue[0].instructions.length>0) {
                 instructions.hidden=false;
@@ -1210,6 +1231,15 @@ function exit() {
     history.go(-1);
 }
 
+function toggleMode() {
+    tapMode=!tapMode;
+    document.getElementById("modeButton").classList.toggle("tapModeOn");
+    if (tapMode) {
+        document.getElementById("tapInstructions").hidden=false;
+    } else {
+        document.getElementById("tapInstructions").hidden=true;
+    }
+}
 /*window.onbeforeunload = confirmExit;
 function confirmExit(){
     return "You have attempted to leave this page.  If you have made any changes to the fields without clicking the Save button, your changes will be lost.  Are you sure you want to exit this page?";

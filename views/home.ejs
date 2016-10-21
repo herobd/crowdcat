@@ -10,8 +10,8 @@
 <body>
 <div class="container">
     <div id="title"><h1>Welcome</h1> <%= id %></div>
-    <p>Thank you for voluteering your time. This is an expirement to characterize how fast and accurate people are at using the CATTSS app. It should take about 10 minutes.</p>
-    <p>You will begin by being briefly trained on using the app before completing a series of tasks.</p>
+    <p>Thank you for volunteering your time. This is an experiment to characterize how fast and accurate people are at using the CATTSS app. It should take about 10 minutes.</p>
+    <p>You will begin by being briefly trained and then will complete a series of tasks.</p>
     <p id=user_specific_message"><%= message %></p>
     <div id='apps'>
         <a href="/app-test">Go to app</a> <br><br>
@@ -29,9 +29,9 @@
 </form>
 <br>
 <h2>How CATTSS works</h2> 
-<p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself. It passes the results it has meduim confidence for to the users. Based on their feedback it increases in its descriminative power, eventually reaching a point it can make a decision about the rest of them.</p>
-<p>The subwords form a partail transcription of words. Comparing these to a lexicon, the system determines the possible transcriptions for a partail transcribed word. If this list is reasonibly small the system passes the list to a user to select the correct one.</p>
-<p>The system additionally uses the subwords approved by users, and the now known letters of user transcribed words to enhance its ability to find subwords.</p>
+<p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself, so it passes subwords it is unsure about on to users. With this feedback the system eventually reaching a point when it can make a decision about the rest of them.</p>
+<p>Together, subwords form partially transcriptioned of words. Comparing these to a lexicon, the system determines the possible transcriptions for a partially transcribed word. If this list is reasonably small the system passes the list to a user to select the correct one.</p>
+<p>The system also uses the subwords approved by users, and the now known letters of user transcribed words to enhance its ability to find subwords.</p>
 <p>For this experiment the system isn't running. The data was taken from a single run of the system so that the results are more consistent and there are ground truth labels for the data.</p>
 </body>
 </html>

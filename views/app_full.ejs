@@ -33,14 +33,16 @@
     <button type="button" id="passButton" onclick="pass()">skip</button>
     <div id="menu" class="hidden">
         <button class="menuItem" id="exitButton" onclick="exit()">EXIT</button>
+        <button class="menuItem" id="modeButton" onclick="toggleMode()">Control toggle: <span id="modeSwipe">swipe</span>/<span id="modeTap">tap</span></button>
+        <div class="menuItem" id="tapInstructions" hidden>
+            Now just tap on the left or right instead of swiping.
+        </div>
         <div class="menuItem">
             <br>
-            <br>
-            <p><h3>Keyboard Controls</h3></p>
+            <b>Keyboard Controls</b>
             <p>Left and right arrow: left and right swipe</p>
             <p>Up arrow: skip</p>
             <p>Down arrow: undo</p>
-            <br>
         </div>
     </div>
 </div>

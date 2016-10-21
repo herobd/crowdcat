@@ -8,6 +8,9 @@ body {
 	color: #f4f4f4;
 }
 
+a {
+    color: #FEF17C;
+}
 
 .slider {
 	overflow-y: hidden;

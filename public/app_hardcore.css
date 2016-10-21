@@ -51,6 +51,20 @@ button {
     margin-left: 10%;
 }
 
+#modeButton #modeSwipe {
+    font-weight: bold;
+}
+#modeButton.tapModeOn #modeSwipe {
+    font-weight: normal;
+}
+
+#modeButton #modeTap {
+    font-weight: normal;
+}
+#modeButton.tapModeOn #modeTap {
+    font-weight: bold;
+}
+
 #menu {
     width:100%;
     text-align:center;
@@ -72,6 +86,8 @@ button {
     -webkit-animation-duration: 0.2s;
     -webkit-animation-name: close;
 }
+
+
 /*#menu.show {
     max-height:300px;
     min-height:100px;

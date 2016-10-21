@@ -63,7 +63,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
                 "<h3>Subword spotting approval task</h3>"
                 "<p>In this task you oversee the system's subword spotting.</p>"
                 "<p>If the highlighted region of the <i>bottom</i> image matches the text at the very <i>bottom</i>, swipe right.</p>"
-                "<p>Alternate keyboard controls available under the <b>menu</b> if you're not using a touch device.</p>"
+                "<p>Alternate controls are available under the <b>menu</b> if you're not using a touch device or have trouble swiping.</p>"
                 "<p><i>(tap the screen to continue)</i></p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==1) {//spotting wrong (not he)
@@ -88,8 +88,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions =
-                "<p>If the highlighted region is significantly misaligned with the desired text, it's wrong, so swipe left.</p>"
-                "<p>The system uses both the location and size of the region in it's prediction process.</p>";
+                "<p>If the highlighted region is significantly misaligned with the desired text, it's wrong, so swipe left.</p>";
+                //"<p>The system uses the region boundaries to count unspotted letters, but you don't need to be perfect.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==4) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
@@ -98,7 +98,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="1";
         string instructions =
                 "<p>Do these next few subwords for practice.</p>"
-                "<p>You will see a tab of a different color when your target subword (the text that should be highlighted) changes.</p>";
+                "<p>You will see a color change when your target subword changes (the text that should be highlighted).</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==5) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
@@ -134,7 +134,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="the";
         string instructions =
                 "<h3>Transcription task</h3>"
-                "<p>When the system has gotten enough subwords for a word, it will show you the this type of task.</p>"
+                "<p>When the system has gotten enough subwords for a word, it will show you this type of task.</p>"
                 "<p>You just need to tap on the correct transcription for the word in the yellow box.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==9) {//transcribe (spotting error) there (err, 'ir')
@@ -149,8 +149,9 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->setWidth(width,0);
         string correct="$REMOVE:"+to_string(spotting_9b.id)+"$";
         string instructions =
-                "<p>Sometimes a subword will have been classified incorrectly, meaning the correct transcription won't be shown. "
-                "The non-yellow highlights on the word are the subwords previously approved.</p>"
+                //"<p>Sometimes a subword will have been classified incorrectly, meaning the correct transcription won't be shown. "
+                //"The non-yellow highlights on the word are the subwords previously approved.</p>"
+                "<p>If the correct transcription is not shown, it may be because a subword was incorrectly labeled.</p>"
                 "<p>Tap the <b>X</b> below the '<b>ir</b>' to indicate this is an incorrect subword.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==10) {//transcribe (all error) Theadore
@@ -165,7 +166,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->setWidth(width,0);
         string correct="$ERROR$";
         string instructions =
-                "<p>If the subwords are all correct, but the correct transcription is not available, just tap the <b>[None / Error]</b> button at the bottom of the transcription list.</p>";
+                "<p>If the subwords are all correct, but the correct transcription is still not available, just tap the <b>[None / Error]</b> button at the bottom of the transcription list.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==11) {//p transcribe (tap) join
         multimap<float,string> scored;
@@ -212,9 +213,9 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="Theadore";
         string instructions =
             "<h3>Manual transcription task</h3>"
-            "<p>When the system recognizes it won't be able to do any more for a word, you will have to manually type in the transcription.</p>"
+            "<p>When the system can't do any more for a word, you will have to manually type in the transcription.</p>"
             "<p><i>*sigh*</i></p>"
-            "<p>Note that the system ignores capitalization in all tasks, so you can as well.<p>";
+            "<p>You can ignore capitalization in all tasks.<p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==14) {//manual (auto compelete)
         vector<string> prunedDictionary = {
@@ -258,7 +259,10 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         TranscribeBatch* batch = new TranscribeBatch(word,scored,&letsgo,&spottings,11,6,211,63, "[start]",0);
         batch->setWidth(width,0);
         string correct="[start]";
-        string instructions ="";
+        string instructions =
+            "<p>Got that?</p>"
+            "<p>Now you'll be doing this on some tasks from a some actual historical documents. Work quickly and accurately. If an instance is particularly challenging, feel free to use the <b>skip</b> button in the top-right. And don't forget the <b>undo</b> button in the top-left.</p>"
+            "<p>Good luck!</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,true));
     }
     return NULL;
