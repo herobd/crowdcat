@@ -150,7 +150,7 @@ function batchShiftAndSend(batchId,callback) {
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            if (timingTestMode && allReceived) {
+            if (timingTestMode && allReceived && !trainingMode) {
                 if (batchQueue.length==0)
                     window.location.href = "/thankyou";
             } else (!timingTestMode || !allReceived)
@@ -183,7 +183,7 @@ function batchShiftAndSend(batchId,callback) {
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            if (timingTestMode && allReceived) {
+            if (timingTestMode && allReceived && !trainingMode) {
                 if (batchQueue.length==0)
                     window.location.href = "/thankyou";
             } else (!timingTestMode || !allReceived)
@@ -206,7 +206,7 @@ function batchShiftAndSend(batchId,callback) {
             
             var jres=JSON.parse(res);
             //console.log(jres);
-            if (timingTestMode && allReceived) {
+            if (timingTestMode && allReceived && !trainingMode) {
                 if (batchQueue.length==0)
                     window.location.href = "/thankyou";
             } else (!timingTestMode || !allReceived)
@@ -225,20 +225,9 @@ function handleTouchStart(evt) {
            this.xDown = evt.clientX;                                 
          
     if (swipeOn) {
-        if (tapMode) {
-            var dif = this.xDown-(screenWidth/2);
-
-            if (dif<BAD_THRESH) {
-                classifySpotting(false);
-            } else if (dif>OK_THRESH) {
-                classifySpotting(true);
-            }
-        }
-        else {
-            theWindow.classList.remove('fadeGray');
-            showX.classList.remove('fadeOut');
-            showCheck.classList.remove('fadeOut');
-        }
+        theWindow.classList.remove('fadeGray');
+        showX.classList.remove('fadeOut');
+        showCheck.classList.remove('fadeOut');
     }
 };
 
@@ -287,30 +276,43 @@ function handleTouchMove(evt) {
 
 
 function handleTouchEnd(evt) {
-    if (!swipeOn || tapMode)
+    if (!swipeOn)
         return;
-    //var xUp = evt.touches[0].clientX;    
-    //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
-    theWindow.classList.add('fadeGray');
-    showX.classList.add('fadeOut');
-    showCheck.classList.add('fadeOut');
-    theWindow.style.background='hsl(350,0%,35%)';
-    showX.style.opacity='0';
-    showCheck.style.opacity='0';
-    
-    this.xDown=null;
-    ondeck.style.left = '0px';
-    //var xDiff = this.xDown - xUp;
-    if (this.xDiff>OK_THRESH) {
-        removeSpotting(true);
-        
-    } else if (this.xDiff<BAD_THRESH) {
-        removeSpotting(false);
+
+    evt.stopPropagation();
+    evt.preventDefault();
+    if (tapMode) {
+        var dif = this.xDown-(screenWidth/2);
+
+        if (dif<BAD_THRESH) {
+            classifySpotting(false);
+        } else if (dif>OK_THRESH) {
+            classifySpotting(true);
+        }
     } else {
-    
+        //var xUp = evt.touches[0].clientX;    
+        //this.getElementsByClassName('num')[0].innerHTML=this.getElementsByClassName('num')[0].innerHTML+' dif='+this.xDiff;
+        theWindow.classList.add('fadeGray');
+        showX.classList.add('fadeOut');
+        showCheck.classList.add('fadeOut');
+        theWindow.style.background='hsl(350,0%,35%)';
+        showX.style.opacity='0';
+        showCheck.style.opacity='0';
         
+        this.xDown=null;
+        ondeck.style.left = '0px';
+        //var xDiff = this.xDown - xUp;
+        if (this.xDiff>OK_THRESH) {
+            removeSpotting(true);
+            
+        } else if (this.xDiff<BAD_THRESH) {
+            removeSpotting(false);
+        } else {
+        
+            
+        }
+        this.xDiff=0;
     }
-    this.xDiff=0;
 }
 
 function classifySpotting(yes) {
@@ -586,28 +588,37 @@ function setup() {
     
     
     if (trainingMode) {
-        instructions.addEventListener('mousedown', function(e){
-            e.preventDefault(); 
-            startTime = new Date().getTime();
-            //this.parentNode.removeChild(this);
-            this.hidden=true;
-            this.style.display='none';
-
-            if (swipeRightGif.toShow)
-                swipeRightGif.hidden=false;
-            if (swipeLeftGif.toShow)
-                swipeLeftGif.hidden=false;
-            if (tapGif.toShow)
-                tapGif.hidden=false;
-
-            if (batchQueue[0].type=='m') {
-                var input = document.getElementById('in_'+ondeck.batch);
-                input.focus();
-            }
-        }, false);
+        instructions.ready=true;
+        instructions.addEventListener('mouseup', closeInstructions, false);
+        //instructions.addEventListener('touchstart', closeInstructions, false);
     }
 
 
+}
+
+function closeInstructions(e) {
+            e.preventDefault(); 
+            e.stopPropagation();
+            if (instructions.ready) {
+
+                startTime = new Date().getTime();
+                //this.parentNode.removeChild(this);
+                this.hidden=true;
+                this.style.display='none';
+
+                if (swipeRightGif.toShow)
+                    swipeRightGif.hidden=false;
+                if (swipeLeftGif.toShow)
+                    swipeLeftGif.hidden=false;
+                if (tapGif.toShow)
+                    tapGif.hidden=false;
+
+                if (batchQueue[0].type=='m') {
+                    var input = document.getElementById('in_'+ondeck.batch);
+                    input.focus();
+                }
+                instructions.ready=false;
+            }
 }
 
 
@@ -913,7 +924,7 @@ function isBatchDone(batchId) {
         oldElement.classList.toggle('collapserH');
     }
 
-    if (trainingMode) {
+    if (trainingMode && batchQueue.length>0) {
         var right=false;
         if (lastRemovedBatchInfo[lastRemovedBatchInfo.length-1].type=='s') {
             for (spottingId in batches[batchId].spottings) {
@@ -935,6 +946,7 @@ function isBatchDone(batchId) {
             if (batchQueue[0].instructions.length>0) {
                 instructions.hidden=false;
                 instructions.style.display='flex';
+                setTimeout(function(){instructions.ready=true;},100);
             }
 
 
@@ -947,10 +959,11 @@ function isBatchDone(batchId) {
                 tapGif.toShow=true;
             }
         } else {
-            instructionsText.innerHTML='<p>That was incorrect. :(</p><Use the <b>undo</b> button to correct the error.</p>';
+            instructionsText.innerHTML='<p>That was incorrect. :(</p><p>Use the <b>undo</b> button to correct the error.</p>';
 
             instructions.hidden=false;
             instructions.style.display='flex';
+            setTimeout(function(){instructions.ready=true;},100);
         }
     }
 }
@@ -1045,7 +1058,7 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
             closeImg.src='/removeNgram.png';
             d.appendChild(closeImg);
             d.addEventListener('mouseup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
-            d.addEventListener('touchup', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
+            //d.addEventListener('touchend', classify(id,'$REMOVE:'+ngramP.id+'$'), false);
             ngramDiv.appendChild(d);
         }
         genDiv.appendChild(ngramDiv);
@@ -1157,7 +1170,7 @@ function createManualTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     submit.classList.toggle('transSubmit');
     submit.innerHTML='&gt;';
     submit.addEventListener('mouseup', classifyR(id,function(){return input.value;}), false);
-    submit.addEventListener('touchup', classifyR(id,function(){return input.value;}), false);
+    //submit.addEventListener('touchstart', classifyR(id,function(){return input.value;}), false);
     
     genDiv.appendChild(input);
     genDiv.appendChild(submit);
@@ -1182,7 +1195,7 @@ function addWordButtons(dest,words,id) {
         wordDiv.classList.toggle('selection');
         wordDiv.innerHTML='<div>'+words[i]+'</div>';
         wordDiv.addEventListener('mouseup', classify(id,words[i]), false);
-        wordDiv.addEventListener('touchup', classify(id,words[i]), false);
+        //wordDiv.addEventListener('touchstart', classify(id,words[i]), false);
         dest.appendChild(wordDiv);
     }
 }
@@ -1204,7 +1217,7 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     errDiv.classList.toggle('error');
     errDiv.innerHTML="<div>[None / Error]</div>";
     errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
-    errDiv.addEventListener('touchup', classify(id,'$ERROR$'), false);
+    //errDiv.addEventListener('touchstart', classify(id,'$ERROR$'), false);
     selectionDiv.appendChild(errDiv);
     
     genDiv.appendChild(selectionDiv);

@@ -51,6 +51,10 @@ button {
     margin-left: 10%;
 }
 
+#menu button {
+    background: #E4DDE9;
+}
+
 #modeButton #modeSwipe {
     font-weight: bold;
 }
@@ -69,7 +73,7 @@ button {
     width:100%;
     text-align:center;
     overflow: hidden;
-    max-height:300px;
+    max-height:700px;
     min-height:100px;
     animation-duration: 0.2s;
     animation-name: open;
