@@ -105,7 +105,7 @@ var ControllerApp = function(port) {
         self.testTransLabels={};
     }
 
-    self.datasetAssignCounter=0;
+    self.datasetAssignCounter=1;
     //self.sourceCounter={};
     /*  ================================================================  */
     /*  Helper functions.                                                 */
