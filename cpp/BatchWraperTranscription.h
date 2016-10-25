@@ -37,6 +37,9 @@ class BatchWraperTranscription: public BatchWraper
         ~BatchWraperTranscription() {}
 #ifndef NO_NAN
         virtual void doCallback(Callback* callback);
+#else
+        virtual int getType(){return TRANSCRIPTION;}
+        virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt);
 #endif
 };
 #endif

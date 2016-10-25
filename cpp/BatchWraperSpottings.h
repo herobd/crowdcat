@@ -34,6 +34,9 @@ class BatchWraperSpottings: public BatchWraper
         ~BatchWraperSpottings() {}
 #ifndef NO_NAN
         virtual void doCallback(Callback* callback);
+#else
+        virtual int getType(){return SPOTTINGS;};
+        virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {};
 #endif
 };
 #endif

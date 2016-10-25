@@ -29,15 +29,15 @@ module.exports =  function() {
                 }
             });
             
-            /*db.collection('THESIS_ALPHA', function(err, collection) {
+            db.collection('THESIS_ALPHA', function(err, collection) {
                 if(!err) {
                     self.alphaCollection=collection;
-                    if (--numCol <= 0)
-                        callback(self);
+                    //if (--numCol <= 0)
+                    //    callback(self);
                 } else {
                     console.log('ERROR: conencting to MongoDB colection THESIS_ALPHA: '+err);
                 }
-            });*/
+            });
             
             self.savedSpottingsCollection={};
             self.savedTransCollection={};
@@ -196,22 +196,6 @@ module.exports =  function() {
         this.alphaCollection.update({_id:(userNum+'')},{$set: { survey:results } } ,{w:1}, callback)
     }
     
-    Database.prototype.listEmailsAlpha = function(callback) {
-        var ret=[];
-        var self=this;
-        var cursor = self.alphaCollection.find({},{survey:1});
-        cursor.each(function(err, doc) {
-            if (err) {
-                callback(err,ret);
-            } else if (doc != null) {
-                //console.log(doc)
-                if (doc.survey)
-                    ret.push(self.revealEmail(doc.survey.email))
-            } else {
-                callback(err,ret);
-            }
-        });
-    }
     
     Database.prototype.listCountPrefAlpha = function(callback) {
         var ret={app_tap:0, app_hardcore:0};
@@ -230,7 +214,7 @@ module.exports =  function() {
                 callback(err,ret);
             }
         });
-    }
+    }*/
     
     Database.prototype.listCSVDumpAlpha = function(callback) {
         var ret='id,preference,device,width,height,first,tap_fp,tap_fn,tap_undos,tap_time,swipe_fp,swipe_fn,swipe_undos,swipe_time,response\n';
@@ -264,7 +248,44 @@ module.exports =  function() {
                 callback(err,ret);
             }
         });
-    };*/
+    };
+    Database.prototype.listEmailsAlpha = function(callback) {
+        var ret=[];
+        var self=this;
+        var cursor = self.alphaCollection.find({},{survey:1});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+            } else if (doc != null) {
+                //console.log(doc)
+                if (doc.survey)
+                    ret.push(self.revealEmail(doc.survey.email))
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
+    /*
+    Database.prototype.listEmailsAlpha = function(callback) {
+        var ret='';
+        var self=this;
+        var cursor = self.alphaCollection.find({});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+            } else if (doc != null) {
+                //console.log(doc)
+                if (doc.tests.length>1) {
+                    ret+=doc._id+','
+                    if (doc.survey && doc.survey.email.length>0)
+                        ret+=self.revealEmail(doc.survey.email)+', ';
+                }
+            } else {
+                callback(err,ret);
+            }
+        });
+    };
+    */
     
     Database.prototype.saveSpotting = function(dataName,id,spotting) {
         this.savedSpottingsCollection[dataName].update({_id:id},{$set: spotting},{ upsert: true } );

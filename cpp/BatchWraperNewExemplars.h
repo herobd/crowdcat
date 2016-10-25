@@ -32,6 +32,10 @@ class BatchWraperNewExemplars: public BatchWraper
         ~BatchWraperNewExemplars() {}
 #ifndef NO_NAN
         void doCallback(Callback* callback);
+#else
+
+        virtual int getType(){return NEW_EXEMPLARS;}
+        virtual void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs);
 #endif
 };
 #endif

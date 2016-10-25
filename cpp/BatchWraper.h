@@ -5,6 +5,10 @@
 #include <nan.h>
 using namespace Nan;
 using namespace v8;
+#else
+#define SPOTTINGS 1
+#define NEW_EXEMPLARS 2
+#define TRANSCRIPTION 3
 #endif
 using namespace std;
 
@@ -26,6 +30,11 @@ class BatchWraper
         //virtual BatchWraper(Batch* batch)=0;
 #ifndef NO_NAN
         virtual void doCallback(Callback* callback)=0;
+#else
+        virtual int getType()=0;
+        virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {}
+        virtual void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs) {}
+        virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt) {}
 #endif
 };
 
@@ -51,6 +60,8 @@ class BatchWraperBlank : public BatchWraper
             callback->Call(8, argv);
 
         }
+#else
+        virtual int getType(){return 0;}
 #endif
         
 };
