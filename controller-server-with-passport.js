@@ -21,8 +21,8 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Debug/spottingaddon");
-//var spottingaddon = require("./cpp/build/Release/spottingaddon")
+//var spottingaddon = require("./cpp/build/Debug/spottingaddon");
+var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 numberOfTests=2;
 
@@ -385,6 +385,9 @@ var ControllerApp = function(port) {
                 self.userSessionMap[req.sessionID]=undefined;
             }
             res.render('thankyou', {});
+            if (req.user) {
+                console.log(req.user.id+' finished');
+            }
         });
         
         self.app.get('/feedback', function(req, res) {
@@ -908,7 +911,7 @@ var ControllerApp = function(port) {
             passwordField: 'password'
           },
           function(username, password, done) {
-            console.log('LocalStrat: '+username);
+            //console.log('LocalStrat: '+username);
             self.database.findUser(username, function (err, user) {
               if (err) { return done(err); }
               if (!user) {
@@ -917,18 +920,28 @@ var ControllerApp = function(port) {
               //if (true||!user.validPassword(password)) {
                // return done(null, false, { message: 'Incorrect password.' });
               //}
-              
+               
               return done(null, user);
             });
           }
         ));
         passport.serializeUser(function(user, done) {
-          //console.log('serializeUser: '+user.id);
-          done(null, user.id);
+            var minutes = 1000 * 60;
+            var hours = minutes * 60;
+            var days = hours * 24;
+            var years = days * 365.25;
+            var d = new Date();
+            var t= d.getTime();
+
+            var y = Math.floor(t / years);
+            var day = Math.floor((t-years*y) / days);
+            var hour = Math.floor((t-(years*y+days*day)) / hours);
+            var minute = Math.floor((t-(years*y+days*day+hour*hours)) / minutes);
+            console.log('Login: '+user.id+', '+day+' '+(6+hour)+':'+minute);
+            done(null, user.id);
         });
 
         passport.deserializeUser(function(id, done) {
-          //console.log('deserializeUser: '+id);
           self.database.findUser(id, function(err, user) {
             if (user==null)
                 console.log('Failed to find user: '+id);
