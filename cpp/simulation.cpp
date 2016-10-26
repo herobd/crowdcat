@@ -32,8 +32,9 @@ void threadLoop(CATTSS* cattss, Simulator* sim)
             vector<Location> locs;
             vector<string> gt;
             batch->getSpottings(&id,&ngram,&ids,&locs,&gt);
-            vector<int> labels = sim->spottings(ngram,locs,gt);
+            vector<int> labels = sim->spottings(ngram,locs,gt,prevNgram);
             cattss->updateSpottings(id,ids,labels,0);
+            prevNgram = ngram
         }
         else if (batch->getType()==NEW_EXEMPLARS)
         {
@@ -41,8 +42,9 @@ void threadLoop(CATTSS* cattss, Simulator* sim)
             vector<string> ngrams;
             vector<Location> locs;
             batch->getNewExemplars(&id,&ngrams,&locs);
-            vector<int> labels = sim->newExemplars(ngrams,locs);
+            vector<int> labels = sim->newExemplars(ngrams,locs,prevNgram);
             cattss-> updateNewExemplars(id,labels,0);
+            prevNgram=ngrams.back();
         }
         else if (batch->getType()==TRANSCRIPTION)
         {
@@ -55,9 +57,15 @@ void threadLoop(CATTSS* cattss, Simulator* sim)
             batch->getTranscription(&batchId,&wordIndex,&spottings,&poss,&manual,&gt);
             string trans;
             if (manual)
-                trans=sim->manual(wordIndex,poss,gt);
+            {
+                trans=sim->manual(wordIndex,poss,gt,prevNgram.compare("#")==0);
+                prevNgram="#";
+            }
             else
-                trans=sim->transcription(wordIndex,spottings,poss,gt);
+            {
+                trans=sim->transcription(wordIndex,spottings,poss,gt,prevNgram.compare("!")==0);
+                prevNgram="!"
+            }
             cattss->updateTranscription(batchId,trans,manual);
         }
         

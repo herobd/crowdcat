@@ -63,7 +63,7 @@ void Tester::testSimulator()
                 "UNKNOWN",
                 "UNKNOWN"
             };
-    vector<int> labels = sim.spottings(ngram0,locs0,gt0);
+    vector<int> labels = sim.spottings(ngram0,locs0,gt0,"");
     for (int i=0; i<labels.size(); i++)
         assert(labels[i]);
 
@@ -84,7 +84,23 @@ void Tester::testSimulator()
                 "UNKNOWN",
                 "0"
             };
-    labels = sim.spottings(ngram1,locs1,gt1);
+    labels = sim.spottings(ngram1,locs1,gt1,"");
     for (int i=0; i<labels.size(); i++)
         assert(labels[i]==0);
+
+    //newExemplars, mixed T,T,F,F,F
+    vector<string> ngrams2= {"io","id","er", "at","al"};
+    vector<Location> locs2 ={
+                Location(0, 850,1495,908,1603),
+                Location(0, 943,958,1084,1102),
+                Location(0, 374,1148,446,1266),
+                Location(0, 724,1501,817,1599),
+                Location(0, 1040,488,1233,638)
+            };
+    labels = sim.newExemplars(ngrams2,locs2,"");
+    assert(labels[0]==1);
+    assert(labels[1]==1);
+    assert(labels[2]==0);
+    assert(labels[3]==0);
+    assert(labels[4]==0);
 }

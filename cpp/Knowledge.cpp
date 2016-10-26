@@ -1185,15 +1185,19 @@ SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightL
             (etlx<0 || etlx>=width) ||
             (etly<0 || etly>=height) ||
             (ebrx<0 || ebrx>=width) ||
-            (ebry<0 || ebry>=height)
+            (ebry<0 || ebry>=height) ||
+            (ebrx-etlx>2.5*(rightRightBound-leftLeftBound)) //heuristic
        )
     {
         delete g;
         return NULL;
     }
 
-     
+#ifndef NO_NAN
     cv::Mat exe = inpainting(wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)),mask(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly)));
+#else
+    cv::Mat exe = wordImg(cv::Rect(etlx,etly,1+ebrx-etlx,1+ebry-etly));
+#endif
     SpottingExemplar* ret = new SpottingExemplar(tlx+etlx,tly+etly,tlx+ebrx,tly+ebry,pageId,pagePnt,newNgram,NAN,exe);
 #ifdef TEST_MODE
 #if SHOW
