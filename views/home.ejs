@@ -29,8 +29,8 @@
 </form>
 <br>
 <h2>How CATTSS works</h2> 
-<p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself, so it passes subwords it is unsure about on to users. With this feedback the system eventually reaching a point when it can make a decision about the rest of them.</p>
-<p>Together, subwords form partially transcriptioned of words. Comparing these to a lexicon, the system determines the possible transcriptions for a partially transcribed word. If this list is reasonably small the system passes the list to a user to select the correct one.</p>
+<p>The system begins by looking for common letter combinations (subwords) like 'th' or 'er'. It can't do this very well by itself, so it passes subwords it is unsure about on to users.</p>
+<p>When the computer has a few letters filled in for a word (think of the game "Wheel of Fortune" - some letters are known, some are blank), it creates a list of possible transcriptions for that word. If this list is reasonably small it passes it to a user to select the correct one.</p>
 <p>The system also uses the subwords approved by users, and the now known letters of user transcribed words to enhance its ability to find subwords.</p>
 <p>For this experiment the system isn't running. The data was taken from a single run of the system so that the results are more consistent and there are ground truth labels for the data.</p>
 </body>
