@@ -940,10 +940,11 @@ function isBatchDone(batchId) {
             trainingMode=false;
             allReceived=false;
             batchQueue[0].type='x';
+            document.getElementById('instructionsButton').hidden=true;
         }
         if (right || batchQueue[0].lastTraining) {
-            instructionsText.innerHTML=batchQueue[0].instructions;
             if (batchQueue[0].instructions.length>0) {
+                instructionsText.innerHTML=batchQueue[0].instructions;
                 instructions.hidden=false;
                 instructions.style.display='flex';
                 setTimeout(function(){instructions.ready=true;},100);
@@ -954,12 +955,13 @@ function isBatchDone(batchId) {
             if (batchQueue[0].trainingNum==0) {
                 swipeRightGif.toShow=true;
             } else if (batchQueue[0].trainingNum==1) {
-                swipeLeftGif.toShow=true;
+                //swipeLeftGif.toShow=true;
+                swipeLeftGif.hidden=false;
             } else if (batchQueue[0].trainingNum==8) {
                 tapGif.toShow=true;
             }
         } else {
-            instructionsText.innerHTML='<p>That was incorrect. :(</p><p>Use the <b>undo</b> button to correct the error.</p>';
+            instructionsText.innerHTML='<p>Opps, that was incorrect. :(</p><p>Use the <b>undo</b> button to try again.</p>';
 
             instructions.hidden=false;
             instructions.style.display='flex';
@@ -1097,6 +1099,7 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                 while (true) {
                     i=Math.floor(lb +(ub-lb)/2);
                     var comp = cur.localeCompare(lcPossibilities[i]);
+                    console.log(i +' '+comp);
                     if (comp==0)
                         break;
                     else if (comp<0)
@@ -1104,7 +1107,7 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                     else
                         lb=i+1;
                     if (ub-lb < 2) {
-                        if (comp<0)
+                        if (comp<0 && cur.localeCompare(lcPossibilities[lb])<=0)
                             i=lb;
                         else
                             i=ub;
@@ -1125,6 +1128,7 @@ function inputBoxFunc(self,possibilities,possDiv,id,onEnter) {
                                 match=false;
                             }
                         }
+                        //console.log(lcPossibilities[i]+' '+match);
                         if (match) {
                             matchList.push(possibilities[i]);
                             if (matchList.length>=limit)
@@ -1252,6 +1256,12 @@ function toggleMode() {
     } else {
         document.getElementById("tapInstructions").hidden=true;
     }
+}
+
+function showInstructions() {
+    instructions.hidden=false;
+    instructions.style.display='flex';
+    setTimeout(function(){instructions.ready=true;},100);
 }
 /*window.onbeforeunload = confirmExit;
 function confirmExit(){

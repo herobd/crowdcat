@@ -88,8 +88,8 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 
     callback->Call(8, argv);
 }
-
-void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt)
+#else
+void BatchWraperSpottings::getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt)
 {
     *resId = resultsId;
     *ids=retId;

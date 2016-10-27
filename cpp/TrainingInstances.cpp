@@ -224,7 +224,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
             "<h3>Manual transcription task</h3>"
             "<p>When the system can't do any more for a word, you will have to manually type in the transcription.</p>"
             "<p><i>*sigh*</i></p>"
-            "<p>You can ignore capitalization in all tasks.<p>";
+            "<p>You can ignore capitalization in <i>all</i> tasks.<p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==14) {//manual (auto compelete)
         vector<string> prunedDictionary = {

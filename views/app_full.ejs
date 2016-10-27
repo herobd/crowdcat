@@ -32,6 +32,9 @@
     <button type="button" id="menuButton" onclick="menu()">menu</button>
     <button type="button" id="passButton" onclick="pass()">skip</button>
     <div id="menu" class="hidden">
+        <% if (trainMode) { %>
+        <button class="menuItem" id="instructionsButton" onclick="showInstructions()">Show instructions</button>
+        <% } %>
         <button class="menuItem" id="modeButton" onclick="toggleMode()">Control toggle: <span id="modeSwipe">swipe</span>/<span id="modeTap">tap</span></button>
         <div class="menuItem" id="tapInstructions" hidden>
             Now just tap on the left or right instead of swiping.

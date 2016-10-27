@@ -36,7 +36,7 @@ class BatchWraperSpottings: public BatchWraper
         virtual void doCallback(Callback* callback);
 #else
         virtual int getType(){return SPOTTINGS;};
-        virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {};
+        virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt);
 #endif
 };
 #endif

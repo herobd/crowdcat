@@ -69,8 +69,8 @@ void BatchWraperNewExemplars::doCallback(Callback *callback)
 
     callback->Call(8, argv);
 }
-
-void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs)
+#else
+void BatchWraperNewExemplars::getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs)
 {
     *batchId=this->batchId;
     *ngrams=retNgram;

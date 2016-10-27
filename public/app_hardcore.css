@@ -669,3 +669,13 @@ div.selection.error {
     font-size: 35px;
     color: #fffff0;
 }
+
+/*#instructionsButton {
+    pointer-events: auto;
+    font-size: 20px;
+    color: #200120;
+    padding: 6px;
+    background: #fff0ff;
+    max-width: 50%;
+    opacity: 0.75;
+}*/
