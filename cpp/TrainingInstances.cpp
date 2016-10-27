@@ -61,8 +61,9 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="1";
         string instructions =
                 "<h3>Subword spotting approval task</h3>"
-                "<p>In this task you help correct the system's finding of subwords (parts of words)."
-                " If the highlighted region of the <i>bottom</i> image matches the text at the very <i>bottom</i>, swipe right.</p>"
+                "<p>In this task you’ll look at the letter combination at the <i>bottom</i> of the screen to see if it matches the highlighted letters in the word directly above it. Swipe right if it matches, left if it doesn’t.</p>"
+                //"<p>In this task you help correct the system's finding of subwords (parts of words)."
+                //" If the highlighted region of the <i>bottom</i> image matches the text at the <i>bottom</i> of the screen, swipe right.</p>"
                 "<p>Alternate controls are available under the <b>menu</b> if you're not using a touch device or have trouble swiping.</p>"
                 "<p><i>(tap the screen to continue)</i></p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
@@ -71,8 +72,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         SpottingImage spottingImage(spotting_1,width,0,color,"he");
         batch->push_back(spottingImage);            
         string correct="0";
-        string instructions =
-                "<p>If the highlighted region does not match the text, swipe left.</p>";
+        string instructions ="";
+                //"<p>If the highlighted region does not match the text, swipe left.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==2) {//spotting bad BB (right) he
         SpottingsBatch* batch = new SpottingsBatch("he",0);
@@ -80,7 +81,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="1";
         string instructions =
-                "<p>The system can handle some inaccuracy, so if the highlighted region isn't perfectly aligned to the desired text, but reasonibly close, swipe right still.</p>";
+            "<p>If the highlighted region isn't perfectly aligned to the letter combination, but it’s close, swipe right.</p>";
+                //"<p>If the highlighted region isn't perfectly aligned to the desired subword, but it's close, swipe right.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==3) {//bad BB (wrong) he
         SpottingsBatch* batch = new SpottingsBatch("he",0);
@@ -88,7 +90,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->push_back(spottingImage);            
         string correct="0";
         string instructions =
-                "<p>If the highlighted region is significantly misaligned with the desired text, it's wrong, so swipe left.</p>";
+            "<p>If the highlighted region doesn’t cover much of the letter combination, swipe left.</p>";
+                //"<p>If the highlighted region is significantly misaligned with the desired subword, it's wrong, so swipe left.</p>";
                 //"<p>The system uses the region boundaries to count unspotted letters, but you don't need to be perfect.</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==4) {//p spotting right or
@@ -98,7 +101,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="1";
         string instructions =
                 "<p>Do these next few subwords for practice.</p>"
-                "<p>You will see a color change when your target subword changes (the text that should be highlighted).</p>";
+                "<p>The colors will change when the letter combinations you’re working on change.</p>";
+                //"<p>You will see a color change when your target subword changes (the text that should be highlighted).</p>";
         return (BatchWraper*) (new TrainingBatchWraperSpottings(batch,correct,instructions,false));
     } else if (trainingNum==5) {//p spotting right or
         SpottingsBatch* batch = new SpottingsBatch("or",0);
@@ -134,8 +138,10 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="the";
         string instructions =
                 "<h3>Transcription task</h3>"
-                "<p>When the system has gotten enough subwords for a word, it will show you this type of task.</p>"
-                "<p>You just need to tap on the correct transcription for the word in the yellow box.</p>";
+                //"<p>When the system has gotten enough subwords for a word, it will show you this type of task.</p>"
+                //"<p>Tap on the correct transcription for the word in the yellow box.</p>";
+                "<p>When the system has gotten enough letter combinations for a word, it will show you this type of task.</p>"
+                "<p>Tap on the correct text of the handwritten word in the yellow box.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==9) {//transcribe (spotting error) there (err, 'ir')
         multimap<float,string> scored;
@@ -151,8 +157,10 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string instructions =
                 //"<p>Sometimes a subword will have been classified incorrectly, meaning the correct transcription won't be shown. "
                 //"The non-yellow highlights on the word are the subwords previously approved.</p>"
-                "<p>If the correct transcription is not shown, it may be because a subword was incorrectly labeled.</p>"
-                "<p>Tap the <b>X</b> below the '<b>ir</b>' to indicate this is an incorrect subword.</p>";
+                //"<p>If the correct transcription is not shown, it may be because a subword was incorrectly labeled.</p>"
+                //"<p>Tap the <b>X</b> below the '<b>ir</b>' to indicate this is an incorrect subword.</p>";
+            "<p>In this example, the right word isn’t an option because one of the letter combinations was identified incorrectly. They appear just under the image of the word.</p>"
+            "<p>In this case, tap the <b>X</b> below the 'ir' to tell the system it’s wrong.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==10) {//transcribe (all error) Theadore
         multimap<float,string> scored;
@@ -166,7 +174,8 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         batch->setWidth(width,0);
         string correct="$ERROR$";
         string instructions =
-                "<p>If the subwords are all correct, but the correct transcription is still not available, just tap the <b>[None / Error]</b> button at the bottom of the transcription list.</p>";
+                //"<p>If the subwords are all correct, but the correct transcription is still not available, just tap the <b>[None / Error]</b> button at the bottom of the transcription list.</p>";
+            "<p>If the letter combinations are all correct, but the right word isn’t available, tap the box at the bottom that says <b>[None / Error]</b>.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==11) {//p transcribe (tap) join
         multimap<float,string> scored;
@@ -183,7 +192,7 @@ BatchWraper* TrainingInstances::makeInstance(int trainingNum, int width,int colo
         string correct="joined";
         string instructions =
             "<p>Here's a couple more to practice on.</p>"
-            "<p>The most likely transcription (according to the system) will occur on top, but you may need to scroll down to get to the correct one.</p>";
+            "<p>The most likely transcription (according to the system) will be on top, but you may need to scroll down to get to the right one.</p>";
         return (BatchWraper*) (new TrainingBatchWraperTranscription(batch,correct,instructions,false));
     } else if (trainingNum==12) {//p transcribe (tap) morning (scroll down)
         multimap<float,string> scored;

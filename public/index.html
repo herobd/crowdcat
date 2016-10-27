@@ -11,9 +11,8 @@
 <body onload="setup()">
 <h1>CATTSS</h1>
 <h2>Computer Assisted Transcription Through Subword Spotting</h2>
-<p>This is the crowd-source transcription app I've created as part of a thesis at BYU. It is prototyping a new paradigm for historical document transcription.</p>
-<p><b>It is intended for a touch device</b>, though it should work in any modern browser.</p>
-<p>I'm running a short experiment which should take about 10 minutes.</p>
+<p>This app has been created as part of a thesis at BYU. It gives volunteers like you the chance to help an automated system transcribe handwritten documents. It is in the testing phase now, so if you’re willing to help, click the link below to go through a short experiment. It should take about 10 minutes.</p>
+<p><b>It is intended for touchscreens</b>, but you should be able to use any computer.</p>
 <div id='apps'>
     <a href="/login">I'll help!</a> <br><br>
 
@@ -22,8 +21,8 @@
 <p>Contact me here: <a href="mailto:briandavis@byu.net?Subject=CATTSS" target="_top">briandavis@byu.net</a></p>
 <br>
 <h2>How CATTSS works</h2>
-<p>The system begins by looking for common subwords ('th', 'er', etc.) in the text. It can't do this very well by itself, so it passes subwords it is unsure about on to users. With this feedback the system eventually reaching a point when it can make a decision about the rest of them.</p>
-<p>Together, subwords form a partial transcription of words (think of the game "Wheel of Fortune", some letters are known, some are blank). Comparing these to a lexicon, the system determines the possible transcriptions for a partially transcribed word. If this list is reasonably small the system passes the list to a user to select the correct one.</p>
+<p>The system begins by looking for common letter combinations (subwords) like 'th' or 'er'. It can't do this very well by itself, so it passes subwords it is unsure about on to users.</p>
+<p>When the computer has a few letters filled in for a word (think of the game "Wheel of Fortune" - some letters are known, some are blank), it creates a list of possible transcriptions for that word. If this list is reasonably small it passes it to a user to select the correct one.</p>
 <p>The system also uses the subwords approved by users, and the now known letters of user transcribed words to enhance its ability to find subwords.</p>
 </body>
 </html>
