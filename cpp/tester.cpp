@@ -103,4 +103,34 @@ void Tester::testSimulator()
     assert(labels[2]==0);
     assert(labels[3]==0);
     assert(labels[4]==0);
+
+    //transcription correct avail
+    //that 1
+    vector<SpottingPoint> spottings3 = {SpottingPoint(0,"th",0,0,0, 0, 369,298,483,464)};
+    vector<string> poss3 = {"this", "that", "they", "thus"};
+    string trans = sim.transcribe(1, spottings3, poss3, "that", false);
+    assert(trans.compare("that"));
+
+    //transcription correct not avail
+    vector<SpottingPoint> spottings4 = {
+                SpottingPoint(0,"th",0,0,0, 0, 369,298,483,464),
+            };
+    vector<string> poss4 = {"this", "they", "thus"};
+    string trans = sim.transcribe(1, spottings4, poss4, "that", false);
+    assert(trans.compare("$ERROR$"));
+    
+    //transcription spotting error
+    vector<SpottingPoint> spottings5 = {
+                SpottingPoint(11,"th",0,0,0, 0, 369,298,483,464),
+                SpottingPoint(13,"ey",0,0,0, 0, 463,373,557,467)
+            };
+    vector<string> poss5 = {"they", "theyd"};
+    string trans = sim.transcribe(1, spottings5, poss5, "that", false);
+    assert(trans.compare("$REMOVE:13$"));
+
+
+    //manual
+    vector<string> poss6;
+    trans = manual(1,poss6,"that",false);
+    assert(trans.compare("that"));
 }

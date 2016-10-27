@@ -7,5 +7,6 @@ class Tester
 {
     public:
         void testSave();
+        void testSimulator();
 };
 #endif
