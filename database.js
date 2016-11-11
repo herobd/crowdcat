@@ -265,6 +265,34 @@ module.exports =  function() {
             }
         });
     }
+
+    Database.prototype.getSpottingTimings = function(dataname,callback) {
+        var ret=[];
+        var self=this;
+        var cursor = self.timingSpottingsCollection[dataname].find({});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+                return;
+            } else if (doc!=null) {
+                //console.log(doc);
+                if (doc.userId != 'herobd@gmail.com' && (doc.userId.length<9 || doc.userId.substr(doc.userId.length-9)!='@test.com')) {
+                    ret.push(   {
+                                    ngram:doc.ngram,
+                                    numSkip:5*(1-doc.didRatio),
+                                    numT:5*(doc.trueRatioFull),
+                                    numF:5*(1-doc.trueRatioFull),
+                                    prevSame:doc.prevNgramSame,
+                                    //numObv:
+                                    accuracy:doc.accuracy,
+                                    time:doc.batchTime
+                                });
+                }
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
     /*
     Database.prototype.listEmailsAlpha = function(callback) {
         var ret='';
