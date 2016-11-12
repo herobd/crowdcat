@@ -1,6 +1,9 @@
 #include "Simulator.h"
 #include <csignal>
 
+
+//BENHTANM 16116
+//NAMES 16783
 Simulator::Simulator()
 {
     spotNet = net_load (spotNet_filename);
@@ -17,6 +20,8 @@ Simulator::Simulator()
     notInSkipProb = stof(line);
     getline(in,line);
     notInFalsePositiveProb = stof(line);
+    getline(in,line);
+    averageMilli = stoi(line);
 }
 //I need, for each word in the corpus"
 //*GT
@@ -32,7 +37,7 @@ vector<int> Simulator::spottings(string ngram, vector<Location> locs, vector<str
     int numObv=0;
     float error;
     vector<int> labels = getSpottingLabels(ngram,locs,&error); //(locs.size());
-    for (int i=0; i<locs.size(); i++)
+    /*for (int i=0; i<locs.size(); i++)
     {
         //labels[i] = getSpottingLabel(ngram,locs[i]);
         if (labels[i]==0)
@@ -43,9 +48,9 @@ vector<int> Simulator::spottings(string ngram, vector<Location> locs, vector<str
             numSkip++;
         if (gt[i].compare("0")==0)
             numObv++;
-    }
+    }*/
     
-    float nIn[nInSIze];
+    /*float nIn[nInSIze];
     for (int i=0; i<2*N_LETTERS; i++)
         nIn[i]=0;
     nIn[ngram[0]-'a']=1;
@@ -60,7 +65,10 @@ vector<int> Simulator::spottings(string ngram, vector<Location> locs, vector<str
     float nOut;
     net_compute (spotNet, nIn, &nOut);
     //int milli = MINSPOT_MILLI+MAX_SPOT_MILLI*(nOut+1)/2.0;
-    int milli = nOut*2*MILLI_STD + MILLI_MEAN;
+    int milli = nOut*2*MILLI_STD + MILLI_MEAN;*/
+    //int same = ngram.compare(prevNgram)==0?1:0;
+    //int milli = c + numT*t  + same*p + (1.0-error)*a;
+    int milli = averageMilli;
     this_thread::sleep_for(chrono::milliseconds(milli));
 
     return labels;
