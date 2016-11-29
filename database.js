@@ -277,16 +277,86 @@ module.exports =  function() {
             } else if (doc!=null) {
                 //console.log(doc);
                 if (doc.userId != 'herobd@gmail.com' && (doc.userId.length<9 || doc.userId.substr(doc.userId.length-9)!='@test.com')) {
-                    ret.push(   {
-                                    ngram:doc.ngram,
-                                    numSkip:5*(1-doc.didRatio),
-                                    numT:5*(doc.trueRatioFull),
-                                    numF:5*(1-doc.trueRatioFull),
-                                    prevSame:doc.prevNgramSame,
-                                    //numObv:
-                                    accuracy:doc.accuracy,
-                                    time:doc.batchTime
-                                });
+                    if (+doc.batchTime<60000 && //outlier
+                        doc.batchNum>2) {
+                        ret.push(   {
+                                        ngram:doc.ngram,
+                                        numSkip:5*(1-doc.didRatio),
+                                        numT:5*(doc.trueRatioFull),
+                                        numF:5*(1-doc.trueRatioFull),
+                                        prevSame:doc.prevNgramSame,
+                                        //numObv:
+                                        accuracy:doc.accuracy,
+                                        time:doc.batchTime,
+                                        user:doc.userId,
+                                        n:doc.batchNum
+                                    });
+                    }
+                    //else
+                    //    console.log('outlier spottings: '+doc.userId);
+                }
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
+    Database.prototype.getTransTimings = function(dataname,callback) {
+        var ret=[];
+        var self=this;
+        var cursor = self.timingTransCollection[dataname].find({});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+                return;
+            } else if (doc!=null) {
+                //console.log(doc);
+                if (doc.userId != 'herobd@gmail.com' && (doc.userId.length<9 || doc.userId.substr(doc.userId.length-9)!='@test.com')) {
+                    if (+doc.batchTime<40000) {
+                        ret.push(   {
+                                        prev:doc.prevWasTrans,
+                                        accuracy:doc.accuracy,
+                                        time:doc.batchTime,
+                                        numPoss:doc.numPossible,
+                                        position:doc.positionCorrect,
+                                        bad:doc.wasBadNgram,
+                                        error:doc.wasError,
+                                        skip:doc.skipped,
+                                        user:doc.userId,
+                                        n:doc.batchNum
+                                    });
+                    }
+                    else
+                        console.log('outlier trans: '+doc.userId);
+                }
+            } else {
+                callback(err,ret);
+            }
+        });
+    }
+    Database.prototype.getManTimings = function(dataname,callback) {
+        var ret=[];
+        var self=this;
+        var cursor = self.timingManualCollection[dataname].find({});
+        cursor.each(function(err, doc) {
+            if (err) {
+                callback(err,ret);
+                return;
+            } else if (doc!=null) {
+                //console.log(doc);
+                if (doc.userId != 'herobd@gmail.com' && (doc.userId.length<9 || doc.userId.substr(doc.userId.length-9)!='@test.com')) {
+                    if (+doc.batchTime<20000) {
+                        ret.push(   {
+                                        prev:doc.prevWasManual,
+                                        accuracy:doc.accuracy,
+                                        time:doc.batchTime,
+                                        numChar:doc.numChar,
+                                        skip:doc.skipped,
+                                        user:doc.userId,
+                                        n:doc.batchNum
+                                    });
+                    }
+                    else
+                        console.log('outlier man: '+doc.userId);
                 }
             } else {
                 callback(err,ret);

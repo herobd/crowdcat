@@ -55,7 +55,11 @@ class Simulator
     vector< pair<int, int> corpusYBounds; //the verticle boundaries of each word
 
     //spotting probs
-    float isInSkipProb, falseNegativeProb, falsePositiveProb, notInSkipProb, notInFalsePositiveProb;
-   
+    //float isInSkipProb, falseNegativeProb, falsePositiveProb, notInSkipProb, notInFalsePositiveProb;
+
+    int averageMilli;
+    float errorProbConst, skipProbConst;
+  
+    int getSpottingLabel(string ngram, Location loc); 
 };
 #endif
