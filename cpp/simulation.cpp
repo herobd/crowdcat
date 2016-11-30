@@ -1,27 +1,37 @@
+#include <atomic>
 
-void* threadTask(void* cattss)
+#include "Simulator.h"
+#include "CATTSS.h"
+
+void controlLoop(CATTSS* cattss, atomic_bool* cont)
 {
-    //signal(SIGPIPE, SIG_IGN);
-    ((CATTSS*)cattss)->threadLoop();
-    //pthread_exit(NULL);
+    while(1)
+    {
+        cout<<"CONTROL:"<<endl<<": quit"<<endl<<": show"<<endl<<": manual"<<endl;
+        string line;
+        getline(cin, line);
+        if (line.compare("quit")==0)
+        {
+            cattss->misc("stopSpotting");
+            cont.store(false);
+            break;
+        }
+        else if (line.compare("show")==0)
+        {
+            cattss->misc("showCorpus");
+        }
+        else if (line.compare("manual")==0)
+        {
+            cattss->misc("manualFinish");
+        }
+    }
 }
 
-void run(int numThreads)
-{
-
-}
-void stop()
-{
-    cont.store(0);
-    for (int i=0; i<taskThreads.size(); i++)
-        sem_post(&semLock);
-}
-
-
-void threadLoop(CATTSS* cattss, Simulator* sim)
+void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
 {
     string prevNgram="";
-    while (cont.load())
+    int slept=0;
+    while (cont->load())
     {
         BatchWraper* batch = cattss->getBatch(5,500,0,prevNgram);
         if (batch->getType()==SPOTTINGS)
@@ -64,12 +74,26 @@ void threadLoop(CATTSS* cattss, Simulator* sim)
             else
             {
                 trans=sim->transcription(wordIndex,spottings,poss,gt,prevNgram.compare("!")==0);
-                prevNgram="!"
+                prevNgram="!";
             }
             cattss->updateTranscription(batchId,trans,manual);
         }
+        else if (batch->getType()==RAN_OUT)
+        {
+            this_thread::sleep_for(chrono::minutes(15));
+            slept+=15;
+            prevNgram="_";
+        }
+        else
+        {
+            cout<<"Blank batch given to sim"<<endl;
+            prevNgram="_";
+        }
+
+        delete batch;
         
     }
+    cout<<"Thread slept: "<<slept<<endl;
 }
 
 
@@ -77,16 +101,17 @@ void threadLoop(CATTSS* cattss, Simulator* sim)
 
 int main(int argc, char** agrv)
 {
-    string lexiconFile = string(*lexiconFileNAN);
-    string pageImageDir = string(*pageImageDirNAN);
-    string segmentationFile = string(*segmentationFileNAN);
-    string spottingModelPrefix = string(*spottingModelPrefixNAN);
-    string savePrefix = string(*savePrefixNAN);
-    int numSpottingThreads = To<int>(info[5]).FromJust();
-    int numTaskThreads = To<int>(info[6]).FromJust();
-    int height = To<int>(info[7]).FromJust();
-    int width = To<int>(info[8]).FromJust();
-    int milli = To<int>(info[9]).FromJust();
+    string dataname="BENTHAM";
+    string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
+    string pageImageDir = "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages";
+    string segmentationFile = "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp";
+    string spottingModelPrefix = "model/CATTSS_BENTHAM";
+    string savePrefix = "save/sim_BENTHAM";
+    int numSpottingThreads = 5;
+    int numTaskThreads = 3;
+    int height = 1000;
+    int width = 2500;
+    int milli = 4000;
     cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
@@ -96,14 +121,21 @@ int main(int argc, char** agrv)
                         numTaskThreads,
                         height,
                         width,
-                        milli);
+                        milli,
+                        0//pad
+                        );
 
-    Simulator sim;
+    Simulator sim(dataname);
+    atomic_bool cont(true);
     taskThreads.resize(numSimThreads);
     for (int i=0; i<numTSimhreads; i++)
     {
-        taskThreads[i] = new thread(threadLoop,cattss,&sim);
+        taskThreads[i] = new thread(threadLoop,cattss,&sim,&cont);
         taskThreads[i]->detach();
         
     }
+    controlLoop(cattss,&cont);
+
+    cout<<"---DONE---"<<endl;
+    //delete cattss;
 }

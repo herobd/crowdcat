@@ -13,10 +13,34 @@
 //spottingErrorProbConst=0.058
 //spottingSkipProbConst=0.029
 
-Simulator::Simulator()
+Simulator::Simulator(string dataname)
 {
-    spotNet = net_load (spotNet_filename);
-    if (dataname.compare("BENTHAM")==0)
+    //TODO read in seg GT
+
+    if (dataname.compare("test")==0)
+    {
+        spottingAverageMilli=1;
+        spottingAverageMilli_prev=1;
+        //spottingErrorProbConst=0.035;
+        //spottingSkipProbConst=0.078;
+        spottingErrorProb_m=0; //https://plot.ly/create/
+        spottingErrorProb_b=0;
+        spottingSkipProb_m=0;
+        spottingSkipProb_b=0;
+
+
+        transMilli_b=1;//position 0.07 (no -1)
+        transMilli_m=1;
+        transMilli_notAvail=1;
+        transErrorProbAvail=0;
+        transErrorProbNotAvail=0;
+        //transSkipProb=0;
+
+        manMilli_b=1;
+        manMilli_m=1;
+        manErrorProb=0;
+    }
+    else if (dataname.compare("BENTHAM")==0)
     {
         spottingAverageMilli=14235;
         spottingAverageMilli_prev=-4338;
@@ -33,6 +57,7 @@ Simulator::Simulator()
         transMilli_notAvail=11539;
         transErrorProbAvail=1- 0.95;
         transErrorProbNotAvail=1- 0.5484;
+        //transSkipProb=0.012;
 
         manMilli_b=2608.0068;
         manMilli_m=726.1412;
@@ -52,6 +77,7 @@ Simulator::Simulator()
         transMilli_notAvail=5749;
         transErrorProbAvail=1- 0.8812;
         transErrorProbNotAvail=1- 0.5208;
+        //transSkipProb=0.012;
 
         manMilli_b=4210.1689;
         manMilli_m=670.0784;
@@ -69,7 +95,7 @@ Simulator::Simulator()
 //*GT
 //*boundaries between letters
 
-void skipAndError(vector<int>& labels)
+void Simulator::skipAndError(vector<int>& labels)
 {
     float T=0;
     for (int c : labels)
@@ -95,9 +121,14 @@ vector<int> Simulator::spottings(string ngram, vector<Location> locs, vector<str
     //int numT=0;
     //int numF=0;
     //int numObv=0;
-    vector<int> labels(locs.size);
+    vector<int> labels(locs.size());
     for (int i=0; i<locs.size(); i++)
-       labels[i] = getSpottingLabel(ngram,locs[i]);
+    {
+        if (gt[i].length()>2)
+            labels[i] = getSpottingLabel(ngram,locs[i]);
+        else
+            labels[i] = stoi(gt[i]);
+    }
     skipAndError(labels);
     /*for (int i=0; i<locs.size(); i++)
     {
@@ -162,8 +193,8 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
     }
     if (w>=0)
     {
-        int l1 = corpusWord[w].indexOf(ngram[0]);
-        int l2 = corpusWord[w].indexOf(ngram[1]);
+        int l1 = corpusWord[w].find(ngram[0]);
+        int l2 = corpusWord[w].find(ngram[1]);
         if (l1==l2-1)
         {
             //if (RAND_PROB<isInSkipProb)
@@ -225,13 +256,12 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
 
 vector<int> Simulator::newExemplars(vector<string> ngrams, vector<Location> locs, string prevNgram)
 {
-    vector<int> labels(locs.size);
+    vector<int> labels(locs.size());
     for (int i=0; i<locs.size(); i++)
        labels[i] = getSpottingLabel(ngrams[i],locs[i]);
     skipAndError(labels);
     
     int milli = (labels.size()/5.0)*spottingAverageMilli;
-    return labels;
     this_thread::sleep_for(chrono::milliseconds(milli));
 
     return labels;
@@ -256,11 +286,43 @@ string Simulator::transcription(int wordIndex, vector<SpottingPoint> spottings, 
 
         for (SpottingPoint sp : spottings)
         {
-            if (0==getSpottingLabel(sp.ngram,sp.loc))
-                ret="$REMOVE:"+to_string(
+            if (0==getSpottingLabel(sp.getNgram(),Location(sp.page,sp.x1,sp.y1,sp.x2,sp.y2)))
+            {
+                ret="$REMOVE:"+sp.getId()+"$";
+                break;
+            }
+        }
+
+        if (ret.length()==0)
+        {
+            if (RAND_PROB < transErrorProbNotAvail)
+                ret="$REMOVE:"+spottings.front().getId()+"$";//If an error is made, I'm just removing a spottings. Not sure what actually should happen
+            else
+                ret="$ERROR$";
+        }
+        else
+        {
+            if (RAND_PROB < transErrorProbNotAvail)
+                ret="$ERROR$";//Assume that user misses that there ngram is wrong
+        }
+    }
+    else
+    {
+        if (RAND_PROB < transErrorProbAvail)
+            ret="$ERROR$";//Assume user didn't see correct trans
+    }
             
+    this_thread::sleep_for(chrono::milliseconds(milli));
+
+    return ret;
 }
 
 string Simulator::manual(int wordIndex, vector<string> poss, string gt, bool lastWasMan)
 {
+    int milli = manMilli_b + manMilli_m*gt.length();
+    string ret=gt;
+    if (RAND_PROB < manErrorProb)
+        ret[0]='!';
+    this_thread::sleep_for(chrono::milliseconds(milli));
+    return ret;
 }

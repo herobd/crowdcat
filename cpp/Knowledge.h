@@ -192,6 +192,14 @@ public:
         *gt=this->gt;
         pthread_rwlock_unlock(&lock);
     }
+    void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
+    {
+        pthread_rwlock_rdlock(&lock);
+	*isDone=done;
+        *gt=this->gt;
+        *query=this->query;
+        pthread_rwlock_unlock(&lock);
+    }
     void getBoundsAndDoneAndSentAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent, string* gt)
     {
         pthread_rwlock_rdlock(&lock);

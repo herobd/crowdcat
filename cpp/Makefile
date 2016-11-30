@@ -28,26 +28,32 @@ OBJECTS = obj/TranscribeBatchQueue.o \
           obj/CATTSS.o \
           obj/BatchWraperNewExemplars.o \
           obj/BatchWraperSpottings.o \
-          obj/BatchWraperTranscription.o 
-          #obj/test.o \
+          obj/BatchWraperTranscription.o \
+          obj/Simulator.o \
+          obj/test.o 
           #obj/FacadeSpotter.o \
           #obj/TestQueue.o 
 
 bin: $(PROGRAM_NAME)
-all: $(PROGRAM_NAME)
+all: $(PROGRAM_NAME) simulation
 tr: train
 data: makeData
+sim: simulation
 
 
 clean:
 	- rm  $(PROGRAM_NAME)
 	- rm  train
 	- rm  makeData
+	- rm  simulation
 	- rm  obj/*.o
 
 
 $(PROGRAM_NAME):  $(OBJECTS)  
 	$(LINK) $(CXX_FLAGS) -o $(PROGRAM_NAME) $(OBJECTS) $(LIBS)
+
+simulation: $(OBJECTS)
+	$(LINK) $(CXX_FLAGS) -o simulation simulation.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 
 train: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o train train.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
@@ -60,6 +66,9 @@ obj/tester.o: tester.cpp tester.h CATTSS.h
 
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
+
+obj/Simulator.o: Simulator.h Simulator.cpp CATTSS.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Simulator.o Simulator.cpp $(LIBS)
 
 obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h CorpusRef.h PageRef.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/TranscribeBatchQueue.o TranscribeBatchQueue.cpp $(LIBS)

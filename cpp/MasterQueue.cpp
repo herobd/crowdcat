@@ -280,6 +280,19 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         }
     }
 
+#ifdef NO_NAN
+    if (ret==NULL)
+        ret = new BatchWraperRanOut();
+    else
+    {
+        if (ret->getType()==SPOTTINGS)
+            GlobalK::knowledge()->sentSpottings();
+        else if (ret->getType()==TRANSCRIPTION)
+            GlobalK::knowledge()->sentTrans();
+    }
+
+#endif
+
     return ret;
 } 
 

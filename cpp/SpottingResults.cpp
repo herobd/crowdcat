@@ -47,11 +47,17 @@ void SpottingResults::add(Spotting spotting) {
     {
         classById[spotting.id]=true;
         numberClassifiedTrue++;
+#ifdef NO_NAN
+        GlobalK::knowledge()->accepted();
+#endif
     }
     else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
     {
         classById[spotting.id]=false;
         numberClassifiedFalse++;
+#ifdef NO_NAN
+        GlobalK::knowledge()->rejected();
+#endif
     }
     else
     {
@@ -261,6 +267,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         {
             swing++;
             numberClassifiedTrue++;
+#ifdef NO_NAN
+        GlobalK::knowledge()->accepted();
+#endif
             if (!resent || !iterClass->second)
             {
                 ret->push_back(instancesById.at(id)); //otherwise we've already sent it
@@ -271,6 +280,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         {
             swing--;
             numberClassifiedFalse++;
+#ifdef NO_NAN
+        GlobalK::knowledge()->rejected();
+#endif
             if (resent && (retRemove && iterClass->second))
             {
                 retRemove->push_back(make_pair(id,instancesById.at(id).ngram));
@@ -317,6 +329,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             ret->push_back(**tracer);
             classById[(**tracer).id]=true;
             numberAccepted++;
+#ifdef NO_NAN
+        GlobalK::knowledge()->autoAccepted();
+#endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: true"<<endl;
 #endif
@@ -326,6 +341,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         {
             (**tracer).type=SPOTTING_TYPE_THRESHED;
             classById[(**tracer).id]=false;
+#ifdef NO_NAN
+        GlobalK::knowledge()->autoRejected();
+#endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: false"<<endl;
 #endif

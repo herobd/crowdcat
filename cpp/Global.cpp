@@ -116,3 +116,15 @@ void GlobalK::loadImage(cv::Mat& im, ifstream& in)
         im=cv::imdecode(encoded,color?CV_LOAD_IMAGE_COLOR:CV_LOAD_IMAGE_GRAYSCALE);
     }
 }
+
+void GlobalK::sentSpottings()
+{
+    spotSent++;
+}
+void GlobalK::sentTrans()
+
+void GlobalK::saveTrack(float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0)
+{
+    trackFile<<time<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<...<<endl;
+    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarsSpotted=0;
+}

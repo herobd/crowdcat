@@ -22,6 +22,12 @@ void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, in
     while(!q->kill.load()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
         c->showProgress(height,width);
+#ifdef NO_NAN
+        float pWordsTrans;
+        float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
+        c->getStats(&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0);
+        GlobalK::knowledge()->saveTrack(pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0);
+#endif
     }
 }
 

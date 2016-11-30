@@ -9,6 +9,8 @@ using namespace v8;
 #define SPOTTINGS 1
 #define NEW_EXEMPLARS 2
 #define TRANSCRIPTION 3
+#define RAN_OUT 4
+#include "batches.h"
 #endif
 using namespace std;
 
@@ -65,4 +67,14 @@ class BatchWraperBlank : public BatchWraper
 #endif
         
 };
+
+#ifdef NO_NAN
+class BatchWraperRanOut : public BatchWraper
+{
+    public:
+        virtual int getType(){return 4;}
+        
+};
+#endif
+
 #endif

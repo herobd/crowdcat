@@ -4,6 +4,7 @@
 #include <vector>
 #include "BatchWraper.h"
 #include "batches.h"
+#include <thread>
 
 /*
    Spotting timing ought to take into consideration:
@@ -42,23 +43,40 @@ Yes ->
 class Simulator
 {
     public:
+    Simulator(string dataname);
     vector<int> spottings(string ngram, vector<Location> locs, vector<string> gt, string prevNgram);
     vector<int> newExemplars(vector<string> ngrams, vector<Location> locs, string prevNgram);
     string transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool lastWasTrans);
     string manual(int wordIndex, vector<string> poss, string gt, bool lastWasMan);
 
     private:
-    network_t *spotNet;
+    void skipAndError(vector<int>& labels);
+    //network_t *spotNet;
     vector<string> corpusWord; //The strings of the corpus
     vector<int> corpusPage;
     vector< vector<int> > corpusXLetterBounds; //The starting X position (in the page) of each letter, with a wl index being the ending of the last char.
-    vector< pair<int, int> corpusYBounds; //the verticle boundaries of each word
+    vector< pair<int, int> > corpusYBounds; //the verticle boundaries of each word
 
     //spotting probs
     //float isInSkipProb, falseNegativeProb, falsePositiveProb, notInSkipProb, notInFalsePositiveProb;
 
-    int averageMilli;
-    float errorProbConst, skipProbConst;
+    float spottingAverageMilli;
+    float spottingAverageMilli_prev;
+    float spottingErrorProb_m; //https://plot.ly/create/
+    float spottingErrorProb_b;
+    float spottingSkipProb_m;
+    float spottingSkipProb_b;
+
+
+    float transMilli_b;
+    float transMilli_m;
+    float transMilli_notAvail;
+    float transErrorProbAvail;
+    float transErrorProbNotAvail;
+
+    float manMilli_b;
+    float manMilli_m;
+    float manErrorProb;
   
     int getSpottingLabel(string ngram, Location loc); 
 };

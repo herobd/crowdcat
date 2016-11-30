@@ -83,7 +83,7 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 void BatchWraperTranscription::getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt)
 {
     *batchId=this->batchId;
-    *wordIndex=this->wordIndex;
+    *wordIndex=stoi(this->wordIndex);
     *spottings=this->spottings;
     *poss=retPoss;
     *manual=this->manual;

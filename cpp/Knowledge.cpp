@@ -2682,3 +2682,82 @@ TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
     query="";
     return queryForBatch(newExemplars);
 }
+
+vector<TranscribeBatch*> Knowledge::Corpus::getStats(float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
+{
+    int cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
+    cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
+    for (Word* w : _words)
+    {
+        bool done;
+        string gt, query;
+        w->getDoneAndGTAndQuery(&done,&gt,&query);
+        if (done)
+            cTrans++;
+        else if (query.length()==0)
+            c0++;
+        else
+        {
+            int numMatch=0;
+            int posGT=0;
+            bool skip=false;
+            char last='.';
+            for (int i=0; i<query.length(); i++)
+            {
+                if (skip)
+                {
+                    if (query[i]==']')
+                        skip=false;
+                }
+                else
+                {
+                    if (query[i]==']')
+                    {
+                        skip=true;
+                        last='.';
+                    }
+                    else if (query[i]>='a' && query[i]<='z')
+                    {
+                        if (query[i]==last)
+                        {
+                            if (query[i]==gt[posGT])
+                            {
+                                posGT++;
+                                numMatch++;
+                            }
+                        }
+                        else
+                        {
+                            for (;posGT<gt.length(); posGT++)
+                                if (gt[posGT]==query[i])
+                                {
+                                    numMatch++;
+                                    posGT++;
+                                    break;
+                                }
+                        }
+                        last=query[i];
+                    }
+                }
+            }
+            float p = numMatch/(0.0+gt.length());
+            if (p>.8)
+                c80_100++;
+            else if (p>.6)
+                c60_80++;
+            else if (p>.4)
+                c40_60++;
+            else if (p>.2)
+                c20_40++;
+            else
+                c0_20++;
+        }
+    }
+    *pWordsTrans= cTrans/(0.0+_words.length());
+    *pWords80_100= c80_100/(0.0+_words.length());
+    *pWords60_80= c60_80/(0.0+_words.length());
+    *pWords40_60= c40_60/(0.0+_words.length());
+    *pWords20_40= c20_40/(0.0+_words.length());
+    *pWords0_20= c0_20/(0.0+_words.length());
+    *pWords0= c0/(0.0+_words.length());
+}

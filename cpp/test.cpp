@@ -1,7 +1,7 @@
 
 //#include "CATTSS.h"
 #include "MasterQueue.h"
-#include "TestQueue.h"
+//#include "TestQueue.h"
 #include "Knowledge.h"
 #include "Lexicon.h"
 #include "TranscribeBatchQueue.h"
@@ -15,8 +15,10 @@ int main() {
     //TEST
     Tester tester;
     tester.testSave();
+    tester.testSimulator();
+    cout <<"Done main tests"<<endl;
 
-/**/
+/*
     Lexicon::instance()->readIn("/home/brian/intel_index/data/wordsEnWithNames.txt");
     
     
