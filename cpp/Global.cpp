@@ -15,6 +15,13 @@ GlobalK::GlobalK()
         in.close();
     }
 
+    trackFile.open("save/simulationTracking.csv");
+    trackFile<<"time,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
+}
+
+Global::~GlobalK()
+{
+    trackFile.close();
 }
 
 GlobalK* GlobalK::knowledge()
@@ -122,9 +129,34 @@ void GlobalK::sentSpottings()
     spotSent++;
 }
 void GlobalK::sentTrans()
+{
+    transSent++;
+}
+void GlobalK::accepted()
+{
+    spotAccept++;
+}
+void GlobalK::rejected()
+{
+    spotReject++;
+}
+void GlobalK::autoAccepted()
+{
+    spotAutoAccept++;
+}
+void GlobalK::autoRejected()
+{
+    spotAutoReject++;
+}
+void GlobalK::newExemplar()
+{
+    newExemplarSpotted++;
+}
 
 void GlobalK::saveTrack(float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0)
 {
-    trackFile<<time<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<...<<endl;
+    time_t timeSec;
+    time(&timeSec);
+    trackFile<<timeSec<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarsSpotted<<endl;
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarsSpotted=0;
 }

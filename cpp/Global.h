@@ -18,10 +18,21 @@ class GlobalK
 {
     private:
         GlobalK();
+        ~GlobalK();
         static GlobalK* _self;
 
         map<int, vector<string> > ngramRanks;
         //int contextPad;
+        mutex mutLock;
+        atomic_int transSent;
+        atmoic_int spotSent;
+        atmoic_int spotAccept;
+        atmoic_int spotReject;
+        atmoic_int spotAutoAccept;
+        atmoic_int spotAutoReject;
+        atmoic_int newExemplarsSpotted;
+        ofstream trackFile;
+
     public:
         static GlobalK* knowledge();
 
@@ -32,6 +43,15 @@ class GlobalK
         static double otsuThresh(vector<int> histogram);
         static void saveImage(const cv::Mat& im, ofstream& out);
         static void loadImage(cv::Mat& im, ifstream& in);
+
+        void sentSpottings();
+        void sentTrans();
+        void accepted();
+        void rejected();
+        void autoAccepted();
+        void autoRejected();
+        void newExemplar();
+        void saveTrack(float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0);
 };
 
 #endif

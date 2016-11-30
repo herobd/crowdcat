@@ -119,6 +119,7 @@ void SpottingQueue::spottingLoop()
         if (results==NULL)
         {
             progLock[threadId].unlock();
+            delete query;
             continue;
         }
         bool cont=true;
@@ -135,6 +136,12 @@ void SpottingQueue::spottingLoop()
             masterQueue->updateSpottingResults(results);
         }
         progLock[threadId].unlock();
+
+#ifdef NO_NAN
+        if (query.getType() == SPOTTING_TYPE_EXEMPLAR)
+            GlobalK::knowledge()->nexExemplar();
+#endif
+
 #ifdef TEST_MODE
         //else
             //cout<<"Successful mid-run cancel."<<endl;
@@ -142,7 +149,7 @@ void SpottingQueue::spottingLoop()
         delete query;
     }
 }
-
+    
 void SpottingQueue::addQueries(vector<SpottingExemplar*>& exemplars)
 {
     //int setId = ++_setId;
