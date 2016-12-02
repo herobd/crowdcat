@@ -13,9 +13,38 @@
 //spottingErrorProbConst=0.058
 //spottingSkipProbConst=0.029
 
-Simulator::Simulator(string dataname)
+Simulator::Simulator(string dataname, string segCSV)
 {
     //TODO read in seg GT
+    ifstream in (segCSV);
+    string line;
+    getline(in,line);//header
+    while (getline(in,line))
+    {
+        string s;
+        std::stringstream ss(line);
+        getline(ss,s,',');
+        corpusWord.push_back(s);
+        getline(ss,s,',');
+        corpusPage.push_back(stoi(s));
+        getline(ss,s,',');//x1
+        getline(ss,s,',');
+        int y1=stoi(s);
+        getline(ss,s,',');//x2
+        getline(ss,s,',');
+        int y2=stoi(s);
+        corpusYBounds.push_back(make_pair(y1,y2));
+        vector<int> lettersStart, lettersEnd;
+        while (getline(ss,s,','))
+        {
+            lettersStart.push_back(stoi(s));
+            getline(ss,s,',');
+            lettersEnd.push_back(stoi(s));
+            //getline(ss,s,',');//conf
+        }
+        corpusXLetterStartBounds.push_back(lettersStart);
+        corpusXLetterEndBounds.push_back(lettersEnd);
+    }
 
     if (dataname.compare("test")==0)
     {
@@ -178,12 +207,12 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
         if (    loc.pageId == corpusPage[i] &&
                 loc.y1<corpusYBounds[i].second &&
                 loc.y2>corpusYBounds[i].first &&
-                loc.x1<corpusXLetterBounds[i].back() &&
-                loc.x2>corpusXLetterBounds[i].front()
+                loc.x1<corpusXLetterEndBounds[i].back() &&
+                loc.x2>corpusXLetterStartBounds[i].front()
            )
         {
             int overlap = ( min(loc.y2,corpusYBounds[i].second)-max(loc.y1,corpusYBounds[i].first) ) *
-                          ( min(loc.x2,corpusXLetterBounds[i].back())-max(loc.x1,corpusXLetterBounds[i].front()) );
+                          ( min(loc.x2,corpusXLetterEndBounds[i].back())-max(loc.x1,corpusXLetterStartBounds[i].front()) );
             if (overlap>maxOverlap)
             {
                 maxOverlap=overlap;
@@ -193,18 +222,25 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
     }
     if (w>=0)
     {
-        int l1 = corpusWord[w].find(ngram[0]);
-        int l2 = corpusWord[w].find(ngram[1]);
-        if (l1==l2-1)
+        cout<<corpusWord[w]<<" : "<<ngram<<endl;
+        //int l1 = corpusWord[w].find(ngram[0]);
+        //int l2 = corpusWord[w].find(ngram[1]);
+        for (int l2=1; l2<corpusWord[w].length(); l2++)
         {
+            int l1=l2-1;
+            if (ngram[0]!=corpusWord[w][l1] || ngram[1]!=corpusWord[w][l2])
+                continue;
             //if (RAND_PROB<isInSkipProb)
             //    ret.push_back( -1 );
             //else
             {
+                cout<<"page: "<<loc.pageId<<"  y1:"<<loc.y1<<endl;
+                cout<<loc.x1<<"\t"<<loc.x2<<"\t"<<endl;
+                cout<<corpusXLetterStartBounds[w][l1]<<"\t"<<corpusXLetterEndBounds[w][l2]<<endl;
                 if (
-                        (loc.x1>=corpusXLetterBounds[w][l1] && loc.x2<=corpusXLetterBounds[w][l2+1] && (loc.x2-loc.x1)/(corpusXLetterBounds[w][l2+1]-corpusXLetterBounds[w][l1]+0.0) > OVERLAP_INSIDE_THRESH) ||
-                        (loc.x1<=corpusXLetterBounds[w][l1] && loc.x2>=corpusXLetterBounds[w][l2+1] && (loc.x2-loc.x1)/(corpusXLetterBounds[w][l2+1]-corpusXLetterBounds[w][l1]+0.0) < OVERLAP_CONSUME_THRESH) ||
-                        ((min(loc.x2,corpusXLetterBounds[w][l2+1])-max(loc.x1,corpusXLetterBounds[w][l1]))/(corpusXLetterBounds[w][l2+1]+corpusXLetterBounds[w][l1]+0.0) > OVERLAP_SIDE_THRESH && max(max(loc.x1,corpusXLetterBounds[w][l1])-min(loc.x1,corpusXLetterBounds[w][l1]),max(loc.x2,corpusXLetterBounds[w][l2+1])-min(loc.x2,corpusXLetterBounds[w][l2+1]))/(min(loc.x2,corpusXLetterBounds[w][l2+1])-max(loc.x1,corpusXLetterBounds[w][l1])+0.0) < SIDE_NOT_INCLUDED_THRESH)
+                        (loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_INSIDE_THRESH) ||
+                        (loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) < OVERLAP_CONSUME_THRESH) ||
+                        ((min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_SIDE_THRESH && max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0) < SIDE_NOT_INCLUDED_THRESH)
                    )
                 {
                     //if  (RAND_PROB < falseNegativeProb)
@@ -223,13 +259,14 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
                     //    *error+=1.0/locs.size();
                     //}
                     //else
+                    cout<<"alignment bad"<<endl;
                         return 0;
                 }
 
             }
             
         }
-        else
+        //else if we didn't find the ngram
         {
             //if (RAND_PROB<notInSkipProb)
             //    ret.push_back( -1 );
@@ -241,6 +278,7 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
                 //    *error+=1.0/locs.size();
                 //}
                 //else
+                cout<<"letters bad"<<endl;
                     return 0;
             }
         }

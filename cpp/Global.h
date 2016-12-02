@@ -8,6 +8,8 @@
 #include <algorithm>
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <atomic>
+#include <mutex>
 
 using namespace std;
 
@@ -25,12 +27,12 @@ class GlobalK
         //int contextPad;
         mutex mutLock;
         atomic_int transSent;
-        atmoic_int spotSent;
-        atmoic_int spotAccept;
-        atmoic_int spotReject;
-        atmoic_int spotAutoAccept;
-        atmoic_int spotAutoReject;
-        atmoic_int newExemplarsSpotted;
+        atomic_int spotSent;
+        atomic_int spotAccept;
+        atomic_int spotReject;
+        atomic_int spotAutoAccept;
+        atomic_int spotAutoReject;
+        atomic_int newExemplarSpotted;
         ofstream trackFile;
 
     public:

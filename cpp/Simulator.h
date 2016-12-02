@@ -43,7 +43,7 @@ Yes ->
 class Simulator
 {
     public:
-    Simulator(string dataname);
+    Simulator(string dataname, string segCSV);
     vector<int> spottings(string ngram, vector<Location> locs, vector<string> gt, string prevNgram);
     vector<int> newExemplars(vector<string> ngrams, vector<Location> locs, string prevNgram);
     string transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool lastWasTrans);
@@ -54,7 +54,8 @@ class Simulator
     //network_t *spotNet;
     vector<string> corpusWord; //The strings of the corpus
     vector<int> corpusPage;
-    vector< vector<int> > corpusXLetterBounds; //The starting X position (in the page) of each letter, with a wl index being the ending of the last char.
+    vector< vector<int> > corpusXLetterStartBounds; //The starting x boundary of a letter. Page relative
+    vector< vector<int> > corpusXLetterEndBounds; //The ending x boudary of a letter
     vector< pair<int, int> > corpusYBounds; //the verticle boundaries of each word
 
     //spotting probs

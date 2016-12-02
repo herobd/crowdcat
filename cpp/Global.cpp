@@ -19,7 +19,7 @@ GlobalK::GlobalK()
     trackFile<<"time,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
 }
 
-Global::~GlobalK()
+GlobalK::~GlobalK()
 {
     trackFile.close();
 }
@@ -157,6 +157,6 @@ void GlobalK::saveTrack(float pWordsTrans, float pWords80_100, float pWords60_80
 {
     time_t timeSec;
     time(&timeSec);
-    trackFile<<timeSec<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarsSpotted<<endl;
-    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarsSpotted=0;
+    trackFile<<timeSec<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
+    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
 }

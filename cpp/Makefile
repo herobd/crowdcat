@@ -61,7 +61,7 @@ train: $(OBJECTS)
 makeData: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o makeData makeData.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
-obj/tester.o: tester.cpp tester.h CATTSS.h
+obj/tester.o: tester.cpp tester.h CATTSS.h Simulator.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/tester.o tester.cpp $(LIBS)
 
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h

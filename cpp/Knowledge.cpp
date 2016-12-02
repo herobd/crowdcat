@@ -2753,11 +2753,11 @@ vector<TranscribeBatch*> Knowledge::Corpus::getStats(float* pWordsTrans, float* 
                 c0_20++;
         }
     }
-    *pWordsTrans= cTrans/(0.0+_words.length());
-    *pWords80_100= c80_100/(0.0+_words.length());
-    *pWords60_80= c60_80/(0.0+_words.length());
-    *pWords40_60= c40_60/(0.0+_words.length());
-    *pWords20_40= c20_40/(0.0+_words.length());
-    *pWords0_20= c0_20/(0.0+_words.length());
-    *pWords0= c0/(0.0+_words.length());
+    *pWordsTrans= cTrans/(0.0+_words.size());
+    *pWords80_100= c80_100/(0.0+_words.size());
+    *pWords60_80= c60_80/(0.0+_words.size());
+    *pWords40_60= c40_60/(0.0+_words.size());
+    *pWords20_40= c20_40/(0.0+_words.size());
+    *pWords0_20= c0_20/(0.0+_words.size());
+    *pWords0= c0/(0.0+_words.size());
 }

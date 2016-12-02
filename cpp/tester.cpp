@@ -46,7 +46,7 @@ void Tester::testSave()
 void Tester::testSimulator()
 {
     //This needs to have perfect accuracy and never skip
-    Simulator sim("test");
+    Simulator sim("test","/home/brian/intel_index/data/bentham/segmentation_corpus.csv");
     
     //Positive spottings
     //0

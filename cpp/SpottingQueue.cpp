@@ -138,8 +138,8 @@ void SpottingQueue::spottingLoop()
         progLock[threadId].unlock();
 
 #ifdef NO_NAN
-        if (query.getType() == SPOTTING_TYPE_EXEMPLAR)
-            GlobalK::knowledge()->nexExemplar();
+        if (query->getType() == SPOTTING_TYPE_EXEMPLAR)
+            GlobalK::knowledge()->newExemplar();
 #endif
 
 #ifdef TEST_MODE

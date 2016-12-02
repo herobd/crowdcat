@@ -14,8 +14,9 @@
 int main() {
     //TEST
     Tester tester;
-    tester.testSave();
     tester.testSimulator();
+    cout<<"SIm test done"<<endl;
+    tester.testSave();
     cout <<"Done main tests"<<endl;
 
 /*
