@@ -6,6 +6,8 @@
 using namespace Nan;
 using namespace v8;
 #else
+#include "opencv2/core/core.hpp"
+using namespace cv;
 #define SPOTTINGS 1
 #define NEW_EXEMPLARS 2
 #define TRANSCRIPTION 3
@@ -37,6 +39,12 @@ class BatchWraper
         virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {}
         virtual void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs) {}
         virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt) {}
+        virtual vector<Mat> getImages()
+        {
+            return images;
+        }
+    protected:
+        vector<Mat> images;
 #endif
 };
 

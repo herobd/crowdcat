@@ -13,6 +13,9 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
     retId.resize(batchSize);
     locations.resize(batchSize);
     gt.resize(batchSize);
+#ifdef NO_NAN
+    images.resize(batchSize);
+#endif
     for (int index=0; index<batchSize; index++) 
     {
         retId[index]=to_string(batch->at(index).id);
@@ -39,6 +42,9 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
             gt[index]=batch->at(index).gt?"1":"0";
         else
             gt[index]="UNKNOWN";
+#ifdef NO_NAN
+        images[index] = batch->at(index).img();
+#endif
     }
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;

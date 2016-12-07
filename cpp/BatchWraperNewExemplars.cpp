@@ -11,6 +11,9 @@ BatchWraperNewExemplars::BatchWraperNewExemplars(NewExemplarsBatch* newExemplars
     retData.resize(batchSize);
     retNgram.resize(batchSize);
     locations.resize(batchSize);
+#ifdef NO_NAN
+    images.resize(batchSize);
+#endif
     //auto iter=newExemplars.begin();
     for (int index=0; index<batchSize; index++) 
     {
@@ -30,6 +33,9 @@ BatchWraperNewExemplars::BatchWraperNewExemplars(NewExemplarsBatch* newExemplars
                                     newExemplars->at(index).brx,
                                     newExemplars->at(index).bry
                                  );
+#ifdef NO_NAN
+        images[index]=newExemplars->at(index).ngramImg();
+#endif
     }
 
     

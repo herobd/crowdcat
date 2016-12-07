@@ -29,6 +29,10 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
     gt=batch->getGT();
     scale=batch->getScale();
+#ifdef NO_NAN
+    images.resize(1);
+    images[0]=batch->getImage();
+#endif
 }
 #ifndef NO_NAN
 void BatchWraperTranscription::doCallback(Callback *callback)

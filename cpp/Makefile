@@ -1,6 +1,6 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS =  -g  -std=c++11 -pthread -DTEST_MODE -DNO_NAN #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  -g  -std=c++11 -pthread -DTEST_MODE -DNO_NAN -DDEBUG_AUTO#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 
 LIBS += -lpthread
 
@@ -29,8 +29,8 @@ OBJECTS = obj/TranscribeBatchQueue.o \
           obj/BatchWraperNewExemplars.o \
           obj/BatchWraperSpottings.o \
           obj/BatchWraperTranscription.o \
-          obj/Simulator.o \
-          obj/test.o 
+          obj/Simulator.o 
+#          obj/test.o 
           #obj/FacadeSpotter.o \
           #obj/TestQueue.o 
 
@@ -49,8 +49,8 @@ clean:
 	- rm  obj/*.o
 
 
-$(PROGRAM_NAME):  $(OBJECTS)  
-	$(LINK) $(CXX_FLAGS) -o $(PROGRAM_NAME) $(OBJECTS) $(LIBS)
+$(PROGRAM_NAME):  obj/test.o $(OBJECTS)
+	$(LINK) $(CXX_FLAGS) -o $(PROGRAM_NAME) obj/test.o $(OBJECTS) $(LIBS)
 
 simulation: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o simulation simulation.cpp $(INCLUDE) $(OBJECTS) $(LIBS)

@@ -1,7 +1,12 @@
 #include <atomic>
 
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include "Simulator.h"
 #include "CATTSS.h"
+
+using namespace std;
+using namespace cv;
 
 void controlLoop(CATTSS* cattss, atomic_bool* cont)
 {
@@ -31,6 +36,10 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
 {
     string prevNgram="";
     int slept=0;
+    thread::id thread_id = this_thread::get_id();
+    stringstream ss;
+    ss<<thread_id;
+    string thread = ss.str();
     while (cont->load())
     {
         BatchWraper* batch = cattss->getBatch(5,500,0,prevNgram);
@@ -43,6 +52,24 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             vector<string> gt;
             batch->getSpottings(&id,&ngram,&ids,&locs,&gt);
             vector<int> labels = sim->spottings(ngram,locs,gt,prevNgram);
+
+#ifdef DEBUG_AUTO
+            vector<Mat> images = batch->getImages();
+            for (int i=0; i<labels.size(); i++)
+            {
+                string name = thread;
+                if (labels[i])
+                    name+="_TRUE";
+                else 
+                    name+="_FALSE";
+                imshow(name,images[i]);
+                while(waitKey() != 10)//enter
+                {
+                    cout<<name<<"> ["<<ngram<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
+                }
+            }
+#endif
+
             cattss->updateSpottings(id,ids,labels,0);
             prevNgram = ngram
         }
@@ -53,6 +80,22 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             vector<Location> locs;
             batch->getNewExemplars(&id,&ngrams,&locs);
             vector<int> labels = sim->newExemplars(ngrams,locs,prevNgram);
+#ifdef DEBUG_AUTO
+            vector<Mat> images = batch->getImages();
+            for (int i=0; i<labels.size(); i++)
+            {
+                string name = thread;
+                if (labels[i])
+                    name+="_TRUE";
+                else 
+                    name+="_FALSE";
+                imshow(name,images[i]);
+                while(waitKey() != 10)//enter
+                {
+                    cout<<name<<"> ["<<ngrams[i]<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
+                }
+            }
+#endif
             cattss-> updateNewExemplars(id,labels,0);
             prevNgram=ngrams.back();
         }
@@ -76,6 +119,8 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
                 trans=sim->transcription(wordIndex,spottings,poss,gt,prevNgram.compare("!")==0);
                 prevNgram="!";
             }
+#ifdef DEBUG_AUTO
+#endif
             cattss->updateTranscription(batchId,trans,manual);
         }
         else if (batch->getType()==RAN_OUT)
@@ -105,6 +150,7 @@ int main(int argc, char** agrv)
     string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
     string pageImageDir = "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages";
     string segmentationFile = "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp";
+    string charSegFile = "/home/brian/intel_index/data/bentham/manual_segmentations.csv";
     string spottingModelPrefix = "model/CATTSS_BENTHAM";
     string savePrefix = "save/sim_BENTHAM";
     int numSpottingThreads = 5;
@@ -124,8 +170,11 @@ int main(int argc, char** agrv)
                         milli,
                         0//pad
                         );
-
-    Simulator sim(dataname);
+#ifndef DEBUG_AUTO
+    Simulator sim(dataname,charSegFile);
+#else
+    Simulator sim("test",charSegFile);
+#endif
     atomic_bool cont(true);
     taskThreads.resize(numSimThreads);
     for (int i=0; i<numTSimhreads; i++)

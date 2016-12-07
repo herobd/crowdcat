@@ -46,13 +46,13 @@ void Tester::testSave()
 void Tester::testSimulator()
 {
     //This needs to have perfect accuracy and never skip
-    Simulator sim("test","/home/brian/intel_index/data/bentham/segmentation_corpus.csv");
+    Simulator sim("test","/home/brian/intel_index/data/bentham/manual_segmentations.csv");
     
     //Positive spottings
     //0
     string ngram0="th";
     vector<Location> locs0 ={
-                Location(0, 53,295,481,452),
+                Location(0, 387,295,481,452),
                 Location(0, 689,306,802,455),
                 Location(0, 270,476,360,611),
                 Location(0, 668,1281,780,1433),
@@ -94,7 +94,7 @@ void Tester::testSimulator()
     vector<string> ngrams2= {"io","id","er", "at","al"};
     vector<Location> locs2 ={
                 Location(0, 850,1495,908,1603),
-                Location(0, 943,958,1084,1102),
+                Location(0, 976,958,1084,1102),
                 Location(0, 374,1148,446,1266),
                 Location(0, 724,1501,817,1599),
                 Location(0, 1040,488,1233,638)
@@ -111,7 +111,7 @@ void Tester::testSimulator()
     vector<SpottingPoint> spottings3 = {SpottingPoint(0,-1,"th",0,0,0, 0, 369,298,483,464)};
     vector<string> poss3 = {"this", "that", "they", "thus"};
     string trans = sim.transcription(1, spottings3, poss3, "that", false);
-    assert(trans.compare("that"));
+    assert(trans.compare("that")==0);
 
     //transcription correct not avail
     vector<SpottingPoint> spottings4 = {
@@ -119,7 +119,7 @@ void Tester::testSimulator()
             };
     vector<string> poss4 = {"this", "they", "thus"};
     trans = sim.transcription(1, spottings4, poss4, "that", false);
-    assert(trans.compare("$ERROR$"));
+    assert(0==trans.compare("$ERROR$"));
     
     //transcription spotting error
     vector<SpottingPoint> spottings5 = {
@@ -128,11 +128,11 @@ void Tester::testSimulator()
             };
     vector<string> poss5 = {"they", "theyd"};
     trans = sim.transcription(1, spottings5, poss5, "that", false);
-    assert(trans.compare("$REMOVE:13$"));
+    assert(0==trans.compare("$REMOVE:13$"));
 
 
     //manual
     vector<string> poss6;
     trans = sim.manual(1,poss6,"that",false);
-    assert(trans.compare("that"));
+    assert(0==trans.compare("that"));
 }

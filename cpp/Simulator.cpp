@@ -237,10 +237,14 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
                 cout<<"page: "<<loc.pageId<<"  y1:"<<loc.y1<<endl;
                 cout<<loc.x1<<"\t"<<loc.x2<<"\t"<<endl;
                 cout<<corpusXLetterStartBounds[w][l1]<<"\t"<<corpusXLetterEndBounds[w][l2]<<endl;
+                cout<<"inside["<<((loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<OVERLAP_INSIDE_THRESH<<endl;
+                cout<<"consume["<<((loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?< "<<OVERLAP_CONSUME_THRESH<<endl;
+                cout<<"("<<endl<<"side: "<<(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<OVERLAP_SIDE_THRESH<<endl;
+                cout<<"not inc: "<<max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0)<<" ?< "<<SIDE_NOT_INCLUDED_THRESH<<endl<<")"<<endl;
                 if (
                         (loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_INSIDE_THRESH) ||
                         (loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) < OVERLAP_CONSUME_THRESH) ||
-                        ((min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_SIDE_THRESH && max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0) < SIDE_NOT_INCLUDED_THRESH)
+                        ((min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_SIDE_THRESH && max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0) < SIDE_NOT_INCLUDED_THRESH)
                    )
                 {
                     //if  (RAND_PROB < falseNegativeProb)
@@ -249,6 +253,7 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
                     //    *error+=1.0/locs.size();
                     //}
                     //else
+                    cout<<"alignment good"<<endl;
                         return 1;
                 }
                 else
