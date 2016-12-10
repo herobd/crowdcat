@@ -18,7 +18,7 @@ void controlLoop(CATTSS* cattss, atomic_bool* cont)
         if (line.compare("quit")==0)
         {
             cattss->misc("stopSpotting");
-            cont.store(false);
+            cont->store(false);
             break;
         }
         else if (line.compare("show")==0)
@@ -62,7 +62,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
                     name+="_TRUE";
                 else 
                     name+="_FALSE";
-                imshow(name,images[i]);
+                imshow(name,images.at(i));
                 while(waitKey() != 10)//enter
                 {
                     cout<<name<<"> ["<<ngram<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
@@ -71,7 +71,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
 #endif
 
             cattss->updateSpottings(id,ids,labels,0);
-            prevNgram = ngram
+            prevNgram = ngram;
         }
         else if (batch->getType()==NEW_EXEMPLARS)
         {
@@ -146,6 +146,8 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
 
 int main(int argc, char** agrv)
 {
+    int numSimThreads=1;
+
     string dataname="BENTHAM";
     string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
     string pageImageDir = "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages";
@@ -158,7 +160,7 @@ int main(int argc, char** agrv)
     int height = 1000;
     int width = 2500;
     int milli = 4000;
-    cattss = new CATTSS(lexiconFile,
+    CATTSS* cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
                         spottingModelPrefix,
@@ -176,8 +178,8 @@ int main(int argc, char** agrv)
     Simulator sim("test",charSegFile);
 #endif
     atomic_bool cont(true);
-    taskThreads.resize(numSimThreads);
-    for (int i=0; i<numTSimhreads; i++)
+    vector<thread*> taskThreads(numSimThreads);
+    for (int i=0; i<numSimThreads; i++)
     {
         taskThreads[i] = new thread(threadLoop,cattss,&sim,&cont);
         taskThreads[i]->detach();
@@ -187,4 +189,6 @@ int main(int argc, char** agrv)
 
     cout<<"---DONE---"<<endl;
     //delete cattss;
+    for (int i=0; i<numSimThreads; i++)
+        delete taskThreads[i];
 }

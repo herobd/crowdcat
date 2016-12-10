@@ -26,7 +26,7 @@ Simulator::Simulator(string dataname, string segCSV)
         getline(ss,s,',');
         corpusWord.push_back(s);
         getline(ss,s,',');
-        corpusPage.push_back(stoi(s));
+        corpusPage.push_back(stoi(s)+1); //+1 is correction from my creation of segmentation file
         getline(ss,s,',');//x1
         getline(ss,s,',');
         int y1=stoi(s);
@@ -197,9 +197,19 @@ vector<int> Simulator::spottings(string ngram, vector<Location> locs, vector<str
     return labels;
 }
 
-int Simulator::getSpottingLabel(string ngram, Location loc)
+int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
 {
-
+    float overlap_insides_thresh = OVERLAP_INSIDE_THRESH;
+    float overlap_consume_thresh = OVERLAP_CONSUME_THRESH;
+    float overlap_size_thresh = OVERLAP_SIDE_THRESH;
+    float size_note_included_thresh = SIDE_NOT_INCLUDED_THRESH;
+    if (strict)
+    {
+        overlap_insides_thresh = OVERLAP_INSIDE_THRESH_STRICT;
+        overlap_consume_thresh = OVERLAP_CONSUME_THRESH_STRICT;
+        overlap_size_thresh = OVERLAP_SIDE_THRESH_STRICT;
+        size_note_included_thresh = SIDE_NOT_INCLUDED_THRESH_STRICT;
+    }
     int maxOverlap=0;
     int w=-1;
     for (int i=0; i<corpusWord.size(); i++)
@@ -237,14 +247,14 @@ int Simulator::getSpottingLabel(string ngram, Location loc)
                 cout<<"page: "<<loc.pageId<<"  y1:"<<loc.y1<<endl;
                 cout<<loc.x1<<"\t"<<loc.x2<<"\t"<<endl;
                 cout<<corpusXLetterStartBounds[w][l1]<<"\t"<<corpusXLetterEndBounds[w][l2]<<endl;
-                cout<<"inside["<<((loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<OVERLAP_INSIDE_THRESH<<endl;
-                cout<<"consume["<<((loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?< "<<OVERLAP_CONSUME_THRESH<<endl;
-                cout<<"("<<endl<<"side: "<<(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<OVERLAP_SIDE_THRESH<<endl;
-                cout<<"not inc: "<<max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0)<<" ?< "<<SIDE_NOT_INCLUDED_THRESH<<endl<<")"<<endl;
+                cout<<"inside["<<((loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<overlap_insides_thresh<<endl;
+                cout<<"consume["<<((loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?< "<<overlap_consume_thresh<<endl;
+                cout<<"("<<endl<<"side: "<<(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<overlap_size_thresh<<endl;
+                cout<<"not inc: "<<max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0)<<" ?< "<<size_note_included_thresh<<endl<<")"<<endl;
                 if (
-                        (loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_INSIDE_THRESH) ||
-                        (loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) < OVERLAP_CONSUME_THRESH) ||
-                        ((min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > OVERLAP_SIDE_THRESH && max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0) < SIDE_NOT_INCLUDED_THRESH)
+                        (loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > overlap_insides_thresh) ||
+                        (loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) < overlap_consume_thresh) ||
+                        ((min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > overlap_size_thresh && max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0) < size_note_included_thresh)
                    )
                 {
                     //if  (RAND_PROB < falseNegativeProb)
@@ -301,7 +311,7 @@ vector<int> Simulator::newExemplars(vector<string> ngrams, vector<Location> locs
 {
     vector<int> labels(locs.size());
     for (int i=0; i<locs.size(); i++)
-       labels[i] = getSpottingLabel(ngrams[i],locs[i]);
+       labels[i] = getSpottingLabel(ngrams[i],locs[i],true);
     skipAndError(labels);
     
     int milli = (labels.size()/5.0)*spottingAverageMilli;

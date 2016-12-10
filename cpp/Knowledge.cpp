@@ -926,6 +926,7 @@ vector<Spotting*> Knowledge::Word::harvest()
 
 inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat &img)
 {
+    assert(x1>=0 && x1<img.cols && y1>=0 && y1<img.rows && x2>=0 && x2<img.cols && y2>=0 && y2<img.rows);
     float w = ((255-img.at<unsigned char>(y1,x1))+(255-img.at<unsigned char>(y2,x2)))/(255.0+255.0);
     //w = 1/(1+exp(-2*w));
     w = w*w*w;
@@ -1264,7 +1265,7 @@ void Knowledge::Word::getBaselines(int* top, int* bot)
 
 void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
 {
-    
+    assert(gray.cols==bin.cols && gray.rows==bin.rows); 
     //top and botBaseline should have page cords.
     int avgWhite=0;
     int countWhite=0;
@@ -1353,6 +1354,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
     float center=-1;
     for (int r=pad; r<gray.rows+pad; r++)
     {
+        assert(r<edges.rows);
         float v = edges.at<float>(r,0);
         if (v>maxEdge)
         {
@@ -1365,6 +1367,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             botBaseline=r-pad;
         }
 
+        assert(r-pad<blurred.rows);
         if (blurred.at<float>(r-pad,0) < minPeak) {
             center=r-pad;
             minPeak=blurred.at<float>(r-pad,0);
@@ -1379,6 +1382,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             maxEdge=-999999;
             for (int r=pad; r<center+pad; r++)
             {
+                assert(edges.rows>r);
                 float v = edges.at<float>(r,0);
                 if (v>maxEdge)
                 {
@@ -1397,6 +1401,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             minEdge=999999;
             for (int r=center+1; r<gray.rows+pad; r++)
             {
+                assert(edges.rows>r);
                 float v = edges.at<float>(r,0);
                 if (v<minEdge)
                 {
@@ -1439,6 +1444,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
         bool hitTop=false;
         for (int r=0; r<b.rows; r++)
         {
+            assert(c<hist.rows && r<orig.rows && c<orig.cols);
             hist.at<float>(c,0)+=orig.at<unsigned char>(r,c);
             if (b.at<unsigned char>(r,c))
             {
@@ -1725,6 +1731,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
 }*/
 cv::Mat Knowledge::inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg, double* std, bool show)
 {
+    assert(src.rows == mask.rows && src.cols==mask.cols);
     int x_start[4] = {0,0,mask.cols-1,mask.cols-1};
     int x_end[4] = {mask.cols,mask.cols,-1,-1};
     int y_start[4] = {0,mask.rows-1,0,mask.rows-1};
@@ -1990,6 +1997,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                     for (int x=tlx; x<=brx; x++)
                         for (int y=tly; y<=bry; y++)
                         {
+                            assert(x<workingIm.cols && y<workingIm.rows);
                             workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
                             workingIm.at<cv::Vec3b>(y,x)[1] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
                             workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
@@ -2002,6 +2010,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                         for (int x=s.tlx; x<=s.brx; x++)
                             for (int y=s.tly; y<=s.bry; y++)
                             {
+                                assert(x<workingIm.cols && y<workingIm.rows);
                                 workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
                                 workingIm.at<cv::Vec3b>(y,x)[2] = min(255,workingIm.at<cv::Vec3b>(y,x)[2]+120);
                                 workingIm.at<cv::Vec3b>(y,x)[1] = 0.5*workingIm.at<cv::Vec3b>(y,x)[1];
@@ -2683,7 +2692,7 @@ TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
     return queryForBatch(newExemplars);
 }
 
-vector<TranscribeBatch*> Knowledge::Corpus::getStats(float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
+void Knowledge::Corpus::getStats(float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
 {
     int cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
     cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;

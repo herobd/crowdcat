@@ -38,6 +38,11 @@ Yes ->
 #define OVERLAP_SIDE_THRESH 0.55
 #define SIDE_NOT_INCLUDED_THRESH 0.90
 
+#define OVERLAP_INSIDE_THRESH_STRICT 0.85
+#define OVERLAP_CONSUME_THRESH_STRICT 1.55
+#define OVERLAP_SIDE_THRESH_STRICT 0.85
+#define SIDE_NOT_INCLUDED_THRESH_STRICT 0.80
+
 #define RAND_PROB (static_cast <float> (rand()) / static_cast <float> (RAND_MAX))
 
 class Simulator
@@ -79,6 +84,6 @@ class Simulator
     float manMilli_m;
     float manErrorProb;
   
-    int getSpottingLabel(string ngram, Location loc); 
+    int getSpottingLabel(string ngram, Location loc, bool strict=false); 
 };
 #endif

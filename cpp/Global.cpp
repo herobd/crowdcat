@@ -15,6 +15,7 @@ GlobalK::GlobalK()
         in.close();
     }
 
+    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
     trackFile.open("save/simulationTracking.csv");
     trackFile<<"time,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
 }

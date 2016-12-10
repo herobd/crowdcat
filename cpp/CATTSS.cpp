@@ -19,14 +19,20 @@ void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, in
 {
     //This is the lowest priority of the systems threads
     nice(3);
+#ifdef NO_NAN
+    int count=0;
+#endif
     while(!q->kill.load()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
         c->showProgress(height,width);
 #ifdef NO_NAN
-        float pWordsTrans;
-        float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
-        c->getStats(&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0);
-        GlobalK::knowledge()->saveTrack(pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0);
+        if (count++ % 5==0) //every 20 seconds
+        {
+            float pWordsTrans;
+            float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
+            c->getStats(&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0);
+            GlobalK::knowledge()->saveTrack(pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0);
+        }
 #endif
     }
 }
@@ -70,6 +76,8 @@ CATTSS::CATTSS( string lexiconFile,
         NewExemplarsBatch::setIdCounter(stoul(line));
         getline(in,line);
         TranscribeBatch::setIdCounter(stoul(line));
+        getline(in,line);
+        cout<<"Loaded. Begins from time: "<<line<<endl;
         in.close();
     }
     else
@@ -469,6 +477,10 @@ void CATTSS::save()
         clock_t t;
         t = clock();
 #endif
+
+        time_t timeSec;
+        time(&timeSec);
+
         string saveName = savePrefix+"_CATTSS.sav";
         //In the event of a crash while saveing, keep a backup of the last save
         rename( saveName.c_str() , (saveName+".bck").c_str() );
@@ -491,6 +503,7 @@ void CATTSS::save()
         out<<SpottingsBatch::getIdCounter()<<"\n";
         out<<NewExemplarsBatch::getIdCounter()<<"\n";
         out<<TranscribeBatch::getIdCounter()<<"\n";
+        out<<timeSec<<"\n";
         out.close();
 #ifdef TEST_MODE
         t = clock() - t;
