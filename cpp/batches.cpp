@@ -228,6 +228,7 @@ TranscribeBatch::TranscribeBatch(ifstream& in, CorpusRef* corpusRef)
     for (int i=0; i<size; i++)
     {
         spottingPoints[i] = SpottingPoint(in);
+        assert(corpusRef->verify(spottingPoints[i].page,spottingPoints[i].x1,spottingPoints[i].y1,spottingPoints[i].x2,spottingPoints[i].y2));
     }
     getline(in,gt);
     getline(in,line);

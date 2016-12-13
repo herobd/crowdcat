@@ -34,14 +34,14 @@ Yes ->
         >55% overlap and spotting outside ngram is <90% of the overlap: accept with W% prob, else reject
 */
 #define OVERLAP_INSIDE_THRESH 0.65
-#define OVERLAP_CONSUME_THRESH 1.95
+#define OVERLAP_CONSUME_THRESH 1.8
 #define OVERLAP_SIDE_THRESH 0.55
-#define SIDE_NOT_INCLUDED_THRESH 0.90
+#define SIDE_NOT_INCLUDED_THRESH 0.80
 
 #define OVERLAP_INSIDE_THRESH_STRICT 0.85
-#define OVERLAP_CONSUME_THRESH_STRICT 1.55
+#define OVERLAP_CONSUME_THRESH_STRICT 1.35
 #define OVERLAP_SIDE_THRESH_STRICT 0.85
-#define SIDE_NOT_INCLUDED_THRESH_STRICT 0.80
+#define SIDE_NOT_INCLUDED_THRESH_STRICT 0.50
 
 #define RAND_PROB (static_cast <float> (rand()) / static_cast <float> (RAND_MAX))
 

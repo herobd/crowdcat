@@ -511,7 +511,7 @@ public:
 
     //For data collection, when I deleted all my trans... :(
     vector<TranscribeBatch*> resetAllWords_();
-    void getStats(float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0);
+    void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0);
 };
 
 }

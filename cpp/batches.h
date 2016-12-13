@@ -63,7 +63,7 @@ class SpottingPoint
             getline(in,line);
             x=stoi(line);
             getline(in,line);
-            page=stoi(line);
+            pad=stoi(line);
             getline(in,ngram);
             getline(in,color);
             getline(in,id);

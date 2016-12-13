@@ -1925,7 +1925,7 @@ void Knowledge::Corpus::show()
                             cv::cvtColor(*word->getPage(),draw[word->getPage()],CV_GRAY2BGR);
                         }
                     }
-                    cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
+                    cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_TRIPLEX,4.0,cv::Scalar(50,50,255));
                 }
                 //else
                 //    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
@@ -1934,8 +1934,9 @@ void Knowledge::Corpus::show()
     }
     for (auto p : draw)
     {
-        int w=(1100.0/p.second.rows)*p.second.cols;
-        cv::resize(p.second, p.second, cv::Size(w,1100));
+        int h =1500;
+        int w=((h+0.0)/p.second.rows)*p.second.cols;
+        cv::resize(p.second, p.second, cv::Size(w,h));
         cv::imshow("a page",p.second);
         cv::waitKey();
     }
@@ -2485,6 +2486,10 @@ CorpusRef* Knowledge::Corpus::getCorpusRef()
     for (int i=0; i<_words.size(); i++)
     {
         ret->addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i)->getSpottingsPointer());
+        int x1,y1,x2,y2;
+        bool toss;
+        _words.at(i)->getBoundsAndDone(&x1,&y1,&x2,&y2,&toss);
+        ret->addLoc(Location(_words.at(i)->getPageId(),x1,y1,x2,y2));
     }
     return ret;
 }
@@ -2495,6 +2500,16 @@ PageRef* Knowledge::Corpus::getPageRef()
     {
         ret->addPage(p.first,p.second->getImg());
     }
+
+    //For debugging
+    for (int i=0; i<_words.size(); i++)
+    {
+        int x1,y1,x2,y2;
+        bool toss;
+        _words.at(i)->getBoundsAndDone(&x1,&y1,&x2,&y2,&toss);
+        ret->addWord(Location(_words.at(i)->getPageId(),x1,y1,x2,y2));
+    }
+
     return ret;
 }
 
@@ -2692,17 +2707,21 @@ TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
     return queryForBatch(newExemplars);
 }
 
-void Knowledge::Corpus::getStats(float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
+void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
 {
-    int cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
-    cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
+    int trueTrans, cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
+    trueTrans= cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
     for (Word* w : _words)
     {
         bool done;
         string gt, query;
         w->getDoneAndGTAndQuery(&done,&gt,&query);
         if (done)
+        {
             cTrans++;
+            if (gt.compare(w->getTranscription())==0)
+                trueTrans++;
+        }
         else if (query.length()==0)
             c0++;
         else
@@ -2762,6 +2781,10 @@ void Knowledge::Corpus::getStats(float* pWordsTrans, float* pWords80_100, float*
                 c0_20++;
         }
     }
+    if (cTrans>0)
+        *accTrans= trueTrans/(0.0+cTrans);
+    else
+        *accTrans=0;
     *pWordsTrans= cTrans/(0.0+_words.size());
     *pWords80_100= c80_100/(0.0+_words.size());
     *pWords60_80= c60_80/(0.0+_words.size());

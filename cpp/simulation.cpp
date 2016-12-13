@@ -57,15 +57,19 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             vector<Mat> images = batch->getImages();
             for (int i=0; i<labels.size(); i++)
             {
-                string name = thread;
-                if (labels[i])
-                    name+="_TRUE";
-                else 
-                    name+="_FALSE";
-                imshow(name,images.at(i));
-                while(waitKey() != 10)//enter
+                if (gt[i].length()>2)
                 {
-                    cout<<name<<"> ["<<ngram<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
+                    string name = thread;
+                    if (labels[i])
+                        name+="_TRUE";
+                    else 
+                        name+="_FALSE";
+                    imshow(name,images.at(i));
+                    do
+                    {
+                        cout<<name<<"> ["<<ngram<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
+                    }
+                    while(waitKey() != 10);//enter
                 }
             }
 #endif
@@ -90,10 +94,11 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
                 else 
                     name+="_FALSE";
                 imshow(name,images[i]);
-                while(waitKey() != 10)//enter
+                do
                 {
                     cout<<name<<"> ["<<ngrams[i]<<"] Loc page:"<<locs[i].pageId<<", bb: "<<locs[i].x1<<" "<<locs[i].y1<<" "<<locs[i].x2<<" "<<locs[i].y2<<endl;
                 }
+                while(waitKey() != 10);//enter
             }
 #endif
             cattss-> updateNewExemplars(id,labels,0);

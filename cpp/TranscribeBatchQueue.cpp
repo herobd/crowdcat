@@ -53,6 +53,7 @@ TranscribeBatch* TranscribeBatchQueue::dequeue(unsigned int maxWidth)
     if (queue.size()>0)
     {
         ret = queue.front();
+        assert(ret->getPossibilities().size()<1000);
         ret->setWidth(maxWidth,contextPad);
         queue.pop_front();
 

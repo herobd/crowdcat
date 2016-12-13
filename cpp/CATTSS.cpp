@@ -28,10 +28,10 @@ void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, in
 #ifdef NO_NAN
         if (count++ % 5==0) //every 20 seconds
         {
-            float pWordsTrans;
+            float accTrans,pWordsTrans;
             float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
-            c->getStats(&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0);
-            GlobalK::knowledge()->saveTrack(pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0);
+            c->getStats(&accTrans,&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0);
+            GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0);
         }
 #endif
     }

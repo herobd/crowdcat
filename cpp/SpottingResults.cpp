@@ -798,7 +798,7 @@ multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting
             bool updateWhenInBatch = (*itLow)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(*itLow)==instancesByScore.end();
             if (updateWhenInBatch)
                 thresh=UPDATE_OVERLAP_THRESH_TIGHT;
-            if (overlapArea/spottingArea > thresh)
+            if (overlapArea/max(spottingArea,1.0*((*itLow)->brx-(*itLow)->tlx)*((*itLow)->bry-(*itLow)->tly)) > thresh)
             {
                 if (overlapArea > bestOverlap)
                 {
@@ -1068,6 +1068,7 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
     for (int i=0; i<size; i++)
     {
         Spotting s(in,pageRef);
+        assert(pageRef->verify(s.pageId,s.tlx,s.tly,s.brx,s.bry));
         instancesById[s.id]=s;
         instancesByLocation.insert(&instancesById[s.id]);
     }

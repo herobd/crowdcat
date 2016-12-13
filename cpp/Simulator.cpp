@@ -301,7 +301,8 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
     else
     {
         cout<<"Error, spotting did not match word"<<endl;
-        raise(SIGINT);
+        cout<<"   Page:"<<loc.pageId<<" bb: "<<loc.x1<<" "<<loc.y1<<" "<<loc.x2<<" "<<loc.y2<<endl;
+        //raise(SIGINT);
         return 0;
     }
 
