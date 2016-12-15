@@ -15,14 +15,12 @@ GlobalK::GlobalK()
         in.close();
     }
 
-    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
-    trackFile.open("save/simulationTracking.csv");
-    trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
 }
 
 GlobalK::~GlobalK()
 {
-    trackFile.close();
+    if (trackFile.good())
+        trackFile.close();
 }
 
 GlobalK* GlobalK::knowledge()
@@ -30,6 +28,13 @@ GlobalK* GlobalK::knowledge()
     if (_self==NULL)
         _self=new GlobalK();
     return _self;
+}
+
+void GlobalK::setSimSave(string file)
+{
+    transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
+    trackFile.open(file);
+    trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
 }
 
 int GlobalK::getNgramRank(string ngram)
@@ -153,11 +158,20 @@ void GlobalK::newExemplar()
 {
     newExemplarSpotted++;
 }
+string GlobalK::currentDateTime() //from http://stackoverflow.com/a/10467633/1018830
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+    // for more information about date/time format
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
 
+    return buf;
+}
 void GlobalK::saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0)
 {
-    time_t timeSec;
-    time(&timeSec);
-    trackFile<<timeSec<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
+    trackFile<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
 }

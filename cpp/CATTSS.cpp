@@ -473,7 +473,7 @@ void CATTSS::save()
     if (savePrefix.length()>0)
     {
 #ifdef TEST_MODE
-        cout<<"START save"<<endl;
+        cout<<"START save.    "<<GlobalK::currentDateTime()<<endl;
         clock_t t;
         t = clock();
 #endif
@@ -507,7 +507,7 @@ void CATTSS::save()
         out.close();
 #ifdef TEST_MODE
         t = clock() - t;
-        cout<<"END save: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+        cout<<"END save: "<<((float)t)/CLOCKS_PER_SEC<<" secs.    "<<endl;
 #endif
     }
 }

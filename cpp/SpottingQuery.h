@@ -12,7 +12,7 @@ class SpottingQuery
     public:
     SpottingQuery(const Spotting* e) : id(e->id), ngram(e->ngram), img(e->ngramImg()), type(e->type) {}
     SpottingQuery(const Spotting& e) : SpottingQuery(&e) {}
-    SpottingQuery(string ngram) : id(-1), ngram(ngram) {}
+    SpottingQuery(string ngram) : id(-1), ngram(ngram), type(SPOTTING_TYPE_NONE) {}
     string getNgram() const {return ngram;}
     unsigned long getId() const {return id;}
     cv::Mat getImg() {return img;}

@@ -10,6 +10,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <atomic>
 #include <mutex>
+#include <time.h>
 
 using namespace std;
 
@@ -38,6 +39,7 @@ class GlobalK
     public:
         static GlobalK* knowledge();
 
+        void setSimSave(string file);
         int getNgramRank(string ngram);
         //int getContextPad() {return contextPad;}
         //void setContextPad(int pad) {contextPad=pad;}
@@ -45,6 +47,7 @@ class GlobalK
         static double otsuThresh(vector<int> histogram);
         static void saveImage(const cv::Mat& im, ofstream& out);
         static void loadImage(cv::Mat& im, ifstream& in);
+        static string currentDateTime();
 
         void sentSpottings();
         void sentTrans();

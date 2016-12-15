@@ -988,7 +988,12 @@ void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int e
 
 SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b)
 {
-    assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
+    //assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
+    if (!(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound))
+    {
+        cout<<"WARNING: extractExemplar given mixed up data ("<<leftLeftBound<<", "<<rightLeftBound<<", "<<leftRightBound<<", "<<rightRightBound<<"). Not extracting."<<endl;
+        return NULL;
+    }
 
     if (topBaseline==-1 || botBaseline==-1)
         findBaselines(wordImg,b);
@@ -2618,7 +2623,7 @@ void Knowledge::Word::save(ofstream& out)
     }
     pthread_rwlock_unlock(&lock);
 }
-Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
 {
     pthread_rwlock_init(&lock,NULL);
     string line;

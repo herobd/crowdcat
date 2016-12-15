@@ -149,7 +149,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
 
 
 
-int main(int argc, char** agrv)
+int main(int argc, char** argv)
 {
     int numSimThreads=1;
 
@@ -160,11 +160,18 @@ int main(int argc, char** agrv)
     string charSegFile = "/home/brian/intel_index/data/bentham/manual_segmentations.csv";
     string spottingModelPrefix = "model/CATTSS_BENTHAM";
     string savePrefix = "save/sim_BENTHAM";
+    if (argc>1)
+        savePrefix=argv[1];
+    if (argc>2)
+        GlobalK::knowledge()->setSimSave(argv[2]);
+    else
+        GlobalK::knowledge()->setSimSave("save/simulationTracking.csv");
+
     int numSpottingThreads = 5;
     int numTaskThreads = 3;
     int height = 1000;
     int width = 2500;
-    int milli = 4000;
+    int milli = 7000;
     CATTSS* cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
@@ -177,11 +184,11 @@ int main(int argc, char** agrv)
                         milli,
                         0//pad
                         );
-#ifndef DEBUG_AUTO
-    Simulator sim(dataname,charSegFile);
-#else
+//#ifndef DEBUG_AUTO
+//    Simulator sim(dataname,charSegFile);
+//#else
     Simulator sim("test",charSegFile);
-#endif
+//#endif
     atomic_bool cont(true);
     vector<thread*> taskThreads(numSimThreads);
     for (int i=0; i<numSimThreads; i++)
@@ -196,4 +203,6 @@ int main(int argc, char** agrv)
     //delete cattss;
     for (int i=0; i<numSimThreads; i++)
         delete taskThreads[i];
+    this_thread::sleep_for(chrono::seconds(40));
+    delete cattss;
 }
