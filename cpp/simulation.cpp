@@ -12,7 +12,7 @@ void controlLoop(CATTSS* cattss, atomic_bool* cont)
 {
     while(1)
     {
-        cout<<"CONTROL:"<<endl<<": quit"<<endl<<": show"<<endl<<": manual"<<endl;
+        cout<<"CONTROL:"<<endl<<": quit"<<endl<<": show"<<endl<<": manual"<<endl<<": save"<<endl;;
         string line;
         getline(cin, line);
         if (line.compare("quit")==0)
@@ -28,6 +28,10 @@ void controlLoop(CATTSS* cattss, atomic_bool* cont)
         else if (line.compare("manual")==0)
         {
             cattss->misc("manualFinish");
+        }
+        else if (line.compare("save")==0)
+        {
+            cattss->misc("save");
         }
     }
 }

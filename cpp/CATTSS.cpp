@@ -13,6 +13,9 @@ void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c
         q->checkIncomplete();
         c->checkIncomplete();
         cattss->save();
+#ifdef NO_NAN
+        GlobalK::knowledge()->writeTrack();
+#endif
     }
 }
 void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
@@ -283,6 +286,10 @@ void CATTSS::misc(string task)
         else if (task.compare("manualFinish")==0)
         {
             masterQueue->setFinish(true);
+        }
+        else if (task.compare("save")==0)
+        {
+            save();
         }
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {

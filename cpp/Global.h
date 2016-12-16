@@ -11,6 +11,8 @@
 #include <atomic>
 #include <mutex>
 #include <time.h>
+#include <sys/stat.h>
+#include <sstream>
 
 using namespace std;
 
@@ -26,7 +28,7 @@ class GlobalK
 
         map<int, vector<string> > ngramRanks;
         //int contextPad;
-        mutex mutLock;
+#ifdef NO_NAN
         atomic_int transSent;
         atomic_int spotSent;
         atomic_int spotAccept;
@@ -36,10 +38,12 @@ class GlobalK
         atomic_int newExemplarSpotted;
         ofstream trackFile;
 
+        stringstream track;
+#endif
+
     public:
         static GlobalK* knowledge();
 
-        void setSimSave(string file);
         int getNgramRank(string ngram);
         //int getContextPad() {return contextPad;}
         //void setContextPad(int pad) {contextPad=pad;}
@@ -49,6 +53,8 @@ class GlobalK
         static void loadImage(cv::Mat& im, ifstream& in);
         static string currentDateTime();
 
+#ifdef NO_NAN
+        void setSimSave(string file);
         void sentSpottings();
         void sentTrans();
         void accepted();
@@ -57,6 +63,8 @@ class GlobalK
         void autoRejected();
         void newExemplar();
         void saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0);
+        void writeTrack();       
+#endif
 };
 
 #endif

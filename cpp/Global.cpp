@@ -19,8 +19,10 @@ GlobalK::GlobalK()
 
 GlobalK::~GlobalK()
 {
+#ifdef NO_NAN
     if (trackFile.good())
         trackFile.close();
+#endif
 }
 
 GlobalK* GlobalK::knowledge()
@@ -30,12 +32,17 @@ GlobalK* GlobalK::knowledge()
     return _self;
 }
 
+#ifdef NO_NAN
 void GlobalK::setSimSave(string file)
 {
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
-    trackFile.open(file);
-    trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
+    struct stat buffer;
+    bool appending = (stat (file.c_str(), &buffer) == 0);
+    trackFile.open(file,ofstream::app|ofstream::out);
+    if (!appending)
+        trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
 }
+#endif
 
 int GlobalK::getNgramRank(string ngram)
 {
@@ -130,6 +137,8 @@ void GlobalK::loadImage(cv::Mat& im, ifstream& in)
     }
 }
 
+#ifdef NO_NAN
+
 void GlobalK::sentSpottings()
 {
     spotSent++;
@@ -172,6 +181,16 @@ string GlobalK::currentDateTime() //from http://stackoverflow.com/a/10467633/101
 }
 void GlobalK::saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0)
 {
-    trackFile<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
+    track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
+    //track+=currentDateTime()+","+accTrans+","+pWordsTrans+","+pWords80_100+","+pWords60_80+","+pWords40_60+","+pWords20_40+","+pWords0_20+","+pWords0+","+transSent+","+spotSent+","+spotAccept+","+spotReject+","+spotAutoAccept+","+spotAutoReject+","+newExemplarSpotted+"\n";
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
 }
+
+void GlobalK::writeTrack()
+{
+    trackFile<<track.rdbuf()<<flush;
+    track.str(string());
+    track.clear();
+}
+
+#endif
