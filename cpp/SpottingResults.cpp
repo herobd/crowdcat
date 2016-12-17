@@ -29,6 +29,7 @@ SpottingResults::SpottingResults(string ngram, int contextPad) :
     
     acceptThreshold=-1;
     rejectThreshold=-1;
+    numLeftInRange=-1;
     
     done=false;
 
@@ -119,7 +120,7 @@ void SpottingResults::addTrueNoScore(const SpottingExemplar& spotting) {
 
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) {
 
-    if (!need && numLeftInRange<12 && starts.size()>1)
+    if (!need && (numLeftInRange<12 && numLeftInRange>=0) && starts.size()>1)
         return NULL;
 
     if (acceptThreshold==-1 && rejectThreshold==-1)

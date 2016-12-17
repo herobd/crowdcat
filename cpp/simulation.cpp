@@ -170,6 +170,8 @@ int main(int argc, char** argv)
         GlobalK::knowledge()->setSimSave(argv[2]);
     else
         GlobalK::knowledge()->setSimSave("save/simulationTracking.csv");
+    if (argc>3)
+        numSimThreads=atoi(argv[3]);
 
     int numSpottingThreads = 5;
     int numTaskThreads = 3;
