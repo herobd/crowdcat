@@ -474,11 +474,14 @@ public:
     void save(ofstream& out);
     ~Corpus()
     {
-        pthread_rwlock_destroy(&pagesLock);
-        pthread_rwlock_destroy(&spottingsMapLock);
+        pthread_rwlock_wrlock(&pagesLock);
+        pthread_rwlock_wrlock(&spottingsMapLock);
+        
         for (auto p : pages)
             delete p.second;
         delete spotter;
+        pthread_rwlock_destroy(&pagesLock);
+        pthread_rwlock_destroy(&spottingsMapLock);
     }
     void loadSpotter(string modelPrefix);
     vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);

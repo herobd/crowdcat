@@ -19,6 +19,14 @@ class TranscribeBatchQueue
 {
     public:
         TranscribeBatchQueue();
+        ~TranscribeBatchQueue()
+        {
+            for (auto t : queue)
+                delete t;
+            for (auto t : returnMap)
+                delete t.second;
+        }
+            
         void save(ofstream& out);
         void load(ifstream& in, CorpusRef* corpusRef);
 

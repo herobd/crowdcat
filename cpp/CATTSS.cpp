@@ -61,7 +61,11 @@ CATTSS::CATTSS( string lexiconFile,
         Lexicon::instance()->load(in);
         corpus = new Knowledge::Corpus(in);
         corpus->loadSpotter(spottingModelPrefix);
-        masterQueue = new MasterQueue(in,corpus->getCorpusRef(),corpus->getPageRef());
+        CorpusRef* corpusRef = corpus->getCorpusRef();
+        PageRef* pageRef = corpus->getPageRef();
+        masterQueue = new MasterQueue(in,corpusRef,pageRef);
+        delete corpusRef;
+        delete pageRef;
         spottingQueue = new SpottingQueue(in,masterQueue,corpus);
 
         string line;
@@ -359,7 +363,11 @@ void CATTSS::threadLoop()
 #endif
             updateTask = dequeue();
             if (!cont.load())
+            {
+                if (updateTask!=NULL)
+                    delete updateTask;
                 break; //END
+            }
             
             if (updateTask!=NULL)
             {

@@ -757,7 +757,6 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     getline(in,line);
     contextPad = stoi(line);
     //in.close();
-    delete corpusRef;
     testIter=0;	
     test_rotate=0;
 }

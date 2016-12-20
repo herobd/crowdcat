@@ -128,7 +128,6 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
 #ifdef TEST_MODE
     cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
 #endif
-    SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     //sem_wait(&mutexSem);
     
     unsigned int toRet = ((hard&&instancesByScore.size()>=num)||((((signed int)instancesByScore.size())-(signed int) num)>3))?num:instancesByScore.size();
@@ -137,6 +136,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         //This occurs in a race condition when the spotting results is queried before it can be removed from the MasterQueue
         return NULL;
     }
+    SpottingsBatch* ret = new SpottingsBatch(ngram,id);
     
     if ((*tracer)->score < pullFromScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<=pullFromScore)

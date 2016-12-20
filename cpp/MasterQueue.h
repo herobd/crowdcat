@@ -111,6 +111,17 @@ public:
         cout << "***********"<<endl;*/
         pthread_rwlock_destroy(&semResultsQueue);
         pthread_rwlock_destroy(&semResults);
+#if ROTATE
+        //pthread_rwlock_wrlock(semRotate);
+        pthread_rwlock_destroy(&semRotate);
+#endif
+        //destory semRotate
+        for (auto p : results)
+        {
+            sem_destroy(p.second.first);//sem
+            delete p.second.first;//sem
+            delete p.second.second;
+        }
     }
     void checkIncomplete();
     atomic_bool kill;

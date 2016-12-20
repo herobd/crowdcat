@@ -118,6 +118,10 @@ class CATTSS
         delete masterQueue;
         delete corpus;
         delete spottingQueue;
+        for (thread* t : taskThreads)
+            delete t;
+        for (UpdateTask* t : taskQueue)
+            delete t;
     } 
     void save();
 

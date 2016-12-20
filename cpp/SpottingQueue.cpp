@@ -19,6 +19,18 @@ SpottingQueue::~SpottingQueue()
     sem_destroy(&semLock);
     for (thread* th : spottingThreads)
         delete th;
+    for (auto s : onDeck)
+        delete s;
+    for (auto qu : ngramQueues) //pair<string,priority_queue<SpottingQuery*,vector<SpottingQuery*>,sqcomparison> >
+    {
+        while (qu.second.size()>0)
+        {
+            delete qu.second.top();
+            qu.second.pop();
+        }
+        //for (auto s : qu.second)
+        //    delete s;
+    }
 }
 
 void SpottingQueue::stop()
