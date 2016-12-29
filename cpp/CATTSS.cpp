@@ -290,6 +290,7 @@ void CATTSS::misc(string task)
         else if (task.compare("manualFinish")==0)
         {
             masterQueue->setFinish(true);
+            cout<<"Manual Finish engaged."<<endl;
         }
         else if (task.compare("save")==0)
         {

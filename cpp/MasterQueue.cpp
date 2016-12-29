@@ -281,9 +281,9 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     }
 
 #ifdef NO_NAN
-    if (ret==NULL)
+    if (ret==NULL && !finish.load())
         ret = new BatchWraperRanOut();
-    else
+    else if (ret!=NULL)
     {
         if (ret->getType()==SPOTTINGS)
             GlobalK::knowledge()->sentSpottings();
@@ -336,12 +336,14 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             bool done=false;
             //cout << "getBatch   prev:"<<prevNgram<<endl;
             batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram,need);
-            
+           
+            unsigned long id = res->getId(); 
+            sem_post(sem);
             if (done)
             {   //cout <<"done in queue "<<endl;
                 
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue.erase(res->getId());
+                resultsQueue.erase(id);
                 
                 pthread_rwlock_unlock(&semResultsQueue);
                 
@@ -349,7 +351,6 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
                 //test_finish();
                 ///test
             }
-            sem_post(sem);
             if (batch!=NULL)
                 break;
             else

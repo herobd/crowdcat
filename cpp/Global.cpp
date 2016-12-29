@@ -15,6 +15,8 @@ GlobalK::GlobalK()
         in.close();
     }
 
+    xLock.lock();
+
 }
 
 GlobalK::~GlobalK()
@@ -22,6 +24,8 @@ GlobalK::~GlobalK()
 #ifdef NO_NAN
     if (trackFile.good())
         trackFile.close();
+    for (auto p : accumRes)
+        delete p.second;
 #endif
 }
 
@@ -35,12 +39,91 @@ GlobalK* GlobalK::knowledge()
 #ifdef NO_NAN
 void GlobalK::setSimSave(string file)
 {
+    spottingFile = file+".spots";
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
     struct stat buffer;
     bool appending = (stat (file.c_str(), &buffer) == 0);
     trackFile.open(file,ofstream::app|ofstream::out);
     if (!appending)
         trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted"<<endl;
+
+    ifstream in (spottingFile);
+    if (!in.good())
+        in.open(spottingFile+".bck");
+    if (in.good())
+    {
+        spotMut.lock();
+        string line;
+        getline(in,line);
+        assert(line.compare("[accums]")==0);
+        getline(in,line);
+        int num = stoi(line);
+        for (int i=0; i<num; i++)
+        {
+            getline(in,line);
+            int ind = line.find(':');
+            string ngram = line.substr(0,ind-1);
+            string scores = line.substr(ind+2);
+            stringstream ss(scores);
+            while (getline(ss,line,','))
+            {
+                spottingAccums[ngram].push_back(stof(line));
+            }
+        }
+
+        getline(in,line);
+        assert(line.compare("[exemplars]")==0);
+        getline(in,line);
+        num = stoi(line);
+        for (int i=0; i<num; i++)
+        {
+            getline(in,line);
+            int ind = line.find(':');
+            string ngram = line.substr(0,ind-1);
+            string scores = line.substr(ind+2);
+            stringstream ss(scores);
+            while (getline(ss,line,','))
+            {
+                spottingExemplars[ngram].push_back(stof(line));
+            }
+        }
+
+        getline(in,line);
+        assert(line.compare("[normals]")==0);
+        getline(in,line);
+        num = stoi(line);
+        for (int i=0; i<num; i++)
+        {
+            getline(in,line);
+            int ind = line.find(':');
+            string ngram = line.substr(0,ind-1);
+            string scores = line.substr(ind+2);
+            stringstream ss(scores);
+            while (getline(ss,line,','))
+            {
+                spottingNormals[ngram].push_back(stof(line));
+            }
+        }
+
+        getline(in,line);
+        assert(line.compare("[others]")==0);
+        getline(in,line);
+        num = stoi(line);
+        for (int i=0; i<num; i++)
+        {
+            getline(in,line);
+            int ind = line.find(':');
+            string ngram = line.substr(0,ind-1);
+            string scores = line.substr(ind+2);
+            stringstream ss(scores);
+            while (getline(ss,line,','))
+            {
+                spottingOthers[ngram].push_back(stof(line));
+            }
+        }
+        spotMut.unlock();
+        in.close();
+    }
 }
 #endif
 
@@ -184,6 +267,7 @@ void GlobalK::saveTrack(float accTrans, float pWordsTrans, float pWords80_100, f
     track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<endl;
     //track+=currentDateTime()+","+accTrans+","+pWordsTrans+","+pWords80_100+","+pWords60_80+","+pWords40_60+","+pWords20_40+","+pWords0_20+","+pWords0+","+transSent+","+spotSent+","+spotAccept+","+spotReject+","+spotAutoAccept+","+spotAutoReject+","+newExemplarSpotted+"\n";
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
+
 }
 
 void GlobalK::writeTrack()
@@ -191,6 +275,78 @@ void GlobalK::writeTrack()
     trackFile<<track.rdbuf()<<flush;
     track.str(string());
     track.clear();
+
+    rename( spottingFile.c_str() , (spottingFile+".bck").c_str() );
+    ofstream out(spottingFile);
+    spotMut.lock();
+    out<<"[accums]\n"<<spottingAccums.size()<<endl;
+    for (auto aps : spottingAccums)
+    {
+        out<<aps.first<<" : ";
+        for (float ap : aps.second)
+            out<<ap<<",";
+        out<<endl;
+    }
+    out<<"[exemplars]\n"<<spottingExemplars.size()<<endl;
+    for (auto aps : spottingExemplars)
+    {
+        out<<aps.first<<" : ";
+        for (float ap : aps.second)
+            out<<ap<<",";
+        out<<endl;
+    }
+    out<<"[normals]\n"<<spottingNormals.size()<<endl;
+    for (auto aps : spottingNormals)
+    {
+        out<<aps.first<<" : ";
+        for (float ap : aps.second)
+            out<<ap<<",";
+        out<<endl;
+    }
+    out<<"[others]\n"<<spottingOthers.size()<<endl;
+    for (auto aps : spottingOthers)
+    {
+        out<<aps.first<<" : ";
+        for (float ap : aps.second)
+            out<<ap<<",";
+        out<<endl;
+    }
+    spotMut.unlock();
+    out.close();
 }
 
+void GlobalK::storeSpottingAccum(string ngram, float ap)
+{
+    spotMut.lock();
+    spottingAccums[ngram].push_back(ap);
+    spotMut.unlock();
+}
+void GlobalK::storeSpottingExemplar(string ngram, float ap)
+{
+    spotMut.lock();
+    spottingExemplars[ngram].push_back(ap);
+    spotMut.unlock();
+}
+void GlobalK::storeSpottingNormal(string ngram, float ap)
+{
+    spotMut.lock();
+    spottingNormals[ngram].push_back(ap);
+    spotMut.unlock();
+}
+void GlobalK::storeSpottingOther(string ngram, float ap)
+{
+    spotMut.lock();
+    spottingOthers[ngram].push_back(ap);
+    spotMut.unlock();
+}
+
+vector<SubwordSpottingResult>* GlobalK::accumResFor(string ngram)
+{
+    accumResMut.lock();
+    if (accumRes.find(ngram) == accumRes.end())
+        accumRes[ngram] = new vector<SubwordSpottingResult>();
+    vector<SubwordSpottingResult>* toRet= accumRes.at(ngram);
+    accumResMut.unlock();
+    return toRet;
+}
 #endif

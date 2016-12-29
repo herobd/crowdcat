@@ -447,8 +447,10 @@ bool SpottingResults::EMThresholds(int swing)
                 continue; 
             unsigned long id = p.first;
             
+#ifdef TEST_MODE
             //test
             int bin=(displayLen-1)*(instancesById.at(id).score-minScore)/(maxScore-minScore);
+#endif        
             
             if (classById.find(id)!=classById.end())
             {
@@ -458,8 +460,10 @@ bool SpottingResults::EMThresholds(int swing)
                     expectedTrue.push_back(instancesById.at(id).score);
                     sumTrue+=2*instancesById.at(id).score;
                     
+#ifdef TEST_MODE
                     //test
                     if (bin>=0) histogramCP.at(bin)++;
+#endif        
                 }
                 else
                 {
@@ -467,8 +471,10 @@ bool SpottingResults::EMThresholds(int swing)
                     expectedFalse.push_back(instancesById.at(id).score);
                     sumFalse+=2*instancesById.at(id).score;
                     
+#ifdef TEST_MODE
                     //test
                     if (bin>=0) histogramCN.at(bin)++;
+#endif        
                 }
             }
             else
@@ -487,16 +493,20 @@ bool SpottingResults::EMThresholds(int swing)
                     sumTrue+=instancesById.at(id).score;
                     expectedTrue.push_back(instancesById.at(id).score);
                     
+#ifdef TEST_MODE
                     //test
                     if (bin>=0) histogramGP.at(bin)++;
+#endif        
                 }
                 else
                 {
                     expectedFalse.push_back(instancesById.at(id).score);
                     sumFalse+=instancesById.at(id).score;
                     
+#ifdef TEST_MODE
                     //test
                     if (bin>=0) histogramGN.at(bin)++;
+#endif        
                 }
             }
         }

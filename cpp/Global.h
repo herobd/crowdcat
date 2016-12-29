@@ -14,6 +14,10 @@
 #include <sys/stat.h>
 #include <sstream>
 
+#ifdef NO_NAN
+#include "SubwordSpottingResult.h"
+#endif
+
 using namespace std;
 
 #define MIN_N 2
@@ -39,6 +43,20 @@ class GlobalK
         ofstream trackFile;
 
         stringstream track;
+
+        mutex spotMut;
+        mutex accumResMut;
+        string spottingFile;
+        map<string, vector<float> > spottingAccums;
+        map<string, vector<float> > spottingExemplars;
+        map<string, vector<float> > spottingNormals;
+        map<string, vector<float> > spottingOthers;
+        
+        map<string, vector<SubwordSpottingResult>*> accumRes;
+
+        mutex xLock;
+        const vector< vector<int> >* corpusXLetterStartBounds;
+        const vector< vector<int> >* corpusXLetterEndBounds;
 #endif
 
     public:
@@ -64,6 +82,20 @@ class GlobalK
         void newExemplar();
         void saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0);
         void writeTrack();       
+
+        void setCorpusXLetterBounds(const vector< vector<int> >* start, const vector< vector<int> >* end)
+        {
+            corpusXLetterStartBounds=start;
+            corpusXLetterEndBounds=end;
+            xLock.unlock();
+        }
+        const vector< vector<int> >* getCorpusXLetterStartBounds() {xLock.lock(); xLock.unlock(); return corpusXLetterStartBounds;}
+        const vector< vector<int> >* getCorpusXLetterEndBounds() {xLock.lock(); xLock.unlock(); return corpusXLetterEndBounds;}
+        void storeSpottingAccum(string ngram, float ap);
+        void storeSpottingExemplar(string ngram, float ap);
+        void storeSpottingNormal(string ngram, float ap);
+        void storeSpottingOther(string ngram, float ap);
+        vector<SubwordSpottingResult>* accumResFor(string ngram);
 #endif
 };
 

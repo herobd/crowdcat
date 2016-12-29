@@ -173,6 +173,12 @@ int main(int argc, char** argv)
     if (argc>3)
         numSimThreads=atoi(argv[3]);
 
+//#ifndef DEBUG_AUTO
+//    Simulator sim(dataname,charSegFile);
+//#else
+    Simulator sim("test",charSegFile);
+//#endif
+
     int numSpottingThreads = 5;
     int numTaskThreads = 3;
     int height = 1000;
@@ -190,13 +196,12 @@ int main(int argc, char** argv)
                         milli,
                         0//pad
                         );
-//#ifndef DEBUG_AUTO
-//    Simulator sim(dataname,charSegFile);
-//#else
-    Simulator sim("test",charSegFile);
-//#endif
     atomic_bool cont(true);
     vector<thread*> taskThreads(numSimThreads);
+    string line;
+    cout<<"WAITING FOR ENTRY BEFORE BEGINNING SIM"<<endl;
+    getline(cin, line);
+    cout<<"SIMULATION STARTED"<<endl;
     for (int i=0; i<numSimThreads; i++)
     {
         taskThreads[i] = new thread(threadLoop,cattss,&sim,&cont);

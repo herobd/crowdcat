@@ -61,6 +61,8 @@ class Simulator
     vector<int> corpusPage;
     vector< vector<int> > corpusXLetterStartBounds; //The starting x boundary of a letter. Page relative
     vector< vector<int> > corpusXLetterEndBounds; //The ending x boudary of a letter
+    vector< vector<int> > corpusXLetterStartBoundsRel; //The starting x boundary of a letter. Word relative
+    vector< vector<int> > corpusXLetterEndBoundsRel; //The ending x boudary of a letter
     vector< pair<int, int> > corpusYBounds; //the verticle boundaries of each word
 
     //spotting probs

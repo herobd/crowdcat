@@ -28,6 +28,7 @@ Simulator::Simulator(string dataname, string segCSV)
         getline(ss,s,',');
         corpusPage.push_back(stoi(s)+1); //+1 is correction from my creation of segmentation file
         getline(ss,s,',');//x1
+        int x1=stoi(s);
         getline(ss,s,',');
         int y1=stoi(s);
         getline(ss,s,',');//x2
@@ -35,16 +36,23 @@ Simulator::Simulator(string dataname, string segCSV)
         int y2=stoi(s);
         corpusYBounds.push_back(make_pair(y1,y2));
         vector<int> lettersStart, lettersEnd;
+        vector<int> lettersStartRel, lettersEndRel;
+
         while (getline(ss,s,','))
         {
             lettersStart.push_back(stoi(s));
+            lettersStartRel.push_back(stoi(s)-x1);
             getline(ss,s,',');
             lettersEnd.push_back(stoi(s));
+            lettersEndRel.push_back(stoi(s)-x1);
             //getline(ss,s,',');//conf
         }
         corpusXLetterStartBounds.push_back(lettersStart);
         corpusXLetterEndBounds.push_back(lettersEnd);
+        corpusXLetterStartBoundsRel.push_back(lettersStartRel);
+        corpusXLetterEndBoundsRel.push_back(lettersEndRel);
     }
+    GlobalK::knowledge()->setCorpusXLetterBounds(&corpusXLetterStartBoundsRel,&corpusXLetterEndBoundsRel);
 
     if (dataname.compare("test")==0)
     {
@@ -244,13 +252,13 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
             //    ret.push_back( -1 );
             //else
             {
-                cout<<"page: "<<loc.pageId<<"  y1:"<<loc.y1<<endl;
+                /*cout<<"page: "<<loc.pageId<<"  y1:"<<loc.y1<<endl;
                 cout<<loc.x1<<"\t"<<loc.x2<<"\t"<<endl;
                 cout<<corpusXLetterStartBounds[w][l1]<<"\t"<<corpusXLetterEndBounds[w][l2]<<endl;
                 cout<<"inside["<<((loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<overlap_insides_thresh<<endl;
                 cout<<"consume["<<((loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2])?1:0)<<"]: "<<(loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0)<<" ?< "<<overlap_consume_thresh<<endl;
                 cout<<"("<<endl<<"side: "<<(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1]))/(corpusXLetterEndBounds[w][l2]+corpusXLetterStartBounds[w][l1]+0.0)<<" ?> "<<overlap_size_thresh<<endl;
-                cout<<"not inc: "<<max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0)<<" ?< "<<size_note_included_thresh<<endl<<")"<<endl;
+                cout<<"not inc: "<<max(max(loc.x1,corpusXLetterStartBounds[w][l1])-min(loc.x1,corpusXLetterStartBounds[w][l1]),max(loc.x2,corpusXLetterEndBounds[w][l2])-min(loc.x2,corpusXLetterEndBounds[w][l2]))/(min(loc.x2,corpusXLetterEndBounds[w][l2])-max(loc.x1,corpusXLetterStartBounds[w][l1])+0.0)<<" ?< "<<size_note_included_thresh<<endl<<")"<<endl;*/
                 if (
                         (loc.x1>=corpusXLetterStartBounds[w][l1] && loc.x2<=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) > overlap_insides_thresh) ||
                         (loc.x1<=corpusXLetterStartBounds[w][l1] && loc.x2>=corpusXLetterEndBounds[w][l2] && (loc.x2-loc.x1)/(corpusXLetterEndBounds[w][l2]-corpusXLetterStartBounds[w][l1]+0.0) < overlap_consume_thresh) ||
@@ -263,7 +271,8 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
                     //    *error+=1.0/locs.size();
                     //}
                     //else
-                    cout<<"alignment good"<<endl;
+
+                    //cout<<"alignment good"<<endl;
                         return 1;
                 }
                 else
@@ -274,7 +283,8 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
                     //    *error+=1.0/locs.size();
                     //}
                     //else
-                    cout<<"alignment bad"<<endl;
+
+                    //cout<<"alignment bad"<<endl;
                         return 0;
                 }
 
@@ -293,7 +303,8 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
                 //    *error+=1.0/locs.size();
                 //}
                 //else
-                cout<<"letters bad"<<endl;
+
+                //cout<<"letters bad"<<endl;
                     return 0;
             }
         }
