@@ -14,7 +14,11 @@ void TranscribeBatch::highlightPix(cv::Vec3b &p, cv::Vec3f color)
     p[2] = min(255.f,p[2]*color[2]);
 }
 
+#if TRANS_DONT_WAIT     
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id, bool lowPriority) : manual(false), lowPriority(lowPriority)
+#else
 TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id) : manual(false)
+#endif
 {
     for (auto p : scored)
     {

@@ -240,7 +240,7 @@ int Simulator::getSpottingLabel(string ngram, Location loc, bool strict)
     }
     if (w>=0)
     {
-        cout<<corpusWord[w]<<" : "<<ngram<<endl;
+        //cout<<corpusWord[w]<<" : "<<ngram<<endl;
         //int l1 = corpusWord[w].find(ngram[0]);
         //int l2 = corpusWord[w].find(ngram[1]);
         for (int l2=1; l2<corpusWord[w].length(); l2++)

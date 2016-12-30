@@ -253,6 +253,7 @@ vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId
         done=true;
         transcription=selected;
         ret = harvest();
+        sentPoss.clear();
     }
     else
     {
@@ -280,6 +281,21 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
         //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
     pthread_rwlock_wrlock(&lock);
+#if TRANS_DONT_WAIT
+    rejectedTrans.insert(sentPoss.begin(), sentPoss.end());
+    sentPoss.clear();
+
+    if (notSent.size()>0)//send this low priority batch which still may have the correct transcription
+    {
+        int numToSend = std::min((int) notSent.size(),(int) THRESH_SCORING_COUNT);
+        sentPoss = multimap<float,string>(notSent.begin(), notSent.begin()+numToSend);
+        notSent = multimap<float,string>(notSent.begin()+numToSend, notSent.end());
+        ret = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId,true);//low priority
+        pthread_rwlock_unlock(&lock);
+        return newBatch;
+    }
+#endif
+
     if (!loose)
     {
         //Given most errors are caused by misalgined ngrams and bad char width predictions
@@ -346,6 +362,9 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
     }
     if (!merged)
     {
+#if TRANS_DONT_WAIT
+        notSent.clear();
+#endif
         spottings.insert(make_pair(s.tlx,s));//multimap, so they are properly ordered
     }
     TranscribeBatch* ret=NULL;
@@ -367,7 +386,24 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
     if (query.compare(newQuery) !=0)
     {
         query=newQuery;
+#if TRANS_DONT_WAIT
+        vector<string> matches = Lexicon::instance()->search(query,meta,rejectedTrans);
+#else
         vector<string> matches = Lexicon::instance()->search(query,meta);
+#endif
+        /*
+#if TRANS_DONT_WAIT
+        //filter out matches we've previously rejected
+        auto iter = matches.begin();
+        while (iter != matches.end())
+        {
+            if (rejectedTrans.find(*iter) != rejectedTrans.end())
+                iter = matches.erase(iter);
+            else
+                iter++;
+        }
+#endif*/
+#if AUTO_TRANS_ON_ONE
         if (matches.size() == 1)
         {
             transcription=matches[0];
@@ -378,14 +414,26 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
                 newExemplars->insert(newExemplars->end(),newE.begin(),newE.end());
             }
         }
-        else if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
+        else
+#endif 
+         if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
+#if TRANS_DONT_WAIT
+            if (scored.size() > 0)
+            {
+                int numToSend = min(scored.size(),THRESH_SCORING_COUNT);
+                sentPoss = multimap<float,string>(scored.begin(), scored.begin()+numToSend);
+                notSent = multimap<float,string>(scored.begin()+numToSend, scored.end());
+                ret = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
+            }
+#else
             if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
                 ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
             }
+#endif
         }
         else if (matches.size()==0 && !loose)
         {
@@ -2712,23 +2760,49 @@ TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
     return queryForBatch(newExemplars);
 }
 
-void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0)
+void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
+                                 float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV)
 {
     int trueTrans, cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
     trueTrans= cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
+    *misTrans="";
+
+    //IV is In-Vocabulary
+    int trueTrans_IV, cTrans_IV, c80_100_IV, c60_80_IV, c40_60_IV, c20_40_IV, c0_20_IV, c0_IV;
+    trueTrans_IV= cTrans_IV= c80_100_IV= c60_80_IV= c40_60_IV= c20_40_IV= c0_20_IV= c0_IV=0;
+    *misTrans_IV="";
+    
+    int numIV=0;
     for (Word* w : _words)
     {
         bool done;
         string gt, query;
         w->getDoneAndGTAndQuery(&done,&gt,&query);
+        for (int i=0; i<gt.length(); i++)
+            gt[i]=tolower(gt[i]);
+        bool inVocab = Lexicon::instance()->inVocab(gt);
+        if (inVocab)
+            numIV++;
         if (done)
         {
             cTrans++;
+            if (inVocab)
+                cTrans_IV++;
             if (gt.compare(w->getTranscription())==0)
                 trueTrans++;
+            else
+            {
+                *misTrans+=w->getTranscription()+"("+gt+") ";
+                if (inVocab)
+                    *misTrans_IV+=w->getTranscription()+"("+gt+") ";
+            }
         }
         else if (query.length()==0)
+        {
             c0++;
+            if (inVocab)
+                c0_IV++;
+        }
         else
         {
             int numMatch=0;
@@ -2775,15 +2849,35 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
             }
             float p = numMatch/(0.0+gt.length());
             if (p>.8)
+            {
                 c80_100++;
+                if (inVocab)
+                    c80_100_IV++;
+            }
             else if (p>.6)
+            {
                 c60_80++;
+                if (inVocab)
+                    c60_80_IV++;
+            }
             else if (p>.4)
+            {
                 c40_60++;
+                if (inVocab)
+                    c40_60_IV++;
+            }
             else if (p>.2)
+            {
                 c20_40++;
+                if (inVocab)
+                    c20_40_IV++;
+            }
             else
+            {
                 c0_20++;
+                if (inVocab)
+                    c0_20_IV++;
+            }
         }
     }
     if (cTrans>0)
@@ -2797,4 +2891,16 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
     *pWords20_40= c20_40/(0.0+_words.size());
     *pWords0_20= c0_20/(0.0+_words.size());
     *pWords0= c0/(0.0+_words.size());
+
+    if (cTrans_IV>0)
+        *accTrans_IV= trueTrans_IV/(0.0+cTrans_IV);
+    else
+        *accTrans_IV=0;
+    *pWordsTrans_IV= cTrans_IV/(0.0+numIV);
+    *pWords80_100_IV= c80_100_IV/(0.0+numIV);
+    *pWords60_80_IV= c60_80_IV/(0.0+numIV);
+    *pWords40_60_IV= c40_60_IV/(0.0+numIV);
+    *pWords20_40_IV= c20_40_IV/(0.0+numIV);
+    *pWords0_20_IV= c0_20_IV/(0.0+numIV);
+    *pWords0_IV= c0_IV/(0.0+numIV);
 }

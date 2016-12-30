@@ -3,7 +3,11 @@
 
 Lexicon* Lexicon::self=NULL;
 
+#if TRANS_NO_WAIT
+vector<string> Lexicon::search(string query, SearchMeta meta, const set<string>& reject) const
+#else
 vector<string> Lexicon::search(string query, SearchMeta meta) const
+#endif
 {
     vector<string> ret1;//, ret2;
 
@@ -18,7 +22,11 @@ vector<string> Lexicon::search(string query, SearchMeta meta) const
     for (const string& word : words)
     {
     
+#if TRANS_NO_WAIT
+        if (regex_match (word, q ) && reject.find(word)==reject.end())
+#else
         if (regex_match (word, q ))
+#endif
         {
             ret1.push_back(word);
             if (meta.max>0 && ret1.size()>meta.max)
@@ -57,6 +65,11 @@ vector<string> Lexicon::search(string query, SearchMeta meta) const
     cout<<endl;
 #endif
     return ret1;
+}
+
+bool Lexicon::inVocab(string word, string field)
+{
+    return find(fields[field].begin(), fields[field].end(), word)!=fields[field].end();
 }
 
 bool Lexicon::readIn(string fileName, string field)

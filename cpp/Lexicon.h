@@ -38,7 +38,14 @@ class Lexicon
 public:
     //This performs the given regex query on a lexicon and returns the matches.
     //meta specifies parameters of the search
+#if TRANS_NO_WAIT
+    vector<string> search(string query, SearchMeta meta, const set<string>& reject=set<string>()) const;
+#else
     vector<string> search(string query, SearchMeta meta) const;
+#endif
+
+    //This simply returns whether the word is in vocab
+    bool inVocab(string word, string field="");
     
 
     //This reads in a file (new word on each line), and stores it under the given field name. The empty string is the default lexicon

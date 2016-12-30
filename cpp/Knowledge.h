@@ -52,6 +52,8 @@ typedef Graph<float,float,float> GraphType;
 
 #define SHOW 0
 
+#define AUTO_TRANS_ON_ONE 0
+
 //#ifndef TEST_MODE_LONG
 //#define averageCharWidth 40 //TODO GW, totally just making this up
 //#else
@@ -124,6 +126,11 @@ private:
 
     map<unsigned long, vector<Spotting> > removedSpottings;
     void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
+#if TRANS_DONT_WAIT
+    set<string> rejectedTrans;
+    set<string> sentPoss;
+    multimap<float,string> notSent;
+#endif
 
 public:
     //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
@@ -514,7 +521,8 @@ public:
 
     //For data collection, when I deleted all my trans... :(
     vector<TranscribeBatch*> resetAllWords_();
-    void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0);
+    void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
+                          float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV);
 };
 
 }

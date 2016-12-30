@@ -142,12 +142,19 @@ private:
     static cv::Vec3f wordHighlight;
     static std::atomic_ulong _id;
     static void highlightPix(cv::Vec3b &p, cv::Vec3f color);
+#if TRANS_DONT_WAIT     
+    bool lowPriority;
+#endif
 public:
     //TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
     //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
-    
+#if TRANS_DONT_WAIT     
+    bool isLowPriority() {return lowPriority;}
     //A normal transcription batch
+    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKOWN$", unsigned long batchId=0, bool lowPriority=false);
+#else
     TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKOWN$", unsigned long batchId=0);
+#endif
     //A manual transcription batch
     TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKNOWN$", unsigned long batchId=0);
     

@@ -262,7 +262,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         //a second pass without conditions
         if (ret==NULL)
         {
-            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth,true);
             if (batch!=NULL)
                 ret = new BatchWraperTranscription(batch);
         }
