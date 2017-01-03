@@ -3,7 +3,7 @@
 
 Lexicon* Lexicon::self=NULL;
 
-#if TRANS_NO_WAIT
+#if TRANS_DONT_WAIT
 vector<string> Lexicon::search(string query, SearchMeta meta, const set<string>& reject) const
 #else
 vector<string> Lexicon::search(string query, SearchMeta meta) const
@@ -22,7 +22,7 @@ vector<string> Lexicon::search(string query, SearchMeta meta) const
     for (const string& word : words)
     {
     
-#if TRANS_NO_WAIT
+#if TRANS_DONT_WAIT
         if (regex_match (word, q ) && reject.find(word)==reject.end())
 #else
         if (regex_match (word, q ))

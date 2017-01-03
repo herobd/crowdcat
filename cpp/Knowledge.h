@@ -128,7 +128,7 @@ private:
     void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
 #if TRANS_DONT_WAIT
     set<string> rejectedTrans;
-    set<string> sentPoss;
+    multimap<float,string> sentPoss;
     multimap<float,string> notSent;
 #endif
 

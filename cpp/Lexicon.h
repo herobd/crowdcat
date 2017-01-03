@@ -5,8 +5,9 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-
+#include <set>
 #include <assert.h>
+#include "Global.h"
 
 using namespace std;
 
@@ -38,7 +39,7 @@ class Lexicon
 public:
     //This performs the given regex query on a lexicon and returns the matches.
     //meta specifies parameters of the search
-#if TRANS_NO_WAIT
+#if TRANS_DONT_WAIT
     vector<string> search(string query, SearchMeta meta, const set<string>& reject=set<string>()) const;
 #else
     vector<string> search(string query, SearchMeta meta) const;

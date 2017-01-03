@@ -282,15 +282,20 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
 #endif
     pthread_rwlock_wrlock(&lock);
 #if TRANS_DONT_WAIT
-    rejectedTrans.insert(sentPoss.begin(), sentPoss.end());
+    //rejectedTrans.insert(sentPoss.begin(), sentPoss.end());
+    for (auto p : sentPoss)
+        rejectedTrans.insert(p.second);
     sentPoss.clear();
 
     if (notSent.size()>0)//send this low priority batch which still may have the correct transcription
     {
         int numToSend = std::min((int) notSent.size(),(int) THRESH_SCORING_COUNT);
-        sentPoss = multimap<float,string>(notSent.begin(), notSent.begin()+numToSend);
-        notSent = multimap<float,string>(notSent.begin()+numToSend, notSent.end());
-        ret = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId,true);//low priority
+        auto iterNotSent = notSent.begin();
+        for (int i=0; i< numToSend; i++)
+            iterNotSent++;
+        sentPoss = multimap<float,string>(notSent.begin(), iterNotSent);
+        notSent = multimap<float,string>(iterNotSent, notSent.end());
+        newBatch = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId,true);//low priority
         pthread_rwlock_unlock(&lock);
         return newBatch;
     }
@@ -422,9 +427,12 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
 #if TRANS_DONT_WAIT
             if (scored.size() > 0)
             {
-                int numToSend = min(scored.size(),THRESH_SCORING_COUNT);
-                sentPoss = multimap<float,string>(scored.begin(), scored.begin()+numToSend);
-                notSent = multimap<float,string>(scored.begin()+numToSend, scored.end());
+                int numToSend = min((int)scored.size(),(int)THRESH_SCORING_COUNT);
+                auto iterScored = scored.begin();
+                for (int i=0; i<numToSend; i++)
+                    iterScored++;
+                sentPoss = multimap<float,string>(scored.begin(), iterScored);
+                notSent = multimap<float,string>(iterScored, scored.end());
                 ret = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
             }
 #else

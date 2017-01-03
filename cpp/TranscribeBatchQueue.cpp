@@ -174,6 +174,21 @@ void TranscribeBatchQueue::feedbackProcess(unsigned long id, string transcriptio
                 queue.push_front(returnMap[id]);
         }*/
     }
+    else
+    {
+        *newNgramExemplars = backPointer->result(transcription,id,resend,toRemoveExemplars);
+        if (!resend)
+        {
+            doneMap[id] = backPointer;
+            delete returnMap[id];
+        }
+    }
+
+    if (!resend)
+    {
+        returnMap.erase(id);
+        timeMap.erase(id);
+    }
 }
 
 vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars)
