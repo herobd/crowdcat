@@ -229,73 +229,84 @@ void SpottingQueue::removeQueries(vector<pair<unsigned long,string> >* toRemove)
     mutLock.lock();
     for (auto r : *toRemove)
     {
-        bool found=false;
-        /*for (auto iter = ngramQueues[r.second].begin(); iter!=ngramQueues[r.second].end(); iter++)
+        if(sem_trywait(&semLock)==0)//try to remove resource
         {
-            if ((*iter)->getId() == r.first)
+            bool found=false;
+            /*for (auto iter = ngramQueues[r.second].begin(); iter!=ngramQueues[r.second].end(); iter++)
             {
-#ifdef TEST_MODE
-                cout<<"found in ngram queue"<<endl;
-#endif
-                sem_wait(&semLock);
-                ngramQueues[r.second].erase(iter);
-                found=true;
-                break;
-            }
-        }*/
-        //A big pain
-        priority_queue<SpottingQuery*,vector<SpottingQuery*>,sqcomparison> temp;
-        while (ngramQueues[r.second].size()>0)
-        {
-            SpottingQuery* s = ngramQueues[r.second].top();
-            ngramQueues[r.second].pop();
-            if (!found && s->getId() == r.first)
-            {
-                sem_wait(&semLock);
-                found=true;
-                break;
-            }
-            else
-                temp.push(s);
-        }
-        ngramQueues[r.second].swap(temp);
-        if (!found)
-        {
-            for (auto iter=onDeck.begin(); iter!=onDeck.end(); iter++)
-            {
-#ifdef TEST_MODE
-                cout<<"scanning onDeck: "<<(*iter)->getId()<<":"<<(*iter)->getNgram()<<endl;
-#endif
                 if ((*iter)->getId() == r.first)
                 {
 #ifdef TEST_MODE
-                    cout<<"found in onDeck"<<endl;
+                    cout<<"found in ngram queue"<<endl;
 #endif
                     sem_wait(&semLock);
-                    onDeck.erase(iter);
+                    ngramQueues[r.second].erase(iter);
                     found=true;
-                    if (ngramQueues[r.second].size()>0)
-                    {
-                        //onDeck.push_back(ngramQueues[r.second].front());
-                        //ngramQueues[r.second].pop_front();
-                        onDeck.push_back(ngramQueues[r.second].top());
-                        ngramQueues[r.second].pop();
-                    }
                     break;
                 }
+            }*/
+            //A big pain
+            priority_queue<SpottingQuery*,vector<SpottingQuery*>,sqcomparison> temp;
+            while (ngramQueues[r.second].size()>0)
+            {
+                SpottingQuery* s = ngramQueues[r.second].top();
+                ngramQueues[r.second].pop();
+                if (!found && s->getId() == r.first)
+                {
+                    //sem_wait(&semLock);
+                    found=true;
+                    //break;
+                }
+                else
+                    temp.push(s);
             }
+            ngramQueues[r.second].swap(temp);
             if (!found)
             {
+                for (auto iter=onDeck.begin(); iter!=onDeck.end(); iter++)
+                {
 #ifdef TEST_MODE
-                cout<<"not found, adding to emList"<<endl;
+                    cout<<"scanning onDeck: "<<(*iter)->getId()<<":"<<(*iter)->getNgram()<<endl;
 #endif
-                //Oh, dear! We've spotted or are spotting it.
-                emLock.lock();
-                emList.insert(r.first);
-                emLock.unlock();
+                    if ((*iter)->getId() == r.first)
+                    {
+#ifdef TEST_MODE
+                        cout<<"found in onDeck"<<endl;
+#endif
+                        //sem_wait(&semLock);
+                        onDeck.erase(iter);
+                        found=true;
+                        if (ngramQueues[r.second].size()>0)
+                        {
+                            //onDeck.push_back(ngramQueues[r.second].front());
+                            //ngramQueues[r.second].pop_front();
+                            onDeck.push_back(ngramQueues[r.second].top());
+                            ngramQueues[r.second].pop();
+                        }
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    //add back resourve since we didn't actually remove one
+                    sem_wait(&semLock);
+#ifdef TEST_MODE
+                    cout<<"not found, adding to emList"<<endl;
+#endif
+                    //Oh, dear! We've spotted or are spotting it.
+                    emLock.lock();
+                    emList.insert(r.first);
+                    emLock.unlock();
+                }
             }
         }
-
+        else
+        {
+            //Oh, dear! We've spotted or are spotting it.
+            emLock.lock();
+            emList.insert(r.first);
+            emLock.unlock();
+        }
     }
     mutLock.unlock();
 }

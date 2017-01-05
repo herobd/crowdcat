@@ -36,14 +36,18 @@ void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch, vector<pair
             while (iter!= queue.end())
             {
                 bool matched=false;
-                for (auto iter2=toRemoveExemplars->begin(); iter2!=toRemoveExemplars->end(); iter2++)
+                auto iter2=toRemoveExemplars->begin();
+                while(iter2!=toRemoveExemplars->end())
                 {
                     if ((*iter)->id == iter2->first)
                     {
                         matched=true;
                         iter=queue.erase(iter);
                         iter2=toRemoveExemplars->erase(iter2);    
+                        break;
                     }
+                    else
+                        iter2++;
                 }
                 if (!matched)
                     iter++;
