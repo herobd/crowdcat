@@ -16,6 +16,7 @@ void TranscribeBatchQueue::enqueueAll(vector<TranscribeBatch*> batches, vector<u
     lock();
     for (TranscribeBatch* b :  batches)
     {
+        assert(b->getBackPointer() != NULL);
 #if TRANS_DONT_WAIT
         bool foundL=false;
         for (int i=0; i<lowQueue.size(); i++)

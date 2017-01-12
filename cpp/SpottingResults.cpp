@@ -174,6 +174,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     
     if (!*done)
     {
+        //check if I'm done
         //cout<<"i'm "<<(*tracer)->score<<", accept "<<acceptThreshold<<", reject "<<rejectThreshold<<endl;
         if ((*tracer)->score>=rejectThreshold)
         {
@@ -194,7 +195,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         }
         else  if ((*tracer)->score<=acceptThreshold)
         {
-            while((*tracer)->score<=acceptThreshold && tracer!=instancesByScore.end())
+            while(tracer!=instancesByScore.end() && (*tracer)->score<=acceptThreshold)
                 tracer++;
             if (tracer==instancesByScore.end() || (*tracer)->score>=rejectThreshold)
             {

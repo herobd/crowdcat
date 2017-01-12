@@ -82,7 +82,7 @@ public:
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need=true);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
-    void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
+    //void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
     
     //TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
