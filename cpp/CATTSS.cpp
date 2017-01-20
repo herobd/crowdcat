@@ -153,6 +153,43 @@ CATTSS::CATTSS( string lexiconFile,
     //#endif
 #endif
     }
+
+#ifdef TEST_MODE
+    in.open(segmentationFile+".char");
+    string line;
+    //getline(in,line);//header
+    while (getline(in,line))
+    {
+        string s;
+        std::stringstream ss(line);
+        getline(ss,s,',');
+        string word=s;
+        getline(ss,s,',');
+        int pageId = (stoi(s)+1); //+1 is correction from my creation of segmentation file
+        getline(ss,s,',');//x1
+        int x1=stoi(s);
+        getline(ss,s,',');
+        int y1=stoi(s);
+        getline(ss,s,',');//x2
+        int x2=stoi(s);
+        getline(ss,s,',');
+        int y2=stoi(s);
+        vector<int> lettersStart, lettersEnd;
+        //vector<int> lettersStartRel, lettersEndRel;
+
+        while (getline(ss,s,','))
+        {
+            lettersStart.push_back(stoi(s));
+            //lettersStartRel.push_back(stoi(s)-x1);
+            getline(ss,s,',');
+            lettersEnd.push_back(stoi(s));
+            //lettersEndRel.push_back(stoi(s)-x1);
+            //getline(ss,s,',');//conf
+        }
+        GlobalK::knowledge()->addWordBound(word,pageId,x1,y1,x2,y2,lettersStart,lettersEnd);
+    }
+    in.close();
+#endif
     
    
     //should be priority 77 
@@ -275,6 +312,11 @@ void CATTSS::misc(string task)
         if (task.compare("showCorpus")==0)
         {
             corpus->show();
+        }
+        else if (task.length()>16 && task.substr(0,16).compare("showInteractive:")==0)
+        {
+            int pageNum = stoi(task.substr(16));
+            corpus->showInteractive(pageNum);
         }
 /*        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {

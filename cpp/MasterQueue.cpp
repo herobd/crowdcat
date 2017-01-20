@@ -106,9 +106,10 @@ MasterQueue::MasterQueue(int contextPad) : contextPad(contextPad)
     r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.53));
     
     addSpottingResults(r0);*/
-    
+#if ROTATE 
     testIter=0;	
     test_rotate=0;
+#endif
     //addTestSpottings();
     //accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     //done=0;
@@ -730,6 +731,8 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     pthread_rwlock_init(&semResults,NULL);
 #if ROTATE
     pthread_rwlock_init(&semRotate,NULL);
+    testIter=0;	
+    test_rotate=0;
 #endif
     kill.store(false);
     
@@ -774,6 +777,4 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     getline(in,line);
     contextPad = stoi(line);
     //in.close();
-    testIter=0;	
-    test_rotate=0;
 }

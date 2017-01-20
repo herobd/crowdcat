@@ -134,13 +134,17 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
         }
         else if (batch->getType()==RAN_OUT)
         {
-            this_thread::sleep_for(chrono::minutes(15));
-            slept+=15;
+            //this_thread::sleep_for(chrono::minutes(15));
+            //slept+=15;
             prevNgram="_";
+            cout<<"ran out, so manual finish."<<endl;
+            cattss->misc("manualFinish");
         }
         else
         {
             cout<<"Blank batch given to sim"<<endl;
+            this_thread::sleep_for(chrono::minutes(5));
+            slept+=5;
             prevNgram="_";
         }
 
@@ -174,9 +178,9 @@ int main(int argc, char** argv)
         numSimThreads=atoi(argv[3]);
 
 //#ifndef DEBUG_AUTO
-//    Simulator sim(dataname,charSegFile);
+    Simulator sim(dataname,charSegFile);
 //#else
-    Simulator sim("test",charSegFile);
+//    Simulator sim("test",charSegFile);
 //#endif
 
     int numSpottingThreads = 5;

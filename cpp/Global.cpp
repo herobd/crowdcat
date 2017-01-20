@@ -14,9 +14,9 @@ GlobalK::GlobalK()
         }
         in.close();
     }
-
+#ifdef NO_NAN
     xLock.lock();
-
+#endif
 }
 
 GlobalK::~GlobalK()
@@ -353,5 +353,55 @@ vector<SubwordSpottingResult>* GlobalK::accumResFor(string ngram)
     vector<SubwordSpottingResult>* toRet= accumRes.at(ngram);
     accumResMut.unlock();
     return toRet;
+}
+#endif
+
+#ifdef TEST_MODE
+bool GlobalK::ngramAt(string ngram, int pageId, int tlx, int tly, int brx, int bry)
+{
+    float overlap_insides_thresh = OVERLAP_INSIDE_THRESH;
+    float overlap_consume_thresh = OVERLAP_CONSUME_THRESH;
+    float overlap_size_thresh = OVERLAP_SIDE_THRESH;
+    float size_note_included_thresh = SIDE_NOT_INCLUDED_THRESH;
+
+
+    WordBound searchL(tlx-5,tly-5,brx,bry);
+    WordBound searchU(brx,bry,brx+5,bry+5);
+    auto iterL = wordBounds[pageId].lower_bound(searchL);
+    auto iterU = wordBounds[pageId].upper_bound(searchU);
+
+    int bestOverlap =0;
+    const WordBound* best;
+    while (iterL != iterU)
+    {
+        int overlap = ( min(iterL->brx, brx)-max(iterL->tlx,tlx) ) *
+            ( min(iterL->bry, bry)-max(iterL->tly,tly) );
+        assert(overlap != bestOverlap);
+        if (overlap > bestOverlap)
+        {
+            bestOverlap = overlap;
+            best = &(*iterL);
+        }
+    }
+    int loc = best->text.find(ngram);
+    if (loc == string::npos)
+        return false;
+
+    //int ngramOverlap = min(best->startBounds[loc],tlx) - max(best->endBounds, brx);
+    if (
+            (tlx>=best->startBounds[loc] && brx<=best->endBounds[loc+ngram.size()-1] && (brx-tlx)/(best->endBounds[loc+ngram.size()-1]-best->startBounds[loc]+0.0) > overlap_insides_thresh) ||
+            (tlx<=best->startBounds[loc] && brx>=best->endBounds[loc+ngram.size()-1] && (brx-tlx)/(best->endBounds[loc+ngram.size()-1]-best->startBounds[loc]+0.0) < overlap_consume_thresh) ||
+            ((min(brx,best->endBounds[loc+ngram.size()-1])-max(tlx,best->startBounds[loc]))/(best->endBounds[loc+ngram.size()-1]-best->startBounds[loc]+0.0) > overlap_size_thresh && max(max(tlx,best->startBounds[loc])-min(tlx,best->startBounds[loc]),max(brx,best->endBounds[loc+ngram.size()-1])-min(brx,best->endBounds[loc+ngram.size()-1]))/(min(brx,best->endBounds[loc+ngram.size()-1])-max(tlx,best->startBounds[loc])+0.0) < size_note_included_thresh)
+       )
+    {
+        return true;
+    }
+    
+    return false;
+}
+
+void GlobalK::addWordBound(string word, int pageId, int tlx, int tly, int brx, int bry, vector<int> startBounds, vector<int> endBounds)
+{
+    wordBounds[pageId].emplace(word,tlx,tly,brx,bry,startBounds,endBounds);
 }
 #endif

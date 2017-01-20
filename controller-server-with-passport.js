@@ -51,7 +51,7 @@ var contextPads=[ 0,
                 ];
 
 
-var datasetNum=2;
+var datasetNum=1;
 var lexiconFile=lexiconFiles[datasetNum];
 var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
@@ -568,7 +568,7 @@ var ControllerApp = function(port) {
                                             self.nextBatch(req,res);
                                         }
                                     } else {
-                                        res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                                        res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5, debug:err});
                                     }
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {

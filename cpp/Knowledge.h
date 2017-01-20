@@ -523,6 +523,9 @@ public:
     vector<TranscribeBatch*> resetAllWords_();
     void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
                           float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV);
+
+    static void mouseCallBackFunc(int event, int x, int y, int flags, void* page_p);
+    void showInteractive(int pageId);
 };
 
 }

@@ -87,6 +87,9 @@ public:
     
     SpottingsBatch(string ngram, unsigned long spottingResultsId) : 
         ngram(ngram), spottingResultsId(spottingResultsId)
+#ifdef TEST_MODE
+        , precAtPull(-1), precAcceptT(-1), precRejectT(-1), precBetweenT(-1)
+#endif
     {
         batchId = _batchId++;
     }
@@ -112,6 +115,17 @@ public:
     //For saving and loading
     static unsigned long getIdCounter() {return _batchId.load();}
     static void setIdCounter(unsigned long id) {_batchId.store(id);}
+
+#ifdef TEST_MODE
+    double precAtPull, precAcceptT, precRejectT, precBetweenT;
+    void addDebugInfo(double precAtPull, double precAcceptT, double precRejectT, double precBetweenT)
+    {
+        this->precAtPull=precAtPull;
+        this->precAcceptT=precAcceptT;
+        this->precRejectT=precRejectT;
+        this->precBetweenT=precBetweenT;
+    }
+#endif
     
 private:
     static std::atomic_ulong _batchId;

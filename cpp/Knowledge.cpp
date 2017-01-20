@@ -337,6 +337,8 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
+    if (newBatch==NULL)
+        sentBatchId=0;
     return newBatch;
 }
 
@@ -506,6 +508,8 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") removeSpotting"<<endl;
 #endif
+    if (ret==NULL)
+        this->sentBatchId=0;
     return ret;
 }
 
@@ -2006,6 +2010,107 @@ void Knowledge::Corpus::show()
 
     pthread_rwlock_unlock(&pagesLock);
 }
+
+
+void Knowledge::Corpus::mouseCallBackFunc(int event, int x, int y, int flags, void* page_p)
+{
+     Page* page = (Page*) page_p;
+     if  ( event == cv::EVENT_LBUTTONDOWN )
+     {
+          //cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+
+        vector<Line*> lines = page->lines();
+        for (Line* line : lines)
+        {
+            int line_ty, line_by;
+            vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : wordsForLine)
+            {
+                int tlx,tly,brx,bry;
+                bool done;
+                word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+                if (tlx<=x && x<=brx && tly<=y && y<=bry)
+                {
+                    string query, gt;
+                    word->getDoneAndGTAndQuery(&done, &gt, &query);
+                    cout<<"WORD: "<<gt<<"  query: "<<query<<endl;
+                    vector<Spotting> spots = word->getSpottings();
+                    cout<<"Spots: ";
+                    for (const Spotting & s : spots)
+                    {
+                        cout<<s.ngram<<", ";
+                    }
+                    cout<<endl<<"Poss trans: ";
+                    vector<string> poss = word->getRestrictedLexicon(100);
+                    for (string p : poss)
+                    {
+                        cout<<p<<", ";
+                    }
+                    cout<<endl;
+                }
+            }
+        }
+     }
+     else if  ( event == cv::EVENT_RBUTTONDOWN )
+     {
+          //cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+     }
+     else if  ( event == cv::EVENT_MBUTTONDOWN )
+     {
+          //cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+     }
+     else if ( event == cv::EVENT_MOUSEMOVE )
+     {
+          //cout << "Mouse move over the window - position (" << x << ", " << y << ")" << endl;
+
+     }
+}
+
+void Knowledge::Corpus::showInteractive(int pageId)
+{
+    cv::Mat draw;
+    pthread_rwlock_rdlock(&pagesLock);
+    
+    Page* page = pages[pageId];
+    vector<Line*> lines = page->lines();
+    for (Line* line : lines)
+    {
+        int line_ty, line_by;
+        vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+        for (Word* word : wordsForLine)
+        {
+            if (draw.cols<2)
+            {
+                if (word->getPage()->type() == CV_8UC3)
+                    draw = word->getPage()->clone();
+                else
+                {
+                    cv::cvtColor(*word->getPage(),draw,CV_GRAY2BGR);
+                }
+            }
+            int tlx,tly,brx,bry;
+            bool done;
+            word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+            if (done)
+            {
+                cv::putText(draw,word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_TRIPLEX,4.0,cv::Scalar(50,50,255));
+            }
+            //else
+            //    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
+        }
+    }
+    //int h =1500;
+    //int w=((h+0.0)/p.second.rows)*p.second.cols;
+    //cv::resize(p.second, p.second, cv::Size(w,h));
+    cv::namedWindow("page", 1);
+    cv::setMouseCallback("page", mouseCallBackFunc, page);
+    cv::imshow("page",draw);
+    cv::waitKey();
+
+    pthread_rwlock_unlock(&pagesLock);
+}
+
+
 void Knowledge::Corpus::showProgress(int height, int width)
 {
     pthread_rwlock_rdlock(&pagesLock);
@@ -2101,6 +2206,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
     pthread_rwlock_unlock(&pagesLock);
 }
 
+
+
 void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesFile)
 {
     ifstream in(queriesFile);
@@ -2138,7 +2245,10 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         //pageName = regex_replace (pageName,nonNum,"");
         //int pageId = stoi(pageName);
         if (pageIdMap.find(pageName)==pageIdMap.end())
-            pageIdMap[pageName]=pageIdMap.size();
+        {
+            int newId = pageIdMap.size()+1;
+            pageIdMap[pageName]=newId;
+        }
         int pageId = pageIdMap.at(pageName);
         Page* page;
         if (pages.find(pageId)==pages.end())
@@ -2151,6 +2261,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             }*/
             page = new Page(&spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
             pages[page->getId()] = page;
+            cout<<"new page "<<pageId<<endl;
         }
         else
         {
@@ -2796,6 +2907,9 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
             cTrans++;
             if (inVocab)
                 cTrans_IV++;
+            string trans = w->getTranscription();
+            for (int i=0; i<trans.length(); i++)
+                trans[i] = tolower(trans[i]);
             if (gt.compare(w->getTranscription())==0)
                 trueTrans++;
             else

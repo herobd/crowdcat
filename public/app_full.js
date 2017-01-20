@@ -686,9 +686,13 @@ function handleSpottingsBatch(jres) {
         batchHeader.style.background=headerColors[colorIndex];
         theWindow.insertBefore(batchHeader,theWindow.childNodes[0]);
     }
-        
+    var debugInfo;
+    if (jres.debug!=undefined)
+        debufInfo = jres.debug;
+    else
+        debugInfo={precAtPull:-2, precAcceptT:-2, precRejectT:-2, precBetweenT:-2};    
     if (jres.resultsId!=='X') {
-        batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId});
+        batchQueue.push({type:'s', ngram:jres.ngram, id:jres.batchId, rid:jres.resultsId, debugInfo:debugInfo});
         //console.log("got "+jres.resultsId)
     } else if (jres.batchId=='R') {
         location.reload(true);
@@ -882,6 +886,8 @@ function highlightLast() {
             var header_s = document.getElementsByClassName(ondeck.batch);
             if (header_s && header_s.length>0 &&!header_s[0].classList.contains('ondeck'))
                 header_s[0].classList.toggle('ondeck');
+            console.log('Batch SpottingResults info:');
+            console.log(batchQueue[0].debugInfo);
             
         }
         else if (batchQueue[0].type=='m') {

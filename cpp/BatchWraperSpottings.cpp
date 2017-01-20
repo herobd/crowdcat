@@ -46,6 +46,12 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
         images[index] = batch->at(index).img();
 #endif
     }
+#ifdef TEST_MODE
+    precAtPull = batch->precAtPull;
+    precAcceptT = batch->precAcceptT;
+    precRejectT = batch->precRejectT;
+    precBetweenT = batch->precBetweenT;
+#endif
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;
 }
@@ -74,8 +80,21 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 
         Nan::Set(gtArr, index, Nan::New(gt[index]).ToLocalChecked());
     }
+
+#ifdef TEST_MODE
+    v8::Local<v8::Object> debug = Nan::New<v8::Object>();
+    debug->Set(Nan::New("precAtPull").ToLocalChecked(), Nan::New(precAtPull));
+    debug->Set(Nan::New("precAcceptT").ToLocalChecked(), Nan::New(precAcceptT));
+    debug->Set(Nan::New("precRejectT").ToLocalChecked(), Nan::New(precRejectT));
+    debug->Set(Nan::New("precBetweenT").ToLocalChecked(), Nan::New(precBetweenT));
+#endif
+
     Local<Value> argv[] = {
+#ifdef TEST_MODE
+        debug,
+#else
 	Nan::Null(),
+#endif
 	Nan::New("spottings").ToLocalChecked(),
 	Nan::New(batchId).ToLocalChecked(),
 	Nan::New(resultsId).ToLocalChecked(),

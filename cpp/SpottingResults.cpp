@@ -118,6 +118,75 @@ void SpottingResults::addTrueNoScore(const SpottingExemplar& spotting) {
     return ret;
 }*/
 
+#ifdef TEST_MODE
+void SpottingResults::setDebugInfo(SpottingsBatch* b)
+{
+    double precAtPull=0;
+    int countAtPull=0;
+    bool atPull=true;
+    double precAcceptT=0;
+    int countAcceptT=0;
+    bool acceptT=true;
+    double precRejectT=0;
+    int countRejectT=0;
+    bool rejectT=false;
+    double precBetweenT=0;
+    int countBetweenT=0;
+    bool betweenT=false;
+    for (auto iter=instancesByScore.begin(); iter!=instancesByScore.end(); iter++)
+    {
+        bool t=false;
+        if ((*iter)->gt==1)
+            t=true;
+        else if ((*iter)->gt!=0)
+        {
+            t = GlobalK::knowledge()->ngramAt(ngram, (*iter)->pageId, (*iter)->tlx, (*iter)->tly, (*iter)->brx, (*iter)->bry);
+            (*iter)->gt=t;
+        }
+
+        if ((*iter)->score >pullFromScore)
+            atPull=false;
+        if ((*iter)->score >=acceptThreshold)
+        {
+            acceptT=false;
+            betweenT=true;
+        }
+        if ((*iter)->score >rejectThreshold)
+        {
+            rejectT=true;
+            betweenT=false;
+        }
+
+        if (atPull)
+        {
+            countAtPull++;
+            precAtPull+=t?1:0;
+        }
+        if (acceptT)
+        {
+            countAcceptT++;
+            precAcceptT+=t?1:0;
+        }
+        if (rejectT)
+        {
+            countRejectT++;
+            precRejectT+=t?1:0;
+        }
+        if (betweenT)
+        {
+            countBetweenT++;
+            precBetweenT+=t?1:0;
+        }
+    }
+    precAtPull/=countAtPull;
+    precAcceptT/=countAcceptT;
+    precRejectT/=countRejectT;
+    precBetweenT/=countBetweenT;
+
+    b->addDebugInfo(precAtPull,precAcceptT,precRejectT,precBetweenT);
+}
+#endif
+
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) {
 
     if (!need && (numLeftInRange<12 && numLeftInRange>=0) && starts.size()>1)
@@ -126,7 +195,8 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
 #ifdef TEST_MODE
-    cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
+    //cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
+
 #endif
     //sem_wait(&mutexSem);
     
@@ -137,6 +207,9 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
         return NULL;
     }
     SpottingsBatch* ret = new SpottingsBatch(ngram,id);
+#ifdef TEST_MODE
+    setDebugInfo(ret);
+#endif
     
     if ((*tracer)->score < pullFromScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<=pullFromScore)

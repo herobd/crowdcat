@@ -113,6 +113,10 @@ public:
     vector<Spotting>* feedback(int* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);
     
     bool checkIncomplete();
+
+#ifdef TEST_MODE
+    void setDebugInfo(SpottingsBatch* b);
+#endif
     
 private:
     static atomic_ulong _id;

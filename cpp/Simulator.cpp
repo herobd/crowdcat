@@ -18,7 +18,7 @@ Simulator::Simulator(string dataname, string segCSV)
     //TODO read in seg GT
     ifstream in (segCSV);
     string line;
-    getline(in,line);//header
+    //getline(in,line);//header
     while (getline(in,line))
     {
         string s;
@@ -52,6 +52,7 @@ Simulator::Simulator(string dataname, string segCSV)
         corpusXLetterStartBoundsRel.push_back(lettersStartRel);
         corpusXLetterEndBoundsRel.push_back(lettersEndRel);
     }
+    in.close();
     GlobalK::knowledge()->setCorpusXLetterBounds(&corpusXLetterStartBoundsRel,&corpusXLetterEndBoundsRel);
 
     if (dataname.compare("test")==0)
