@@ -118,12 +118,16 @@ public:
 
 #ifdef TEST_MODE
     double precAtPull, precAcceptT, precRejectT, precBetweenT;
-    void addDebugInfo(double precAtPull, double precAcceptT, double precRejectT, double precBetweenT)
+    int countAcceptT, countRejectT, countBetweenT;
+    void addDebugInfo(double precAtPull, double precAcceptT, double precRejectT, double precBetweenT, int countAcceptT, int countRejectT, int countBetweenT)
     {
         this->precAtPull=precAtPull;
         this->precAcceptT=precAcceptT;
         this->precRejectT=precRejectT;
         this->precBetweenT=precBetweenT;
+        this->countAcceptT=countAcceptT;
+        this->countRejectT=countRejectT;
+        this->countBetweenT=countBetweenT;
     }
 #endif
     

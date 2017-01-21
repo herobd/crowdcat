@@ -56,6 +56,7 @@ vector<string> Lexicon::search(string query, SearchMeta meta) const
         assert(ret1[i].compare(ret2[i])==0);
     }*/
 #ifdef TEST_MODE
+    /*
     cout << query <<": ";
     if (meta.max>0 && ret1.size()>meta.max)
         cout<<" MAXED";
@@ -63,6 +64,7 @@ vector<string> Lexicon::search(string query, SearchMeta meta) const
         for (string s : ret1)
             cout<<s<<", ";
     cout<<endl;
+    */
 #endif
     return ret1;
 }

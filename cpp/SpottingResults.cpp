@@ -62,9 +62,9 @@ void SpottingResults::add(Spotting spotting) {
     }
     else
     {
-        instancesByScore.insert(&instancesById[spotting.id]);
+        instancesByScore.insert(&instancesById.at(spotting.id));
     }
-    instancesByLocation.insert(&instancesById[spotting.id]);
+    instancesByLocation.insert(&instancesById.at(spotting.id));
     tracer = instancesByScore.begin();
     if (spotting.score>maxScore)
     {
@@ -85,8 +85,8 @@ void SpottingResults::addTrueNoScore(const SpottingExemplar& spotting) {
     //sem_wait(&mutexSem);
     assert(spotting.score != spotting.score);
     instancesById[spotting.id]=spotting;
-    instancesById[spotting.id].type=SPOTTING_TYPE_APPROVED;
-    instancesByLocation.insert(&instancesById[spotting.id]);
+    instancesById.at(spotting.id).type=SPOTTING_TYPE_APPROVED;
+    instancesByLocation.insert(&instancesById.at(spotting.id));
     classById[spotting.id]=true;
     //sem_post(&mutexSem);
 }
@@ -133,6 +133,12 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
     double precBetweenT=0;
     int countBetweenT=0;
     bool betweenT=false;
+
+    int tBetBefore=0;
+    int fBetBefore=0;
+    int tBetAfter=0;
+    int fBetAfter=0;
+
     for (auto iter=instancesByScore.begin(); iter!=instancesByScore.end(); iter++)
     {
         bool t=false;
@@ -177,13 +183,35 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
             countBetweenT++;
             precBetweenT+=t?1:0;
         }
+        if (!acceptT && atPull)
+        {
+            if (t)
+                tBetBefore++;
+            else
+                fBetBefore++;
+        }
+
+        if (!rejectT && !atPull)
+        {
+            if (t)
+                tBetAfter++;
+            else
+                fBetAfter++;
+        }
     }
+    cout<<"["<<id<<"]:"<<ngram<<" serving batch."<<endl;
+    cout<<"("<<precAcceptT/countAcceptT<<", "<<(int)precAcceptT<<", "<<(int)(countAcceptT-precAcceptT)<<") A ";
+    cout<<"("<<(0.0+tBetBefore)/(tBetBefore+fBetBefore)<<", "<<tBetBefore<<", "<<fBetBefore<<") P ";
+    cout<<"("<<(0.0+tBetAfter)/(tBetAfter+fBetAfter)<<", "<<tBetAfter<<", "<<fBetAfter<<") R ";
+    cout<<"("<<precRejectT/countRejectT<<", "<<(int)precRejectT<<", "<<(int)(countRejectT-precRejectT)<<")"<<endl;;
+
     precAtPull/=countAtPull;
     precAcceptT/=countAcceptT;
     precRejectT/=countRejectT;
     precBetweenT/=countBetweenT;
 
-    b->addDebugInfo(precAtPull,precAcceptT,precRejectT,precBetweenT);
+    b->addDebugInfo(precAtPull,precAcceptT,precRejectT,precBetweenT, countAcceptT, countRejectT, countBetweenT);
+    //cout<<"precAtPull: "<<precAtPull<<"\t
 }
 #endif
 
@@ -195,7 +223,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
 #ifdef TEST_MODE
-    //cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
+    cout <<"\ngetBatch, from:"<<pullFromScore<<"\n"<<endl;
 
 #endif
     //sem_wait(&mutexSem);
@@ -287,6 +315,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     //cout << "send: ";
     for (int i=0; i<ret->size(); i++)
     {   
+        assert(instancesById.find(ret->at(i).id) != instancesById.end());
         starts[ret->at(i).id] = chrono::system_clock::now();
         
         //time_t tt= chrono::system_clock::to_time_t ( starts[ret->at(i).id] );
@@ -366,7 +395,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         }
         else if (!resent)//someone passed, so we need to add it again, unless this is resent, in whichcase we use the old.
         { 
-            instancesByScore.insert(&instancesById[id]);
+            instancesByScore.insert(&instancesById.at(id));
             tracer = instancesByScore.begin();
         }
     }
@@ -396,6 +425,10 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         this->done=true;
 #ifdef TEST_MODE
         cout <<"["<<id<<"]:"<<ngram<<", all batches sent, cleaning up"<<endl;
+        int numAutoAccepted=0;
+        int trueAutoAccepted=0;
+        int numAutoRejected=0;
+        int trueAutoRejected=0;
 #endif
         tracer = instancesByScore.begin();
         while (tracer!=instancesByScore.end() && (*tracer)->score <= acceptThreshold)
@@ -405,7 +438,11 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             classById[(**tracer).id]=true;
             numberAccepted++;
 #ifdef NO_NAN
-        GlobalK::knowledge()->autoAccepted();
+            GlobalK::knowledge()->autoAccepted();
+#endif
+#ifdef TEST_MODE
+            numAutoAccepted++;
+            trueAutoAccepted = GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
 #endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: true"<<endl;
@@ -417,7 +454,11 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
             (**tracer).type=SPOTTING_TYPE_THRESHED;
             classById[(**tracer).id]=false;
 #ifdef NO_NAN
-        GlobalK::knowledge()->autoRejected();
+            GlobalK::knowledge()->autoRejected();
+#endif
+#ifdef TEST_MODE
+            numAutoRejected++;
+            trueAutoRejected = GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
 #endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: false"<<endl;
@@ -427,7 +468,9 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
         instancesByScore.clear();
         //cout << "hit end "<<(tracer==instancesByScore.end())<<endl;
         numberRejected = distance(tracer,instancesByScore.end());
-        
+#ifdef TEST_MODE
+        cout<<"["<<id<<"]:"<<ngram<<" AUTO accepted["<<numAutoAccepted<<"]: "<<(0.0+trueAutoAccepted)/numAutoAccepted<<"  rejected["<<numAutoRejected<<"]: "<<(0.0+trueAutoRejected)/numAutoRejected<<endl;
+#endif        
     }
     else if (!allBatchesSent && allWereSent)
     {
@@ -681,7 +724,7 @@ bool SpottingResults::EMThresholds(int swing)
         }
         difPullFromScore = pullFromScore-prevPullFromScore;
 #ifdef TEST_MODE
-        cout<<"final pull dif="<<difPullFromScore<<",  swing="<<swing<<",  lastDif="<<lastDifPullFromScore<<endl;
+        cout<<"final pull="<<pullFromScore<<" dif="<<difPullFromScore<<",  swing="<<swing<<",  lastDif="<<lastDifPullFromScore<<endl;
 #endif
         lastDifPullFromScore=difPullFromScore;
     }
@@ -833,7 +876,15 @@ bool SpottingResults::checkIncomplete()
         //cout<<pass.count()<<" minutes has past for "<<(start.first)<<endl;
         if (pass.count() > 20) //if 20 mins has passed
         {
-            instancesByScore.insert(&instancesById[start.first]);
+            unsigned long restartId=start.first;
+            if (instancesById.find(restartId) == instancesById.end())
+            {
+                if (updateMap.find(restartId) != updateMap.end())
+                    restartId = updateMap.at(start.first);
+                else
+                    assert(false && "SpottingResults::checkIncomplete() is trying to restart a non-existant spotting id");
+            }
+            instancesByScore.insert(&instancesById.at(restartId));
             tracer = instancesByScore.begin();
             incomp=true;
             //toRemove.push_back(start.first);
@@ -927,10 +978,11 @@ void SpottingResults::updateSpottingTrueNoScore(const SpottingExemplar& spotting
             testUpdateMap[best->id]=spotting.id;
 #endif
         //Add this spotting
+        assert(spotting.pageId>=0);
         instancesById[spotting.id]=spotting;
-        instancesById[spotting.id].type=SPOTTING_TYPE_APPROVED;
-        instancesById[spotting.id].score=best->score;//we replace the score so that we contribute to the thresholding
-        instancesByLocation.insert(&instancesById[spotting.id]);
+        instancesById.at(spotting.id).type=SPOTTING_TYPE_APPROVED;
+        instancesById.at(spotting.id).score=best->score;//we replace the score so that we contribute to the thresholding
+        instancesByLocation.insert(&instancesById.at(spotting.id));
         classById[spotting.id]=true;
         instancesByLocation.erase(bestIter); //erase by iterator
 
@@ -972,15 +1024,17 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
         {
             classById[spotting.id]=true;
             numberClassifiedTrue++;
+            assert(spotting.pageId>=0);
             instancesById[spotting.id]=spotting;
-            instancesByLocation.insert(&instancesById[spotting.id]);
+            instancesByLocation.insert(&instancesById.at(spotting.id));
         }
         else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
         {
             classById[spotting.id]=false;
             numberClassifiedFalse++;
+            assert(spotting.pageId>=0);
             instancesById[spotting.id]=spotting;
-            instancesByLocation.insert(&instancesById[spotting.id]);
+            instancesByLocation.insert(&instancesById.at(spotting.id));
         }
         else
         {
@@ -1003,8 +1057,9 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                         testUpdateMap[best->id]=spotting.id;
 #endif
                     //Add this spotting
+                    assert(spotting.pageId>=0);
                     instancesById[spotting.id]=spotting;
-                    instancesByLocation.insert(&instancesById[spotting.id]);
+                    instancesByLocation.insert(&instancesById.at(spotting.id));
                     instancesByLocation.erase(bestIter); //erase by iterator
 
                     //remove the old one
@@ -1012,7 +1067,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                     if (removed)
                     {
                         //add
-                        instancesByScore.insert(&instancesById[spotting.id]);
+                        instancesByScore.insert(&instancesById.at(spotting.id));
                         tracer = instancesByScore.begin();
                     }
                     else if ((best)->type==SPOTTING_TYPE_THRESHED && classById[(best)->id]==false)
@@ -1020,7 +1075,7 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                         //cout<<"{} replaced false spotting "<<spotting.score<<endl;
                         //(best)->type=SPOTTING_TYPE_NONE;
                         classById.erase((best)->id);
-                        instancesByScore.insert(&instancesById[spotting.id]);
+                        instancesByScore.insert(&instancesById.at(spotting.id));
                         tracer = instancesByScore.begin();
                     }
                     instancesById.erase(best->id);
@@ -1028,15 +1083,18 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
             }
             else
             {
+                assert(spotting.pageId>=0);
                 instancesById[spotting.id]=spotting;
-                instancesByScore.insert(&instancesById[spotting.id]);
-                instancesByLocation.insert(&instancesById[spotting.id]);
+                instancesByScore.insert(&instancesById.at(spotting.id));
+                instancesByLocation.insert(&instancesById.at(spotting.id));
                 tracer = instancesByScore.begin();
             }
         }
     }
     delete spottings;
     bool allWereSent = allBatchesSent;
+    acceptThreshold=-1;
+    rejectThreshold=-1;
     EMThresholds();
     if (allWereSent && !allBatchesSent)
     {
@@ -1083,11 +1141,27 @@ void SpottingResults::save(ofstream& out)
     out<<instancesByScore.size()+starts.size()<<"\n";
     for (Spotting* s : instancesByScore)
     {
-        out<<s->id<<"\n";
+        unsigned long sid = s->id;
+        if (instancesById.find(sid) == instancesById.end())
+        {
+            if (updateMap.find(sid) != updateMap.end())
+                sid=updateMap.at(s->id);
+            else
+                assert(false && "SpottingResults::save ran into non-existant spotting id (in instancesByScore)");
+        }
+        out<<sid<<"\n";
     }
     for (auto p : starts)
     {
-        out<<p.first<<"\n";
+        unsigned long sid = p.first;
+        if (instancesById.find(sid) == instancesById.end())
+        {
+            if (updateMap.find(sid) != updateMap.end())
+                sid=updateMap.at(p.first);
+            else
+                assert(false && "SpottingResults::save ran into non-existant spotting id (in starts)");
+        }
+        out<<sid<<"\n";
     }
 
     out<<classById.size()<<"\n";
@@ -1155,7 +1229,7 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
         Spotting s(in,pageRef);
         assert(pageRef->verify(s.pageId,s.tlx,s.tly,s.brx,s.bry));
         instancesById[s.id]=s;
-        instancesByLocation.insert(&instancesById[s.id]);
+        instancesByLocation.insert(&instancesById.at(s.id));
     }
     getline(in,line);
     size = stoi(line);
@@ -1163,7 +1237,7 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
     {
         getline(in,line);
         unsigned long sid = stoul(line);
-        instancesByScore.insert(&instancesById[sid]);
+        instancesByScore.insert(&instancesById.at(sid));
     }
     getline(in,line);
     size = stoi(line);

@@ -520,7 +520,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
     float min=999999;
     float max=-999999;
 #ifdef TEST_MODE
-    cout<<"Scoring poss  ";
+    //cout<<"Scoring poss  ";
 #endif
     for (string word : match)
     {
@@ -535,11 +535,11 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
             max=score;
 
 #ifdef TEST_MODE
-        cout<<word<<":"<<score<<", ";
+        //cout<<word<<":"<<score<<", ";
 #endif
     }
 #ifdef TEST_MODE
-    cout<<endl;
+    //cout<<endl;
 #endif
     if (min==max)
         return scores;
@@ -660,7 +660,7 @@ string Knowledge::Word::generateQuery()
         if (-1*numChars<THRESH_UNKNOWN_EST/2)
             ret += "[a-zA-Z0-9]?";
     }*/
-    cout << "query : "<<ret<<endl;
+    //cout << "query : "<<ret<<endl;
     return ret;
 }
 
@@ -697,7 +697,7 @@ void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 vector<Spotting*> Knowledge::Word::harvest()
 {
 #ifdef TEST_MODE
-    cout<<"harvesting: "<<transcription<<endl;
+    //cout<<"harvesting: "<<transcription<<endl;
 #endif
     assert (transcription[0]!='$' || transcription[transcription.length()-1]!='$');
 
@@ -1944,7 +1944,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
                 }
             }
         }
-        cout<<"findPotentailWordBoundraies: "<<minX<<", "<<minY<<", "<<maxX<<", "<<maxY<<endl;
+       // cout<<"findPotentailWordBoundraies: "<<minX<<", "<<minY<<", "<<maxX<<", "<<maxY<<endl;
         *tlx=min(s.tlx,minX);
         *tly=min(s.tly,minY);
         *brx=max(s.brx,maxX);
@@ -2014,6 +2014,8 @@ void Knowledge::Corpus::show()
 
 void Knowledge::Corpus::mouseCallBackFunc(int event, int x, int y, int flags, void* page_p)
 {
+    x*=2;
+    y*=2;
      Page* page = (Page*) page_p;
      if  ( event == cv::EVENT_LBUTTONDOWN )
      {
@@ -2101,7 +2103,7 @@ void Knowledge::Corpus::showInteractive(int pageId)
     }
     //int h =1500;
     //int w=((h+0.0)/p.second.rows)*p.second.cols;
-    //cv::resize(p.second, p.second, cv::Size(w,h));
+    cv::resize(draw,draw, cv::Size(), 0.5,0.5);
     cv::namedWindow("page", 1);
     cv::setMouseCallback("page", mouseCallBackFunc, page);
     cv::imshow("page",draw);
@@ -2261,7 +2263,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             }*/
             page = new Page(&spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
             pages[page->getId()] = page;
-            cout<<"new page "<<pageId<<endl;
+            //cout<<"new page "<<pageId<<endl;
         }
         else
         {

@@ -115,6 +115,9 @@ MasterQueue::MasterQueue(int contextPad) : contextPad(contextPad)
     //done=0;
     numCFalse=numCTrue=0;
 
+#ifdef TEST_MODE
+    forceNgram="";
+#endif
     
     ///end testing
 }
@@ -316,6 +319,12 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         
         sem_t* sem = ele.second.first;
         SpottingResults* res = ele.second.second;
+#ifdef TEST_MODE
+        if (!need && forceNgram.size()>0 && forceNgram.compare(res->ngram)!=0)
+            continue;
+        if (forceNgram.size()>0)
+            cout<<"Force ngram is on : "<<forceNgram<<endl;
+#endif
         bool succ = 0==sem_trywait(sem);
         if (succ)
         {
@@ -583,7 +592,7 @@ void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings
 unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
 #ifdef TEST_MODE
-    cout<<"updateSpottingResults called from MasterQueue. "<<spottings->front().ngram<<endl;
+    //cout<<"updateSpottingResults called from MasterQueue. "<<spottings->front().ngram<<endl;
 #endif
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
@@ -777,4 +786,7 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     getline(in,line);
     contextPad = stoi(line);
     //in.close();
+#ifdef TEST_MODE
+    forceNgram="";
+#endif
 }

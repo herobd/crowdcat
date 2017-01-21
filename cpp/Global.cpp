@@ -223,6 +223,18 @@ void GlobalK::loadImage(cv::Mat& im, ifstream& in)
     }
 }
 
+string GlobalK::currentDateTime() //from http://stackoverflow.com/a/10467633/1018830
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+    // for more information about date/time format
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+
+    return buf;
+}
 #ifdef NO_NAN
 
 void GlobalK::sentSpottings()
@@ -252,18 +264,6 @@ void GlobalK::autoRejected()
 void GlobalK::newExemplar()
 {
     newExemplarSpotted++;
-}
-string GlobalK::currentDateTime() //from http://stackoverflow.com/a/10467633/1018830
-{
-    time_t     now = time(0);
-    struct tm  tstruct;
-    char       buf[80];
-    tstruct = *localtime(&now);
-    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
-    // for more information about date/time format
-    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
-
-    return buf;
 }
 void GlobalK::saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0, string misTrans,
                        float accTrans_IV, float pWordsTrans_IV, float pWords80_100_IV, float pWords60_80_IV, float pWords40_60_IV, float pWords20_40_IV, float pWords0_20_IV, float pWords0_IV, string misTrans_IV)
@@ -370,7 +370,7 @@ bool GlobalK::ngramAt(string ngram, int pageId, int tlx, int tly, int brx, int b
     auto iterL = wordBounds[pageId].lower_bound(searchL);
     auto iterU = wordBounds[pageId].upper_bound(searchU);
 
-    int bestOverlap =0;
+    int bestOverlap =-1;
     const WordBound* best;
     while (iterL != iterU)
     {
@@ -382,6 +382,7 @@ bool GlobalK::ngramAt(string ngram, int pageId, int tlx, int tly, int brx, int b
             bestOverlap = overlap;
             best = &(*iterL);
         }
+        iterL++;
     }
     int loc = best->text.find(ngram);
     if (loc == string::npos)

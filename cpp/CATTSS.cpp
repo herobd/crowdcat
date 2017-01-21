@@ -64,6 +64,7 @@ CATTSS::CATTSS( string lexiconFile,
     ifstream in (savePrefix+"_CATTSS.sav");
     if (in.good())
     {
+        cout<<"Load file found."<<endl;
         Lexicon::instance()->load(in);
         corpus = new Knowledge::Corpus(in);
         corpus->loadSpotter(spottingModelPrefix);
@@ -343,6 +344,14 @@ void CATTSS::misc(string task)
         else if (task.compare("save")==0)
         {
             save();
+        }
+        else if (task.length()>11 && task.substr(0,11).compare("forceNgram:")==0)
+        {
+            masterQueue->forceNgram = task.substr(11);
+        }
+        else if (task.compare("unforce")==0 || task.compare("unforceNgram")==0)
+        {
+            masterQueue->forceNgram="";
         }
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {

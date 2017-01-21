@@ -31,6 +31,7 @@ class BatchWraperSpottings: public BatchWraper
 
 #ifdef TEST_MODE
         double precAtPull, precAcceptT, precRejectT, precBetweenT;
+        int countAcceptT, countRejectT, countBetweenT;
 #endif
         
     public:

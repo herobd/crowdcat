@@ -21,8 +21,8 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-//var spottingaddon = require("./cpp/build/Debug/spottingaddon");
-var spottingaddon = require("./cpp/build/Release/spottingaddon")
+var spottingaddon = require("./cpp/build/Debug/spottingaddon");
+//var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 numberOfTests=2;
 
@@ -66,12 +66,12 @@ var showHeight=1000;
 var showMilli=4000;
 
 var saveMode=false;
-var timingTestMode=true;
-var trainUsers=true;
-var debug=false;
+var timingTestMode=false;
+var trainUsers=false;
+var debug=true;
 
-if (saveMode)
-    savePrefix+=datasetName
+//if (saveMode)
+savePrefix+=datasetName
 if (timingTestMode)
 {
     numThreadsSpotting=0;
@@ -428,6 +428,34 @@ var ControllerApp = function(port) {
         self.app.get('/xxx/show_results', function(req, res) {
             if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
                 spottingaddon.showCorpus(function (err) {
+                    if (err) console.log(err);
+                    res.send('ok');
+                });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/xxx/show', function(req, res) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
+                var page = 1;
+                if (req.query.page) {
+                    page = +req.query.page;
+                }
+                spottingaddon.showInteractive(page,function (err) {
+                    if (err) console.log(err);
+                    res.send('ok');
+                });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/xxx/force', function(req, res) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
+                var ngram = '';
+                if (req.query.ngram) {
+                    ngram = req.query.ngram;
+                }
+                spottingaddon.forceNgram(ngram,function (err) {
                     if (err) console.log(err);
                     res.send('ok');
                 });

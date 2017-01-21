@@ -51,6 +51,9 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
     precAcceptT = batch->precAcceptT;
     precRejectT = batch->precRejectT;
     precBetweenT = batch->precBetweenT;
+    countAcceptT = batch->countAcceptT;
+    countRejectT = batch->countRejectT;
+    countBetweenT = batch->countBetweenT;
 #endif
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;
@@ -87,6 +90,9 @@ void BatchWraperSpottings::doCallback(Callback *callback)
     debug->Set(Nan::New("precAcceptT").ToLocalChecked(), Nan::New(precAcceptT));
     debug->Set(Nan::New("precRejectT").ToLocalChecked(), Nan::New(precRejectT));
     debug->Set(Nan::New("precBetweenT").ToLocalChecked(), Nan::New(precBetweenT));
+    debug->Set(Nan::New("countAcceptT").ToLocalChecked(), Nan::New(countAcceptT));
+    debug->Set(Nan::New("countRejectT").ToLocalChecked(), Nan::New(countRejectT));
+    debug->Set(Nan::New("countBetweenT").ToLocalChecked(), Nan::New(countBetweenT));
 #endif
 
     Local<Value> argv[] = {

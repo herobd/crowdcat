@@ -30,6 +30,8 @@ class PageRef
 
     bool verify(int pageId, int tlx, int tly, int brx, int bry) const
     {
+        if (pageId<0)
+            return false;
         //check against words
         bool found=false;
         for (const Location& loc : words.at(pageId))

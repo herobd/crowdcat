@@ -688,7 +688,7 @@ function handleSpottingsBatch(jres) {
     }
     var debugInfo;
     if (jres.debug!=undefined)
-        debufInfo = jres.debug;
+        debugInfo = jres.debug;
     else
         debugInfo={precAtPull:-2, precAcceptT:-2, precRejectT:-2, precBetweenT:-2};    
     if (jres.resultsId!=='X') {
@@ -887,7 +887,11 @@ function highlightLast() {
             if (header_s && header_s.length>0 &&!header_s[0].classList.contains('ondeck'))
                 header_s[0].classList.toggle('ondeck');
             console.log('Batch SpottingResults info:');
-            console.log(batchQueue[0].debugInfo);
+            console.log('Prec at pull:   \t'+batchQueue[0].debugInfo.precAtPull);
+            console.log('Prec accept['+batchQueue[0].debugInfo.countAcceptT+']:\t'+batchQueue[0].debugInfo.precAcceptT);
+            console.log('Prec between['+batchQueue[0].debugInfo.countBetweenT+']:\t'+batchQueue[0].debugInfo.precBetweenT);
+            console.log('Prec reject['+batchQueue[0].debugInfo.countRejectT+']:\t'+batchQueue[0].debugInfo.precRejectT);
+            //console.log(batchQueue[0].debugInfo);
             
         }
         else if (batchQueue[0].type=='m') {

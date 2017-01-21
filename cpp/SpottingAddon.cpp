@@ -203,6 +203,13 @@ NAN_METHOD(showInteractive) {
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "showInteractive:"+to_string(page)));
 }
+NAN_METHOD(forceNgram) {
+    v8::String::Utf8Value ngramNAN(info[0]);
+    string ngram = string(*ngramNAN);
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "forceNgram:"+ngram));
+}
 /*NAN_METHOD(showProgress) {
     int height = To<int>(info[0]).FromJust();
     int width = To<int>(info[1]).FromJust();
@@ -456,6 +463,8 @@ NAN_MODULE_INIT(Init) {
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("showInteractive").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showInteractive)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("forceNgram").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(forceNgram)).ToLocalChecked());
     //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 

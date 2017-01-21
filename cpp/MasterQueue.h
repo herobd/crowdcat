@@ -130,5 +130,8 @@ public:
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();
+#ifdef TEST_MODE
+    string forceNgram;
+#endif
 };
 #endif
