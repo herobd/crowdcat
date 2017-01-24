@@ -1,7 +1,7 @@
 #include "SpottingResults.h"
 
 #include <ctime>
-
+#include <random>
 
 atomic_ulong Spotting::_id;
 atomic_ulong SpottingResults::_id;
@@ -36,6 +36,11 @@ SpottingResults::SpottingResults(string ngram, int contextPad) :
     //pullFromScore=splitThreshold;
     momentum=1.2;
     lastDifPullFromScore=0;
+#ifdef GRAPH_SPOTTING_RESULTS
+    undoneGraphName="save/graph_undone_"+ngram+".png";
+    fullGraphName="save/graph_full_"+ngram+".png";
+    //cv::namedWindow(undoneGraphName);
+#endif
 }
 
 void SpottingResults::add(Spotting spotting) {
@@ -138,7 +143,14 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
     int fBetBefore=0;
     int tBetAfter=0;
     int fBetAfter=0;
-
+#ifdef GRAPH_SPOTTING_RESULTS
+    //cv::Mat newFullLine = cv::Mat::zeros(2,fullGraph.cols,CV_8UC3);
+    //int inFull=0;
+    if (undoneGraph.cols==0)
+        undoneGraph = cv::Mat::zeros(1,instancesByScore.size()+3,CV_8UC3);
+    cv::Mat newUndoneLine = cv::Mat::zeros(2,undoneGraph.cols,CV_8UC3);
+    int inUndone=0;
+#endif
     for (auto iter=instancesByScore.begin(); iter!=instancesByScore.end(); iter++)
     {
         bool t=false;
@@ -150,17 +162,28 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
             (*iter)->gt=t;
         }
 
-        if ((*iter)->score >pullFromScore)
+        if ((*iter)->score >=pullFromScore && atPull)
+        {
             atPull=false;
-        if ((*iter)->score >=acceptThreshold)
+#ifdef GRAPH_SPOTTING_RESULTS
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+#endif
+        }
+        if ((*iter)->score >=acceptThreshold && acceptT)
         {
             acceptT=false;
             betweenT=true;
+#ifdef GRAPH_SPOTTING_RESULTS
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+#endif
         }
-        if ((*iter)->score >rejectThreshold)
+        if ((*iter)->score >rejectThreshold && betweenT)
         {
             rejectT=true;
             betweenT=false;
+#ifdef GRAPH_SPOTTING_RESULTS
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+#endif
         }
 
         if (atPull)
@@ -198,12 +221,83 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
             else
                 fBetAfter++;
         }
+#ifdef GRAPH_SPOTTING_RESULTS
+        if (t)
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(0,205,0);
+        else
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(0,0,205);
+#endif
     }
     cout<<"["<<id<<"]:"<<ngram<<" serving batch."<<endl;
     cout<<"("<<precAcceptT/countAcceptT<<", "<<(int)precAcceptT<<", "<<(int)(countAcceptT-precAcceptT)<<") A ";
     cout<<"("<<(0.0+tBetBefore)/(tBetBefore+fBetBefore)<<", "<<tBetBefore<<", "<<fBetBefore<<") P ";
     cout<<"("<<(0.0+tBetAfter)/(tBetAfter+fBetAfter)<<", "<<tBetAfter<<", "<<fBetAfter<<") R ";
     cout<<"("<<precRejectT/countRejectT<<", "<<(int)precRejectT<<", "<<(int)(countRejectT-precRejectT)<<")"<<endl;;
+
+#ifdef GRAPH_SPOTTING_RESULTS
+    undoneGraph.push_back(newUndoneLine);
+    //if (undoneGraph.rows-1%4==0)
+        cv::imwrite(undoneGraphName,undoneGraph);
+    //cv::imshow(undoneGraphName,undoneGraph);
+    //cv::waitKey(100);
+    atPull=true;
+    acceptT=true;
+    rejectT=false;
+    betweenT=false;
+    if (fullInstancesByScore.size() < instancesById.size())
+    {
+        fullInstancesByScore.clear();
+        for (auto p : instancesById)
+            fullInstancesByScore.insert(&(instancesById.at(p.first)));
+    }
+
+    if (fullGraph.cols==0)
+        fullGraph = cv::Mat::zeros(1,fullInstancesByScore.size()+3,CV_8UC3);
+    cv::Mat newFullLine = cv::Mat::zeros(2,fullGraph.cols,CV_8UC3);
+    int inFull=0;
+    for (auto iter=fullInstancesByScore.begin(); iter!=fullInstancesByScore.end(); iter++)
+    {
+        bool t=false;
+        if ((*iter)->gt==1)
+            t=true;
+        else if ((*iter)->gt!=0)
+        {
+            t = GlobalK::knowledge()->ngramAt(ngram, (*iter)->pageId, (*iter)->tlx, (*iter)->tly, (*iter)->brx, (*iter)->bry);
+            (*iter)->gt=t;
+        }
+
+        int color=205;
+        if (instancesByScore.find(*iter) == instancesByScore.end())
+            color = 100;
+
+        if ((*iter)->score >=pullFromScore && atPull)
+        {
+            atPull=false;
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+        }
+        if ((*iter)->score >=acceptThreshold && acceptT)
+        {
+            acceptT=false;
+            betweenT=true;
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+        }
+        if ((*iter)->score >rejectThreshold && betweenT)
+        {
+            rejectT=true;
+            betweenT=false;
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+        }
+        if (t)
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(0,color,0);
+        else
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(0,0,color);
+    } 
+    fullGraph.push_back(newFullLine);
+    //if (fullGraph.rows-1%4==0)
+        cv::imwrite(fullGraphName,fullGraph);
+    //cv::imshow(fullGraphName,fullGraph);
+    //cv::waitKey(100);
+#endif
 
     precAtPull/=countAtPull;
     precAcceptT/=countAcceptT;
@@ -238,7 +332,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
 #ifdef TEST_MODE
     setDebugInfo(ret);
 #endif
-    
+    /*
     if ((*tracer)->score < pullFromScore)
         while(tracer!=instancesByScore.end() && (*tracer)->score<=pullFromScore)
             tracer++;
@@ -249,9 +343,9 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     if ((tracer!=instancesByScore.end() && (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin())
         tracer--;
     
-    //*The commented out regoins seem prinicpled, but empirical results showed that it was better to leave them out
-    //*if ((*tracer)->score<=acceptThreshold)
-    //*    tracer++;
+    // *The commented out regoins seem prinicpled, but empirical results showed that it was better to leave them out
+    // *if ((*tracer)->score<=acceptThreshold)
+    // *    tracer++;
     if (tracer==instancesByScore.end())
         tracer--;
     
@@ -265,7 +359,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
             *done=true;
         }
         
-        if ((i%2==0 || tracer==instancesByScore.end() || (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin() )//*&& (*tracer)->score>acceptThreshold)
+        if ((i%2==0 || tracer==instancesByScore.end() || (*tracer)->score>=rejectThreshold) && tracer!=instancesByScore.begin() )// *&& (*tracer)->score>acceptThreshold)
         {
             tracer--;
         }
@@ -305,7 +399,103 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
             //cout<<"now i'm "<<(*tracer)->score<<", accept "<<acceptThreshold<<", reject "<<rejectThreshold<<endl;
         }
     }
-    
+    */
+    set<float> scoresToDraw;
+    //normal_distribution<float> distribution(pullFromScore,((pullFromScore-acceptThreshold)+(rejectThreshold-pullFromScore))/4.0);
+    uniform_real_distribution<float> distribution(acceptThreshold,rejectThreshold);
+    for (int i=0; i<min(toRet,(unsigned int)instancesByScore.size()); i++)
+    {
+        float v = distribution(generator);
+        if (v<=acceptThreshold)
+            v=2*acceptThreshold-v;
+        if (v>=rejectThreshold)
+            v=2*rejectThreshold-v;
+        scoresToDraw.insert(v);
+    }
+
+    auto iterR = instancesByScore.end();
+    do
+    {
+        iterR--;
+    } while((*iterR)->score >rejectThreshold);
+    for (float drawScore : scoresToDraw)
+    {
+        auto iter=iterR;
+        while ((*iter)->score >drawScore && iter!=instancesByScore.begin())
+        {
+            iter--;
+        }
+        if ((*iter)->score<acceptThreshold && iter!=instancesByScore.end())
+        {
+            iter++;
+            if (iter==instancesByScore.end())
+                iter--;
+        }
+        if (iter==iterR)
+        {
+            if (iterR!=instancesByScore.begin())
+            {
+                iterR--;
+            }
+            else
+            {
+                iterR++;
+            }
+        }
+
+        SpottingImage tmp(**iter,maxWidth,contextPad,color,prevNgram);
+        ret->push_back(tmp);
+        
+        instancesByScore.erase(iter);
+    }
+    //check if done
+    if (instancesByScore.size()<=1)
+        *done=true;
+    else if ((*iterR)->score > rejectThreshold)
+    {
+        if (iterR==instancesByScore.begin())
+            *done=true;
+        else
+        {
+            iterR--;
+            if ((*iterR)->score < acceptThreshold)
+                *done=true;
+        }
+    }
+    else if ((*iterR)->score < acceptThreshold)
+        *done=true;
+    /*
+    auto iter = instancesByScore.begin();
+    auto iterA = iter;
+    while(iterA->score <acceptThreshold)
+        iterA++;
+    for (float drawScore : scoresToDraw)
+    {
+        iter=iterA;
+        while ((*iter)->score <=drawScore && iter!=instancesByScore.end())
+        {
+            iter++;
+        }
+        if (((*iter)->score>rejectThreshold && iter!=instancesByScore.begin()) || iter==instancesByScore.end())
+        {
+            iter--;
+        }
+        if (iter==iterA)
+        {
+            iterA++;
+            if (iterA==instancesByScore.end() && iter!=instancesByScore.begin())
+            {
+                iterA-=2;
+            }
+        }
+
+        SpottingImage tmp(**iter,maxWidth,contextPad,color,prevNgram);
+        ret->push_back(tmp);
+        
+        instancesByScore.erase(iter);
+    }
+    */
+
     
     
     if (*done)
@@ -442,7 +632,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
 #endif
 #ifdef TEST_MODE
             numAutoAccepted++;
-            trueAutoAccepted = GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
+            trueAutoAccepted += GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
 #endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: true"<<endl;
@@ -458,7 +648,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
 #endif
 #ifdef TEST_MODE
             numAutoRejected++;
-            trueAutoRejected = GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
+            trueAutoRejected += GlobalK::knowledge()->ngramAt(ngram, (**tracer).pageId, (**tracer).tlx, (**tracer).tly, (**tracer).brx, (**tracer).bry)?1:0;
 #endif
 #ifdef TEST_MODE_LONG
             cout <<" "<<(**tracer).id<<"[tlx:"<<(**tracer).tlx<<", score:"<<(**tracer).score<<"]: false"<<endl;
@@ -650,13 +840,13 @@ bool SpottingResults::EMThresholds(int swing)
         float acceptThreshold1 = falseMean-numStdDevs*sqrt(falseVariance);
         float rejectThreshold1 = trueMean+numStdDevs*sqrt(trueVariance);
         float acceptThreshold2 = trueMean-numStdDevs*sqrt(trueVariance);
-        float rejectThreshold2 = falseMean+numStdDevs*sqrt(falseVariance);
+        float rejectThreshold2 = falseMean-numStdDevs*sqrt(falseVariance);
         //float prevAcceptThreshold=acceptThreshold;
         //float prevRejectThreshold=rejectThreshold;
         if (falseVariance!=0 && trueVariance!=0)
         {
             acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
-            rejectThreshold = min( min(rejectThreshold1,rejectThreshold2), maxScore);
+            rejectThreshold = min( max(rejectThreshold1,rejectThreshold2), maxScore);
         }
         else if (falseVariance==0)
         {
@@ -700,8 +890,9 @@ bool SpottingResults::EMThresholds(int swing)
         pullFromScore = trueMean;*/
     //}
     float prevPullFromScore = pullFromScore;
-    pullFromScore = trueMean-sqrt(trueVariance);
-    if (!init)
+    pullFromScore = (acceptThreshold+rejectThreshold)/2.0;// -sqrt(trueVariance);
+    //pullFromScore = trueMean-sqrt(trueVariance);
+    /*if (!init)
     {
         float difPullFromScore = pullFromScore-prevPullFromScore;
 #ifdef TEST_MODE
@@ -727,7 +918,7 @@ bool SpottingResults::EMThresholds(int swing)
         cout<<"final pull="<<pullFromScore<<" dif="<<difPullFromScore<<",  swing="<<swing<<",  lastDif="<<lastDifPullFromScore<<endl;
 #endif
         lastDifPullFromScore=difPullFromScore;
-    }
+    }*/
 
     //safe gaurd
     if (pullFromScore>rejectThreshold)
@@ -1251,4 +1442,9 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef)
     tracer = instancesByScore.begin();
     getline(in,line);
     contextPad = stoi(line);
+#ifdef GRAPH_SPOTTING_RESULTS
+    undoneGraphName="save/graph_undone_"+ngram+".png";
+    //cv::namedWindow(undoneGraphName);
+    fullGraphName="save/graph_full_"+ngram+".png";
+#endif
 }

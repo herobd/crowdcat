@@ -38,7 +38,7 @@ typedef Graph<float,float,float> GraphType;
 #define OVERLAP_LINE_THRESH 0.9
 #define OVERLAP_WORD_THRESH 0.45
 #define THRESH_UNKNOWN_EST 0.3
-#define THRESH_LEXICON_LOOKUP_COUNT 50
+#define THRESH_LEXICON_LOOKUP_COUNT 49
 //#define THRESH_SCORING 1.0
 #define LOW_COUNT_PRUNE_THRESH 5
 #define LOW_COUNT_SCORE_THRESH 0.75
@@ -104,6 +104,7 @@ private:
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
     vector<Spotting*> harvest();
+    bool removeWorstSpotting(unsigned long batchId=0);//Returns whether a spotting was removed. Accepts batchId to add to removedSpottings so it can be redeemed in a resend of the batch
 #ifdef TEST_MODE
     void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word, cv::Mat& showA);
 #else

@@ -46,7 +46,7 @@ void GlobalK::setSimSave(string file)
     trackFile.open(file,ofstream::app|ofstream::out);
     if (!appending)
     {
-        trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted,";
+        trackFile<<"time,accuracyTrans,pWordsTrans,pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,transSent,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted,badPrunes";
         trackFile<<"accuracyTrans_IV,pWordsTrans_IV,pWords80_100_IV,pWords60_80_IV,pWords40_60_IV,pWords20_40_IV,pWords0_20_IV,pWords0_IV,misTrans,misTrans_IV"<<endl;
     }
 
@@ -268,7 +268,7 @@ void GlobalK::newExemplar()
 void GlobalK::saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0, string misTrans,
                        float accTrans_IV, float pWordsTrans_IV, float pWords80_100_IV, float pWords60_80_IV, float pWords40_60_IV, float pWords20_40_IV, float pWords0_20_IV, float pWords0_IV, string misTrans_IV)
 {
-    track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<",";
+    track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<<pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<transSent<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<","<<badPrunes<<",";
     track << accTrans_IV<<","<<pWordsTrans_IV<<","<<pWords80_100_IV<<","<<pWords60_80_IV<<","<<pWords40_60_IV<<","<<pWords20_40_IV<<","<<pWords0_20_IV<<","<<pWords0_IV<<","<<misTrans<<","<<misTrans_IV<<endl;
     //track+=currentDateTime()+","+accTrans+","+pWordsTrans+","+pWords80_100+","+pWords60_80+","+pWords40_60+","+pWords20_40+","+pWords0_20+","+pWords0+","+transSent+","+spotSent+","+spotAccept+","+spotReject+","+spotAutoAccept+","+spotAutoReject+","+newExemplarSpotted+"\n";
     transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;

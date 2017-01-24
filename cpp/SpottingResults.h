@@ -161,6 +161,7 @@ private:
 
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
     multiset<Spotting*,scoreComp>::iterator tracer;
+    default_random_engine generator;
     
     //SpottingImage getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram);
    
@@ -175,6 +176,13 @@ private:
 
     //How much to pad (top and bottom) images sent to users
     int contextPad;
+#ifdef GRAPH_SPOTTING_RESULTS
+    string undoneGraphName;
+    cv::Mat undoneGraph;
+    string fullGraphName;
+    cv::Mat fullGraph;
+    multiset<Spotting*,scoreComp> fullInstancesByScore;
+#endif
 };
 
 #endif

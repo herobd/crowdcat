@@ -81,6 +81,7 @@ class GlobalK
         atomic_int spotAutoAccept;
         atomic_int spotAutoReject;
         atomic_int newExemplarSpotted;
+        atomic_int badPrunes;
         ofstream trackFile;
 
         stringstream track;
@@ -120,6 +121,7 @@ class GlobalK
         void rejected();
         void autoAccepted();
         void autoRejected();
+        void badPrune(){badPrunes++;}
         void newExemplar();
         void saveTrack(float accTrans, float pWordsTrans, float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0, string misTrans,
                        float accTrans_IV, float pWordsTrans_IV, float pWords80_100_IV, float pWords60_80_IV, float pWords40_60_IV, float pWords20_40_IV, float pWords0_20_IV, float pWords0_IV, string misTrans_IV);

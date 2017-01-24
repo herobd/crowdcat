@@ -1,5 +1,5 @@
 #include "CATTSS.h"
-
+//
 
 void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c)
 {
@@ -198,7 +198,9 @@ CATTSS::CATTSS( string lexiconFile,
     incompleteChecker->detach();
     showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
+#ifndef GRAPH_SPOTTING_RESULTS
     spottingQueue->run(numSpottingThreads);
+#endif
     run(numTaskThreads);
     //test
     /*
@@ -345,6 +347,7 @@ void CATTSS::misc(string task)
         {
             save();
         }
+#ifdef TEST_MODE
         else if (task.length()>11 && task.substr(0,11).compare("forceNgram:")==0)
         {
             masterQueue->forceNgram = task.substr(11);
@@ -353,6 +356,7 @@ void CATTSS::misc(string task)
         {
             masterQueue->forceNgram="";
         }
+#endif
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));

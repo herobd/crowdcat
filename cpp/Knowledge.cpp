@@ -311,27 +311,36 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
     }
     else
     {
-        if (resend)
+        bool removedSpotting = removeWorstSpotting(batchId);
+        if (removedSpotting)
         {
-            //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
-            auto s = removedSpottings.find(batchId);
-            if (s != removedSpottings.end())
+            newBatch=queryForBatch(newExemplars);
+        }
+        else
+        {
+            //This code should never run, now that removeWorstSpotting() removes a spotting each call
+            if (resend)
             {
-                for (Spotting& spotting : s->second)
-                    spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
-                removedSpottings.erase(s);
-            }
+                //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
+                auto s = removedSpottings.find(batchId);
+                if (s != removedSpottings.end())
+                {
+                    for (Spotting& spotting : s->second)
+                        spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
+                    removedSpottings.erase(s);
+                }
 
+            }
+            vector<Spotting> removed;
+            for (auto p : spottings)
+            {
+                removed.push_back(p.second);
+            }
+            removedSpottings[batchId]=removed;
+            spottings.clear();
+            toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+            harvested.clear();
         }
-        vector<Spotting> removed;
-        for (auto p : spottings)
-        {
-            removed.push_back(p.second);
-        }
-        removedSpottings[batchId]=removed;
-        spottings.clear();
-        toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
-        harvested.clear();
     }
     pthread_rwlock_unlock(&lock);
 #ifdef TEST_MODE
@@ -447,17 +456,61 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
         }
         else if (matches.size()==0 && !loose)
         {
-            loose=true;
-            return queryForBatch(newExemplars);
-            //OoV or something is wrong. Return as manual batch.
-            //But we'll do it later to keep the state of the Corpus's queue good.
-            //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+            if (!loose)
+            {
+                loose=true;
+                return queryForBatch(newExemplars);
+            }
+            else
+            {
+                bool removedSpotting = removeWorstSpotting();
+                if (removedSpotting)
+                    return queryForBatch(newExemplars);
+                //OoV or something is wrong. Return as manual batch.
+                //But we'll do it later to keep the state of the Corpus's queue good.
+                //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+            }
         }
     }
     if (ret!=NULL)
         sentBatchId=ret->getId();
     return ret;
 }
+
+bool Knowledge::Word::removeWorstSpotting(unsigned long batchId)
+{
+    if (spottings.size()==0)
+        return false;
+    //curretly removes auto-accepted spottings, and then the highest scored spotting
+    float maxScore=-9999;
+    auto maxIter = spottings.begin();
+    auto iter = spottings.begin();
+    while (iter!=spottings.end())
+    {
+        if (iter->second.type==SPOTTING_TYPE_THRESHED)
+        {
+            if (batchId!=0)
+                removedSpottings[batchId].insert(iter->second);
+            iter=spottings.erase(iter);
+            return true;//only do first
+        }
+        else
+        {
+            if (iter->second.score>maxScore)
+            {
+                maxScore = iter->second.score;
+                maxIter=iter;
+            }
+            iter++;
+    }
+    spottings.erase(maxIter);
+    if (batchId!=0)
+        removedSpottings[batchId].insert(maxIter->second);
+
+    //can we fix spotting boundaries? loose should do this to some degree...
+    return true;
+}
+
 vector<string> Knowledge::Word::getRestrictedLexicon(int max)
 {
 #ifdef TEST_MODE
@@ -558,6 +611,16 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
         multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
         //for (string m : match)
         //    ret.insert(make_pair(0.1,m));
+#ifdef TEST_MODE
+        for (auto iter =scores.lower_bound(thresh); iter!=scores.end(); iter++)
+            if (iter->second.compare(gt)==0)
+                cout<<"[!]Pruning discarded correct: "<<gt<<endl;
+#endif
+#ifdef NO_NAN
+        for (auto iter =scores.lower_bound(thresh); iter!=scores.end(); iter++)
+            if (iter->second.compare(gt)==0)
+                GlobalK::knowledge()->badPrune();
+#endif
         return ret;
     }
     else
@@ -2104,7 +2167,7 @@ void Knowledge::Corpus::showInteractive(int pageId)
     //int h =1500;
     //int w=((h+0.0)/p.second.rows)*p.second.cols;
     cv::resize(draw,draw, cv::Size(), 0.5,0.5);
-    cv::namedWindow("page", 1);
+    cv::namedWindow("page");
     cv::setMouseCallback("page", mouseCallBackFunc, page);
     cv::imshow("page",draw);
     cv::waitKey();

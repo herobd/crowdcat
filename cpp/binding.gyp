@@ -38,7 +38,7 @@
                     "TrainingBatchWraperTranscription.h", "TrainingBatchWraperTranscription.cpp",
                     "SpecialBatchRetrieveWorker.cpp"
                 ],
-      "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DTEST_MODE"],
+      "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DTEST_MODE", "-DGRAPH_SPOTTING_RESULTS"],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/intel_index/EmbAttSpotter"],
