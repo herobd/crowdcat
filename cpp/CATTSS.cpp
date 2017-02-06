@@ -7,40 +7,55 @@ void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c
     nice(3);
     //this_thread::sleep_for(chrono::hours(1));
     //cout <<"kill is "<<q->kill.load()<<endl;
-    while(!q->kill.load()) {
+#ifdef NO_NAN
+    int count=0;
+#endif
+    while(!q->kill.load() && cattss->getCont()) {
         //cout <<"begin sleep"<<endl;
         this_thread::sleep_for(chrono::minutes(CHECK_SAVE_TIME));
-        q->checkIncomplete();
-        c->checkIncomplete();
-        cattss->save();
+        if (!q->kill.load() && cattss->getCont())
+        {
+            cattss->save();
 #ifdef NO_NAN
-        GlobalK::knowledge()->writeTrack();
+            GlobalK::knowledge()->writeTrack();
+            if (++count % 39 == 0)
+            {
+                q->checkIncomplete();
+                c->checkIncomplete();
+            }
+#else
+            q->checkIncomplete();
+            c->checkIncomplete();
 #endif
+        }
     }
 }
-void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
+void showSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
 {
     //This is the lowest priority of the systems threads
     nice(3);
 #ifdef NO_NAN
     int count=0;
 #endif
-    while(!q->kill.load()) {
+    while(!q->kill.load() && cattss->getCont()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
-        c->showProgress(height,width);
-#ifdef NO_NAN
-        if (count++ % 5==0) //every 20 seconds
+        if (!q->kill.load() && cattss->getCont())
         {
-            string misTrans;
-            float accTrans,pWordsTrans;
-            float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
-            string misTrans_IV;
-            float accTrans_IV,pWordsTrans_IV;
-            float pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV;
-            c->getStats(&accTrans,&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0, &misTrans,
-                        &accTrans_IV,&pWordsTrans_IV, &pWords80_100_IV, &pWords60_80_IV, &pWords40_60_IV, &pWords20_40_IV, &pWords0_20_IV, &pWords0_IV, &misTrans_IV);
-            GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0, misTrans,
-                                            accTrans_IV,pWordsTrans_IV, pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV, misTrans_IV);
+            c->showProgress(height,width);
+#ifdef NO_NAN
+            if (count++ % 5==0) //every 20 seconds
+            {
+                string misTrans;
+                float accTrans,pWordsTrans;
+                float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
+                string misTrans_IV;
+                float accTrans_IV,pWordsTrans_IV;
+                float pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV;
+                c->getStats(&accTrans,&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0, &misTrans,
+                            &accTrans_IV,&pWordsTrans_IV, &pWords80_100_IV, &pWords60_80_IV, &pWords40_60_IV, &pWords20_40_IV, &pWords0_20_IV, &pWords0_IV, &misTrans_IV);
+                GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0, misTrans,
+                                                accTrans_IV,pWordsTrans_IV, pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV, misTrans_IV);
+            }
         }
 #endif
     }
@@ -196,7 +211,7 @@ CATTSS::CATTSS( string lexiconFile,
     //should be priority 77 
     incompleteChecker = new thread(checkIncompleteSleeper,this,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
-    showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
+    showChecker = new thread(showSleeper,this,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
 #ifndef GRAPH_SPOTTING_RESULTS
     spottingQueue->run(numSpottingThreads);
@@ -250,7 +265,7 @@ CATTSS::CATTSS( string lexiconFile,
 }
 BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 {
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     try
     {
 #else
@@ -276,7 +291,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
             return ret;
         else
             return new BatchWraperBlank();
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     }
     catch (exception& e)
     {
@@ -308,7 +323,7 @@ void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
 
 void CATTSS::misc(string task)
 {
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     try
     {
 #endif
@@ -366,7 +381,7 @@ void CATTSS::misc(string task)
             else
                 cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
         }*/
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     }
     catch (exception& e)
     {
@@ -419,7 +434,7 @@ void CATTSS::threadLoop()
     while(1)
     {
         
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
         try
         {
 #endif
@@ -509,7 +524,7 @@ void CATTSS::threadLoop()
             }
             else
                 break; //END
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
         }
         catch (exception& e)
         {

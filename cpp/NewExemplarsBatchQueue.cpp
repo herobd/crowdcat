@@ -258,7 +258,13 @@ void NewExemplarsBatchQueue::needExemplar(string ngram)
 void NewExemplarsBatchQueue::save(ofstream& out)
 {
     lock();
-    out<<(queue.size()+returnMap.size())<<"\n";
+    int returnMapSize = 0;
+    for (auto p : returnMap)
+    {
+        returnMapSize+=p.second->size();
+    }
+
+    out<<(queue.size()+returnMapSize)<<"\n";
     for (auto p : returnMap)
     {
         for (int i=0; i<p.second->size(); i++)

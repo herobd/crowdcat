@@ -134,6 +134,7 @@ class CATTSS
 
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
     void threadLoop();
+    bool getCont() {return cont.load();}
 #ifdef NO_NAN
     friend class Tester;
 #endif

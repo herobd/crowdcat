@@ -417,7 +417,7 @@ SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool har
     do
     {
         iterR--;
-    } while((*iterR)->score >rejectThreshold);
+    } while(iterR!=instancesByScore.begin() && (*iterR)->score >rejectThreshold);
     for (float drawScore : scoresToDraw)
     {
         auto iter=iterR;

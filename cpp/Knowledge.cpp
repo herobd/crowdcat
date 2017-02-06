@@ -479,6 +479,7 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
 
 bool Knowledge::Word::removeWorstSpotting(unsigned long batchId)
 {
+
     if (spottings.size()==0)
         return false;
     //curretly removes auto-accepted spottings, and then the highest scored spotting
@@ -490,7 +491,7 @@ bool Knowledge::Word::removeWorstSpotting(unsigned long batchId)
         if (iter->second.type==SPOTTING_TYPE_THRESHED)
         {
             if (batchId!=0)
-                removedSpottings[batchId].insert(iter->second);
+                removedSpottings[batchId].push_back(iter->second);
             iter=spottings.erase(iter);
             return true;//only do first
         }
@@ -502,10 +503,11 @@ bool Knowledge::Word::removeWorstSpotting(unsigned long batchId)
                 maxIter=iter;
             }
             iter++;
+        }
     }
-    spottings.erase(maxIter);
     if (batchId!=0)
-        removedSpottings[batchId].insert(maxIter->second);
+        removedSpottings[batchId].push_back(maxIter->second);
+    spottings.erase(maxIter);
 
     //can we fix spotting boundaries? loose should do this to some degree...
     return true;
