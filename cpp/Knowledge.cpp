@@ -2,6 +2,7 @@
 #include <time.h>
 
 int Knowledge::Page::_id=0;
+atomic_uint Knowledge::Word::_id(0);
 
 Knowledge::Corpus::Corpus(int contextPad) 
 {
@@ -2477,6 +2478,10 @@ const Mat Knowledge::Corpus::image(unsigned int i) const
 {
     return _wordImgs[i];
 }
+unsigned int Knowledge::Corpus::wordId(unsigned int i) const
+{
+    return _words[i]->getId();
+}
 Knowledge::Word* Knowledge::Corpus::getWord(unsigned int i) const
 {
     return _words[i];
@@ -2825,6 +2830,7 @@ void Knowledge::Word::save(ofstream& out)
 {
     out<<"WORD"<<endl;
     pthread_rwlock_rdlock(&lock);
+    out<<id<<"\n";
     out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
     out<<query<<"\n"<<gt<<"\n";
     meta.save(out);
@@ -2863,6 +2869,8 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     string line;
     getline(in,line);
     assert(line.compare("WORD")==0);
+    getline(in,line);
+    id = stoi(line);
     getline(in,line);
     tlx = stoi(line);
     getline(in,line);

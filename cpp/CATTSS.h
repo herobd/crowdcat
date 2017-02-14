@@ -17,6 +17,8 @@
 #include "tester.h"
 #endif
 
+using namespace std;
+
 #define CHECK_SAVE_TIME 6
 
 #define NEW_EXEMPLAR_TASK 1

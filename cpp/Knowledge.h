@@ -132,6 +132,9 @@ private:
     multimap<float,string> sentPoss;
     multimap<float,string> notSent;
 #endif
+    unsigned int id;
+protected:
+    static atomic_uint _id;
 
 public:
     //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
@@ -144,12 +147,14 @@ public:
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
+        id = _id++;
     }
     Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
+        id = _id++;
     }
     Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
@@ -276,6 +281,7 @@ public:
     }
     string getGT() {return gt;}
     void preapproveSpotting(Spotting* spotting);
+    unsigned int getId(){return id;}
 
     //For data collection, when I deleted all my trans... :(
     TranscribeBatch* reset_(vector<Spotting*>* newExemplars);
@@ -516,6 +522,7 @@ public:
     const vector<string>& labels() const;
     int size() const;
     const cv::Mat image(unsigned int i) const;
+    unsigned int wordId(unsigned int i) const;
     Word* getWord(unsigned int i) const;
     CorpusRef* getCorpusRef();
     PageRef* getPageRef();

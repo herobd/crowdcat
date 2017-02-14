@@ -56,8 +56,8 @@ void showSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c, int heigh
                 GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0, misTrans,
                                                 accTrans_IV,pWordsTrans_IV, pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV, misTrans_IV);
             }
-        }
 #endif
+        }
     }
 }
 
