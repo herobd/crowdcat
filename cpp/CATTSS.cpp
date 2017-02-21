@@ -66,6 +66,7 @@ CATTSS::CATTSS( string lexiconFile,
                 string segmentationFile, 
                 string spottingModelPrefix,
                 string savePrefix,
+                int avgCharWidth,
                 int numSpottingThreads,
                 int numTaskThreads,
                 int showHeight,
@@ -96,7 +97,8 @@ CATTSS::CATTSS( string lexiconFile,
         for (int i=0; i<tSize; i++)
         {
 
-            taskQueue.push_back(new UpdateTask(in));
+            UpdateTask burn(in); //we simply burn these as we don't save the appropriate data in other objects
+            //taskQueue.push_back(new UpdateTask(in));
             sem_post(&semLock);
         }
         getline(in,line);
@@ -114,7 +116,7 @@ CATTSS::CATTSS( string lexiconFile,
     
         masterQueue = new MasterQueue(contextPad);
         Lexicon::instance()->readIn(lexiconFile);
-        corpus = new Knowledge::Corpus(contextPad);
+        corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         corpus->loadSpotter(spottingModelPrefix);
         spottingQueue = new SpottingQueue(masterQueue,corpus);

@@ -4,11 +4,11 @@
 int Knowledge::Page::_id=0;
 atomic_uint Knowledge::Word::_id(0);
 
-Knowledge::Corpus::Corpus(int contextPad) 
+Knowledge::Corpus::Corpus(int contextPad, int averageCharWidth) 
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
-    averageCharWidth=30;
+    averageCharWidth=averageCharWidth;
     countCharWidth=0;
     threshScoring= 1.0;
     manQueue.setContextPad(contextPad);
@@ -18,7 +18,8 @@ void Knowledge::Corpus::loadSpotter(string modelPrefix)
     spotter = new AlmazanSpotter(this,modelPrefix);
 
     //This is bad, it shouldn't be coming from here, but it prevents code dup.
-    averageCharWidth = spotter->getAverageCharWidth();
+    //averageCharWidth = spotter->getAverageCharWidth();
+
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
@@ -2407,7 +2408,11 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     pthread_rwlock_unlock(&pagesLock);
 
     in.close();
+
+    //TODO
+    //averageCharWidth = getAverageCharWidth();
 }
+
 
 
 const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const

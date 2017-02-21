@@ -182,6 +182,13 @@ int main(int argc, char** argv)
 //#else
 //    Simulator sim("test",charSegFile);
 //#endif
+    int avgCharWidth=-1;
+    if (dataname.compare("BENTHAN")==0)
+        avgCharWidth=37;
+    else if (dataname.compare("NAMES")==0)
+        avgCharWidth=20;
+    else if (dataname.compare("GW")==0)
+        avgCharWidth=38;
 
     int numSpottingThreads = 5;
     int numTaskThreads = 3;
@@ -193,6 +200,7 @@ int main(int argc, char** argv)
                         segmentationFile,
                         spottingModelPrefix,
                         savePrefix,
+                        avgCharWidth,
                         numSpottingThreads,
                         numTaskThreads,
                         height,

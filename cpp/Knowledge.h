@@ -483,7 +483,7 @@ private:
     void recreateDatasetVectors(bool lockPages);
 
 public:
-    Corpus(int contextPad);
+    Corpus(int contextPad, int averageCharWidth);
     Corpus(ifstream& in);
     void save(ofstream& out);
     ~Corpus()

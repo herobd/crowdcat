@@ -49,6 +49,10 @@ var contextPads=[ 0,
                   0,
                   15
                 ];
+var avgCharWidths=[ 38,
+                    37,
+                    20
+                  ];
 
 
 var datasetNum=1;
@@ -57,6 +61,7 @@ var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 var contextPad=contextPads[datasetNum];
+var avgCharWidth=avgCharWidths[datasetNum];
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
 var savePrefix="save/2_";
 var numThreadsSpotting=5;
@@ -919,6 +924,7 @@ var ControllerApp = function(port) {
                                 segmentationFile,
                                 spottingModelPrefix+datasetName,
                                 savePrefix,
+                                avgCharWidth,
                                 numThreadsSpotting,
                                 numThreadsUpdating,
                                 showHeight,

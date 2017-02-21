@@ -172,7 +172,8 @@ private:
 
     //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
     //It returns instancesByLocation.end() if none is found.
-    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting) const;
+    //It sets ratioOff to indicate how far off the overlap is, 1 beng the max allowed by the threshold, 0 being perfectly alligned
+    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting, float* ratioOff) const;
 
     //How much to pad (top and bottom) images sent to users
     int contextPad;

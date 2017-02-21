@@ -11,6 +11,7 @@ void Tester::testSave()
                                 "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
                                 "model/CATTSS_BENTHAM",
                                 "save/0_BENTHAM",
+                                30,
                                 0,
                                 0,
                                 100,

@@ -48,7 +48,8 @@ void SpottingResults::add(Spotting spotting) {
     //sem_wait(&mutexSem);
     allBatchesSent=false;
     instancesById[spotting.id]=spotting;
-    assert(spotting.score==spotting.score);
+    assert(spotting.ngram.compare(ngram)==0);
+    assert(spotting.score==spotting.score && spotting.pageId<100000);//currption checking
     if (spotting.type==SPOTTING_TYPE_TRANS_TRUE)
     {
         classById[spotting.id]=true;
@@ -312,7 +313,11 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
 SpottingsBatch* SpottingResults::getBatch(bool* done, unsigned int num, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need) {
 
     if (!need && (numLeftInRange<12 && numLeftInRange>=0) && starts.size()>1)
+#ifndef NO_NAN
         return NULL;
+#else
+    {}
+#endif
 
     if (acceptThreshold==-1 && rejectThreshold==-1)
         EMThresholds();
@@ -661,6 +666,7 @@ vector<Spotting>* SpottingResults::feedback(int* done, const vector<string>& ids
 #ifdef TEST_MODE
         cout<<"["<<id<<"]:"<<ngram<<" AUTO accepted["<<numAutoAccepted<<"]: "<<(0.0+trueAutoAccepted)/numAutoAccepted<<"  rejected["<<numAutoRejected<<"]: "<<(0.0+trueAutoRejected)/numAutoRejected<<endl;
 #endif        
+        tracer = instancesByScore.begin();
     }
     else if (!allBatchesSent && allWereSent)
     {
@@ -1024,31 +1030,16 @@ for (int bin=0; bin<displayLen; bin++)
     else
     {
         allBatchesSent=true;
-        auto iter = tracer;
-        while (iter!=instancesByScore.end())
+        auto iter = instancesByScore.begin();
+        while (iter!=instancesByScore.end() && (**iter).score < rejectThreshold)
         {
             if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
             {
                 allBatchesSent=false;
                 break;
             }
-            if (iter==instancesByScore.begin() || (**iter).score>acceptThreshold)
-                break;
-            iter--;
+            iter++;
         } 
-        if (allBatchesSent)
-        {
-            iter = tracer;
-            while (iter!=instancesByScore.end() && (**iter).score < rejectThreshold)
-            {
-                if ((**iter).score > acceptThreshold && (**iter).score < rejectThreshold)
-                {
-                    allBatchesSent=false;
-                    break;
-                }
-                iter++;
-            } 
-        }
     }
     return allBatchesSent;
 }
@@ -1100,7 +1091,7 @@ bool SpottingResults::checkIncomplete()
 }
 
 
-multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting& spotting) const
+multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting& spotting, float* ratioOff) const
 {
     bool updated=false;
     int width = spotting.brx-spotting.tlx;
@@ -1125,13 +1116,16 @@ multiset<Spotting*,tlComp>::iterator SpottingResults::findOverlap(const Spotting
             bool updateWhenInBatch = (*itLow)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(*itLow)==instancesByScore.end();
             if (updateWhenInBatch)
                 thresh=UPDATE_OVERLAP_THRESH_TIGHT;
-            if (overlapArea/max(spottingArea,1.0*((*itLow)->brx-(*itLow)->tlx)*((*itLow)->bry-(*itLow)->tly)) > thresh)
+            double ratio = overlapArea/max(spottingArea,1.0*((*itLow)->brx-(*itLow)->tlx)*((*itLow)->bry-(*itLow)->tly));
+            if (ratio > thresh)
             {
                 if (overlapArea > bestOverlap)
                 {
                     bestOverlap=overlapArea;
                     //bestSoFar=*itLow;
                     bestSoFarIter=itLow;
+                    if (ratioOff!=NULL)
+                        *ratioOff = 1.0 - (ratio-thresh)/(1.0-thresh);
                 }
                 else
                 {
@@ -1155,7 +1149,7 @@ void SpottingResults::updateSpottingTrueNoScore(const SpottingExemplar& spotting
 
     //Scan for possibly overlapping (the same) spottings
     Spotting* best=NULL;
-    auto bestIter = findOverlap(spotting);
+    auto bestIter = findOverlap(spotting,NULL);
     if (bestIter != instancesByLocation.end())
         best=*bestIter;
     if (best!=NULL)
@@ -1232,14 +1226,24 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 
             //Scan for possibly overlapping (the same) spottings
             Spotting* best=NULL;
-            auto bestIter = findOverlap(spotting);
+            float ratioOff;//1 at threshold, 0 exactly the same
+            auto bestIter = findOverlap(spotting, &ratioOff);
             if (bestIter != instancesByLocation.end())
                 best=*bestIter;
             if (best!=NULL)
             {
+                //Zagoris et al. A Framework for Efficient Transcription of Historical Documents Using Keyword Spotting would indicate that taking the worse (max) score would yield the best combintation results.
+                //However, we choose to do a weighted averaging based on how far spatially the spottings are from one another.
+                //If they are percisely on the same location, we take the max.
+                //If they are maximally off (as allowed by threshold), the min score (selected spotting) is used.
+                //Interpolate between
+                float worseScore = max(spotting.score, (best)->score);
+                float bestScore = min(spotting.score, (best)->score);
+                float combScore = (1.0f-ratioOff)*worseScore + (ratioOff)*bestScore;
 
                 if (spotting.score < (best)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
                 {
+                    spotting.score = combScore;
                     bool updateWhenInBatch = (best)->type!=SPOTTING_TYPE_THRESHED && instancesByScore.find(best)==instancesByScore.end();
                     if (updateWhenInBatch)
                         updateMap[best->id]=spotting.id;
@@ -1271,6 +1275,15 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
                     }
                     instancesById.erase(best->id);
                 }
+                else
+                {
+                    (best)->score = combScore;
+                }
+                //Zagoris et al. A Framework for Efficient Transcription of Historical Documents Using Keyword Spotting would indicate that taking the worse (max) score would yield the best combintation results.
+                //However, we choose to do a weighted averaging based on how far spatially the spottings are from one another.
+                //If they are percisely on the same location, we take the max.
+                //If they are maximally off (as allowed by threshold), the min score (selected spotting) is used.
+                //Interpolate between
             }
             else
             {

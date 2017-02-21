@@ -236,7 +236,9 @@ vector<Spotting*> TranscribeBatchQueue::feedback(unsigned long id, string transc
             feedbackProcess(id,transcription,toRemoveExemplars, backPointer, resend, lowQueue, lowReturnMap, lowTimeMap, lowDoneMap, &newNgramExemplars);
         }
         else
+        {
             cout <<"ERROR: TranscribeBatchQueue::feedback unrecogized id: "<<id<<"   for trans: "<<transcription<<endl;
+        }
     }
 #else
     else

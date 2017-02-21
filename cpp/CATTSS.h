@@ -107,6 +107,7 @@ class CATTSS
             string segmentationFile, 
             string spottingModelPrefix,
             string savePrefix,
+            int avgCharWidth,
             int numSpottingThreads,
             int numTaskThreads,
             int showHeight,     //Height of showProgress image
