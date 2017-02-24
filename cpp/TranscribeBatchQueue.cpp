@@ -140,6 +140,9 @@ void TranscribeBatchQueue::feedbackProcess(unsigned long id, string transcriptio
                 doneMap[id] = backPointer;
                 delete returnMap[id];
             }
+#ifdef NO_NAN
+            GlobalK::knowledge()->badTransBatch();
+#endif
         }
         else if (transcription.length()>9 && transcription.substr(0,8).compare("$REMOVE:")==0)
         {
@@ -163,6 +166,9 @@ void TranscribeBatchQueue::feedbackProcess(unsigned long id, string transcriptio
                 doneMap[id] = backPointer;
                 delete returnMap[id];
             }
+#ifdef NO_NAN
+            GlobalK::knowledge()->badTransNgram();
+#endif
         }
         else if (!resend && (transcription.length()==0 || transcription.compare("$PASS$")==0))
         {

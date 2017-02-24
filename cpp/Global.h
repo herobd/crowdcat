@@ -75,6 +75,8 @@ class GlobalK
         //int contextPad;
 #ifdef NO_NAN
         atomic_int transSent;
+        atomic_int transBadBatch;
+        atomic_int transBadNgram;
         atomic_int spotSent;
         atomic_int spotAccept;
         atomic_int spotReject;
@@ -99,6 +101,7 @@ class GlobalK
         mutex xLock;
         const vector< vector<int> >* corpusXLetterStartBounds;
         const vector< vector<int> >* corpusXLetterEndBounds;
+        const vector<string>* corpusSegWords;
 #endif
 
     public:
@@ -117,6 +120,8 @@ class GlobalK
         void setSimSave(string file);
         void sentSpottings();
         void sentTrans();
+        void badTransBatch();
+        void badTransNgram();
         void accepted();
         void rejected();
         void autoAccepted();
@@ -127,11 +132,16 @@ class GlobalK
                        float accTrans_IV, float pWordsTrans_IV, float pWords80_100_IV, float pWords60_80_IV, float pWords40_60_IV, float pWords20_40_IV, float pWords0_20_IV, float pWords0_IV, string misTrans_IV);
         void writeTrack();       
 
-        void setCorpusXLetterBounds(const vector< vector<int> >* start, const vector< vector<int> >* end)
+        void setCorpusXLetterBounds(const vector< vector<int> >* start, const vector< vector<int> >* end, const vector<string>* words)
         {
             corpusXLetterStartBounds=start;
             corpusXLetterEndBounds=end;
+            corpusSegWords=words;
             xLock.unlock();
+        }
+        string getSegWord(int i)
+        {
+            return corpusSegWords->at(i);
         }
         const vector< vector<int> >* getCorpusXLetterStartBounds() {xLock.lock(); xLock.unlock(); return corpusXLetterStartBounds;}
         const vector< vector<int> >* getCorpusXLetterEndBounds() {xLock.lock(); xLock.unlock(); return corpusXLetterEndBounds;}

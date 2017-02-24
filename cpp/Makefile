@@ -54,7 +54,8 @@ OBJECTS2 = obj/TranscribeBatchQueue2.o \
           obj/BatchWraperNewExemplars2.o \
           obj/BatchWraperSpottings2.o \
           obj/BatchWraperTranscription2.o \
-          obj/Simulator2.o 
+          obj/Simulator2.o  \
+          obj/NetSpotter2.o
 PREPROCESSEDS = pp/TranscribeBatchQueue.cpp \
           pp/NewExemplarsBatchQueue.cpp \
           pp/Global.cpp \

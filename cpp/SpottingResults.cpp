@@ -55,7 +55,7 @@ void SpottingResults::add(Spotting spotting) {
         classById[spotting.id]=true;
         numberClassifiedTrue++;
 #ifdef NO_NAN
-        GlobalK::knowledge()->accepted();
+        //GlobalK::knowledge()->accepted();
 #endif
     }
     else if (spotting.type==SPOTTING_TYPE_TRANS_FALSE)
@@ -63,7 +63,7 @@ void SpottingResults::add(Spotting spotting) {
         classById[spotting.id]=false;
         numberClassifiedFalse++;
 #ifdef NO_NAN
-        GlobalK::knowledge()->rejected();
+        //GlobalK::knowledge()->rejected();
 #endif
     }
     else

@@ -2301,11 +2301,13 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             strV.push_back(item);
         }
         
-        numWordsReadIn++;
         
         string imageFile = strV[0];
         string pageName = (strV[0]);
         string gt = strV[5];
+#ifdef NO_NAN
+        assert(gt.compare(GlobalK::knowledge()->getSegWord(numWordsReadIn))==0);
+#endif
         int tlx=stoi(strV[1]);
         int tly=stoi(strV[2]);
         int brx=stoi(strV[3]);
@@ -2378,6 +2380,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         {
             page->addWord(tlx,tly,brx,bry,gt);
         }
+        numWordsReadIn++;
     }
     
     /*double heightAvg=0;
@@ -2934,6 +2937,13 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
             removedSpottings.at(sid).at(j)=Spotting(pagePnt,in);
         }
     }
+#ifdef NO_NAN
+    assert(gt.compare(GlobalK::knowledge()->getSegWord(id))==0);
+    if (id == 3715)
+    {
+        cout <<id<<": "<<gt<<" ?= "<<GlobalK::knowledge()->getSegWord(id)<<endl;
+    }
+#endif
 }
 
 //For data collection, when I deleted all my trans... :(
@@ -2990,13 +3000,13 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
             string trans = w->getTranscription();
             for (int i=0; i<trans.length(); i++)
                 trans[i] = tolower(trans[i]);
-            if (gt.compare(w->getTranscription())==0)
+            if (gt.compare(trans)==0)
                 trueTrans++;
             else
             {
-                *misTrans+=w->getTranscription()+"("+gt+") ";
+                *misTrans+=trans+"("+gt+") ";
                 if (inVocab)
-                    *misTrans_IV+=w->getTranscription()+"("+gt+") ";
+                    *misTrans_IV+=trans+"("+gt+") ";
             }
         }
         else if (query.length()==0)

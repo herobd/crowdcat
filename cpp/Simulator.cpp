@@ -47,13 +47,15 @@ Simulator::Simulator(string dataname, string segCSV)
             lettersEndRel.push_back(stoi(s)-x1);
             //getline(ss,s,',');//conf
         }
+        assert(lettersStart.size() == corpusWord.back().length());
         corpusXLetterStartBounds.push_back(lettersStart);
         corpusXLetterEndBounds.push_back(lettersEnd);
         corpusXLetterStartBoundsRel.push_back(lettersStartRel);
         corpusXLetterEndBoundsRel.push_back(lettersEndRel);
     }
     in.close();
-    GlobalK::knowledge()->setCorpusXLetterBounds(&corpusXLetterStartBoundsRel,&corpusXLetterEndBoundsRel);
+    //sending corpus word is purely for error checking
+    GlobalK::knowledge()->setCorpusXLetterBounds(&corpusXLetterStartBoundsRel,&corpusXLetterEndBoundsRel,&corpusWord);
 
     if (dataname.compare("test")==0)
     {

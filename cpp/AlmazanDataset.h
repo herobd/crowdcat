@@ -18,9 +18,11 @@ class AlmazanDataset : public Dataset
     int size() const;
     const cv::Mat image(unsigned int i) const;
     int backwards(int i, int x) const;
+    unsigned int wordId(unsigned int i) const {return ids.at(i);}
 
     private:
     vector<string> _labels;
+    vector<unsigned int> ids;
     vector<cv::Mat> wordImages;
     map<int,double> ratios; //for mapping back to original image space after preprocess
     cv::Mat preprocess(cv::Mat im, int i=-1);
