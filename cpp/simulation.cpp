@@ -145,7 +145,13 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             cout<<"Blank batch given to sim"<<endl;
             this_thread::sleep_for(chrono::minutes(5));
             slept+=5;
-            prevNgram="_";
+            if (prevNgram.compare("-")==0)
+            {
+                cattss->misc("stopSpotting");
+                cont->store(false);
+            }
+
+            prevNgram="-";
         }
 
         delete batch;

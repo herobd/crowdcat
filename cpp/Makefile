@@ -1,7 +1,7 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS_NO_G =  -std=c++11 -pthread  -DNO_NAN #-DTEST_MODE #-DDEBUG_AUTO#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
-CXX_FLAGS =  $(CXX_FLAGS_NO_G) -g#-O3 #-g
+CXX_FLAGS_NO_G =  -std=c++11 -pthread  -DNO_NAN -DNO_EXEMPLARS -DTEST_MODE -DGRAPH_SPOTTING_RESULTS #-DDEBUG_AUTO#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  $(CXX_FLAGS_NO_G) -O3 #-g
 
 LIBS += -lpthread
 

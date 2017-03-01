@@ -215,9 +215,9 @@ CATTSS::CATTSS( string lexiconFile,
     incompleteChecker->detach();
     showChecker = new thread(showSleeper,this,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
-#ifndef GRAPH_SPOTTING_RESULTS
+//#ifndef GRAPH_SPOTTING_RESULTS
     spottingQueue->run(numSpottingThreads);
-#endif
+//#endif
     run(numTaskThreads);
     //test
     /*

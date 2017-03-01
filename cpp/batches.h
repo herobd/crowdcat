@@ -98,14 +98,14 @@ public:
     unsigned long spottingResultsId;
     
     
-    void push_back(SpottingImage im) {
+    void push_back(const SpottingImage& im) {
         if (im.img().cols>0)
 		instances.push_back(im);
     }
-    SpottingImage operator [](int i) const    {return instances.at(i);}
-    SpottingImage & operator [](int i) {return instances.at(i);}
-    SpottingImage at(int i) const    {return instances.at(i);}
-    SpottingImage & at(int i) {return instances.at(i);}
+    const SpottingImage& operator [](int i) const    {return instances.at(i);}
+    SpottingImage& operator [](int i) {return instances.at(i);}
+    const SpottingImage& at(int i) const    {return instances.at(i);}
+    SpottingImage& at(int i) {return instances.at(i);}
     unsigned int size() const { return instances.size();}
     
     virtual ~SpottingsBatch()

@@ -763,6 +763,10 @@ void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 
 vector<Spotting*> Knowledge::Word::harvest()
 {
+#ifdef NO_EXEMPLARS
+    return vector<Spotting*>();
+#endif
+
 #ifdef TEST_MODE
     //cout<<"harvesting: "<<transcription<<endl;
 #endif
