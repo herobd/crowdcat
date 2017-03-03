@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CATTSS <% if (testMode) { %>user timing study <% } else { %>demo app<% } %></title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+<link href="app_hardcore.css" rel="stylesheet" type="text/css" />
+<script> 
+    <% if (testMode) { %>
+    timingTestMode=true; 
+    <% } else { %>
+    timingTestMode=false; 
+    <% } %>
+    <% if (trainMode) { %>
+    trainingMode=true;
+    <% } else { %>
+    trainingMode=false;
+    <% } %>
+    <% if (save) { %>
+    save=true;
+    <% } else { %>
+    save=false;
+    <% } %>
+</script>
+</head>
+<body onload="setup()">
+<script type="text/javascript" src="<%= app_version %>.js"></script>
+<div id="topper">
+    <button type="button" id="undoButton" onclick="undo()">undo</button>
+    <button type="button" id="menuButton" onclick="menu()">menu</button>
+    <button type="button" id="passButton" onclick="pass()">skip</button>
+    <div id="menu" class="hidden">
+        <% if (trainMode) { %>
+        <button class="menuItem" id="instructionsButton" onclick="showInstructions()">Show instructions</button>
+        <% } %>
+        <button class="menuItem" id="modeButton" onclick="toggleMode()">Control toggle: <span id="modeSwipe">swipe</span>/<span id="modeTap">tap</span></button>
+        <div class="menuItem" id="tapInstructions" hidden>
+            Now just tap on the left or right instead of swiping.
+        </div>
+        <div class="menuItem">
+            <br>
+            <b>Keyboard Controls</b>
+            <p>Left and right arrow: left and right swipe</p>
+            <p>Up arrow: skip</p>
+            <p>Down arrow: undo</p>
+            <br>
+        </div>
+        <button class="menuItem" id="exitButton" onclick="exit()">EXIT</button>
+    </div>
+</div>
+<noscript>ERROR, JavaScript must be enabled for this app to work.</noscript>
+
+<div class="container">
+    
+    <div class="window">
+        <div id="spinner" class="loader">Loading...</div>
+    </div>
+    
+    <div id="icons">
+        <div id="shows">
+            <img src='/X.png' id='showX'>
+            <img src='/check.png' id='showCheck'>
+            
+        </div>
+        <% if (trainMode) { %>
+            <img hidden src='/swipe-right.gif' class="gif swipeGif" id='swipeRightGif'>
+            <img hidden src='/swipe-left.gif' class="gif swipeGif" id='swipeLeftGif'>
+        <% } %>
+        <img src='/leftIcon.png' class="icon" id='leftIcon'>
+        <img src='/rightIcon.png' class="icon" id='rightIcon'>
+        
+    </div>
+</div>
+<div id='overlay'></div>
+<% if (trainMode) { %><div id='instructions'><div id='instructionsText'>
+        Training
+</div></div>
+            <img hidden src='/tap.gif' class="gif" id='tapGif'>
+<% } %>
+
+</body>
+</html>
