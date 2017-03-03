@@ -10,12 +10,16 @@
 <body>
 <div class="container">
     <div id="title"><h1>Welcome</h1> <%= id %></div>
-    <p>Thank you for volunteering your time. This is an experiment to characterize how fast and accurate people are at using the CATTSS app. It should take about 10 minutes.</p>
+    <!--
+    <p>Thank you for volunteering your time. This is an experiment to characterize how fast and accurate people are at using the CATTSS app. It should take about 15 minutes.</p>
     <p>You will begin by being briefly trained and then will complete a series of tasks.</p>
     <p id=user_specific_message"><%= message %></p>
+    -->
+    <p>You'll be contacted with an email when the test is ready.<p>
     <div id='apps'>
+        <% if (id=='herobd@gmail.com' || id=='test@test.com' || id=='test2@test.com') { %>
         <a href="/app-test">Go to app</a> <br><br>
-        <% if (id=='herobd@gmail.com') { %>
+        <%} if (id=='herobd@gmail.com') { %>
         <a href="/app-label">Labeling</a> <br><br>
         <a href="/app-false-label">Don't (false) label</a> <br><br>
         <% } %>
