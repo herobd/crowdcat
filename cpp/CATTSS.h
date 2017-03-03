@@ -17,6 +17,8 @@
 #include "tester.h"
 #endif
 
+using namespace std;
+
 #define CHECK_SAVE_TIME 6
 
 #define NEW_EXEMPLAR_TASK 1
@@ -105,6 +107,7 @@ class CATTSS
             string segmentationFile, 
             string spottingModelPrefix,
             string savePrefix,
+            int avgCharWidth,
             int numSpottingThreads,
             int numTaskThreads,
             int showHeight,     //Height of showProgress image
@@ -118,6 +121,10 @@ class CATTSS
         delete masterQueue;
         delete corpus;
         delete spottingQueue;
+        for (thread* t : taskThreads)
+            delete t;
+        for (UpdateTask* t : taskQueue)
+            delete t;
     } 
     void save();
 
@@ -130,6 +137,7 @@ class CATTSS
 
     const cv::Mat* imgForPageId(int id) const {return corpus->imgForPageId(id);}
     void threadLoop();
+    bool getCont() {return cont.load();}
 #ifdef NO_NAN
     friend class Tester;
 #endif

@@ -38,7 +38,7 @@ typedef Graph<float,float,float> GraphType;
 #define OVERLAP_LINE_THRESH 0.9
 #define OVERLAP_WORD_THRESH 0.45
 #define THRESH_UNKNOWN_EST 0.3
-#define THRESH_LEXICON_LOOKUP_COUNT 50
+#define THRESH_LEXICON_LOOKUP_COUNT 49
 //#define THRESH_SCORING 1.0
 #define LOW_COUNT_PRUNE_THRESH 5
 #define LOW_COUNT_SCORE_THRESH 0.75
@@ -51,6 +51,8 @@ typedef Graph<float,float,float> GraphType;
 #define PRUNED_LEXICON_MAX_SIZE 200
 
 #define SHOW 0
+
+#define AUTO_TRANS_ON_ONE 0
 
 //#ifndef TEST_MODE_LONG
 //#define averageCharWidth 40 //TODO GW, totally just making this up
@@ -102,6 +104,7 @@ private:
     string generateQuery();
     TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
     vector<Spotting*> harvest();
+    bool removeWorstSpotting(unsigned long batchId=0);//Returns whether a spotting was removed. Accepts batchId to add to removedSpottings so it can be redeemed in a resend of the batch
 #ifdef TEST_MODE
     void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word, cv::Mat& showA);
 #else
@@ -124,6 +127,14 @@ private:
 
     map<unsigned long, vector<Spotting> > removedSpottings;
     void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
+#if TRANS_DONT_WAIT
+    set<string> rejectedTrans;
+    multimap<float,string> sentPoss;
+    multimap<float,string> notSent;
+#endif
+    unsigned int id;
+protected:
+    static atomic_uint _id;
 
 public:
     //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
@@ -136,12 +147,14 @@ public:
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
+        id = _id++;
     }
     Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
         meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
+        id = _id++;
     }
     Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
@@ -190,6 +203,14 @@ public:
         *word_bry=bry;
 	*isDone=done;
         *gt=this->gt;
+        pthread_rwlock_unlock(&lock);
+    }
+    void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
+    {
+        pthread_rwlock_rdlock(&lock);
+	*isDone=done;
+        *gt=this->gt;
+        *query=this->query;
         pthread_rwlock_unlock(&lock);
     }
     void getBoundsAndDoneAndSentAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent, string* gt)
@@ -260,6 +281,7 @@ public:
     }
     string getGT() {return gt;}
     void preapproveSpotting(Spotting* spotting);
+    unsigned int getId(){return id;}
 
     //For data collection, when I deleted all my trans... :(
     TranscribeBatch* reset_(vector<Spotting*>* newExemplars);
@@ -461,16 +483,19 @@ private:
     void recreateDatasetVectors(bool lockPages);
 
 public:
-    Corpus(int contextPad);
+    Corpus(int contextPad, int averageCharWidth);
     Corpus(ifstream& in);
     void save(ofstream& out);
     ~Corpus()
     {
-        pthread_rwlock_destroy(&pagesLock);
-        pthread_rwlock_destroy(&spottingsMapLock);
+        pthread_rwlock_wrlock(&pagesLock);
+        pthread_rwlock_wrlock(&spottingsMapLock);
+        
         for (auto p : pages)
             delete p.second;
         delete spotter;
+        pthread_rwlock_destroy(&pagesLock);
+        pthread_rwlock_destroy(&spottingsMapLock);
     }
     void loadSpotter(string modelPrefix);
     vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
@@ -497,12 +522,18 @@ public:
     const vector<string>& labels() const;
     int size() const;
     const cv::Mat image(unsigned int i) const;
+    unsigned int wordId(unsigned int i) const;
     Word* getWord(unsigned int i) const;
     CorpusRef* getCorpusRef();
     PageRef* getPageRef();
 
     //For data collection, when I deleted all my trans... :(
     vector<TranscribeBatch*> resetAllWords_();
+    void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
+                          float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV);
+
+    static void mouseCallBackFunc(int event, int x, int y, int flags, void* page_p);
+    void showInteractive(int pageId);
 };
 
 }

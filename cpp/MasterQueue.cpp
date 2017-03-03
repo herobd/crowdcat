@@ -106,14 +106,18 @@ MasterQueue::MasterQueue(int contextPad) : contextPad(contextPad)
     r0->add(Spotting(1626, 366, 1704, 396, 0, &page, "an", 0.53));
     
     addSpottingResults(r0);*/
-    
+#if ROTATE 
     testIter=0;	
     test_rotate=0;
+#endif
     //addTestSpottings();
     //accuracyAvg= recallAvg= manualAvg= effortAvg= 0;
     //done=0;
     numCFalse=numCTrue=0;
 
+#ifdef TEST_MODE
+    forceNgram="";
+#endif
     
     ///end testing
 }
@@ -227,6 +231,19 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     ngramQueueCount=resultsQueue.size();
     pthread_rwlock_unlock(&semResultsQueue);
 
+    //for setting up, just do some spottings
+    if (prevNgram.compare("~")==0)
+    {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
+            if (batch!=NULL)
+            {
+#ifdef NO_NAN
+                GlobalK::knowledge()->sentSpottings();
+#endif
+                return new BatchWraperSpottings(batch);
+            }
+    }
+
     BatchWraper* ret=NULL;
     if (finish.load())
     {
@@ -262,7 +279,7 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         //a second pass without conditions
         if (ret==NULL)
         {
-            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth);
+            TranscribeBatch* batch = transcribeBatchQueue.dequeue(maxWidth,true);
             if (batch!=NULL)
                 ret = new BatchWraperTranscription(batch);
         }
@@ -280,6 +297,19 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
         }
     }
 
+#ifdef NO_NAN
+    if (ret==NULL && !finish.load())
+        ret = new BatchWraperRanOut();
+    else if (ret!=NULL)
+    {
+        if (ret->getType()==SPOTTINGS)
+            GlobalK::knowledge()->sentSpottings();
+        else if (ret->getType()==TRANSCRIPTION)
+            GlobalK::knowledge()->sentTrans();
+    }
+
+#endif
+
     return ret;
 } 
 
@@ -289,19 +319,50 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_rdlock(&semResultsQueue);
     //cout<<"got rw lock"<<endl;
-#if ROTATE
-    int test_loc=0;
-    pthread_rwlock_rdlock(&semRotate);
-#endif
-    for (auto ele : resultsQueue)
+
+    auto iter = resultsQueue.begin();
+    int indexHolder=0;
+    //for (auto ele : resultsQueue)
+    for (; iter!=resultsQueue.end(); iter++, indexHolder++)
     {
-#if ROTATE
-        if (test_loc++<test_rotate/2) //TODO add var to control
-            continue;
+        SpottingResults*  res = iter->second.second;
+        if (prevNgram.compare(res->ngram)==0)
+        {
+            break;
+        }
+
+#ifdef TEST_MODE
+        if (!need && forceNgram.size()>0 && forceNgram.compare(res->ngram)==0)
+        {
+            cout<<"Forcing ngram : "<<forceNgram<<endl;
+            break;
+        }
 #endif
+    }
+
+
+    if (iter==resultsQueue.end())
+    {
+        iter = resultsQueue.begin();
+        indexHolder=0;
+#if ROTATE
+        int test_loc=0;
+        pthread_rwlock_rdlock(&semRotate);
+        for (; iter!=resultsQueue.end(); iter++,indexHolder++)
+            if (test_loc++>=test_rotate/2) //TODO add var to control
+                break;
+        assert(iter!=resultsQueue.end());
+        pthread_rwlock_unlock(&semRotate);
+#endif
+    }
+
+    auto iterStart=iter;
+    do
+    {
         
-        sem_t* sem = ele.second.first;
-        SpottingResults* res = ele.second.second;
+        sem_t* sem = iter->second.first;
+        SpottingResults* res = iter->second.second;
+
         bool succ = 0==sem_trywait(sem);
         if (succ)
         {
@@ -309,11 +370,11 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             
             //test
 #if ROTATE
-            pthread_rwlock_unlock(&semRotate);
             int qSize = resultsQueue.size();
             pthread_rwlock_wrlock(&semRotate);
             if (test_rotate++>2*(qSize-1))
                 test_rotate=0;
+            //cout<<"rotated to "<<test_rotate<<endl;
             pthread_rwlock_unlock(&semRotate);
 #endif
             //test
@@ -323,12 +384,14 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             bool done=false;
             //cout << "getBatch   prev:"<<prevNgram<<endl;
             batch = res->getBatch(&done,numberOfInstances,hard,maxWidth,color,prevNgram,need);
-            
+           
+            unsigned long id = res->getId(); 
+            sem_post(sem);
             if (done)
             {   //cout <<"done in queue "<<endl;
                 
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue.erase(res->getId());
+                resultsQueue.erase(id);
                 
                 pthread_rwlock_unlock(&semResultsQueue);
                 
@@ -336,15 +399,16 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
                 //test_finish();
                 ///test
             }
-            sem_post(sem);
             if (batch!=NULL)
                 break;
             else
             {
                 pthread_rwlock_rdlock(&semResultsQueue);
-#if ROTATE
-                pthread_rwlock_rdlock(&semRotate);
-#endif
+                //reset iter as results queue may have changed (race)
+                iter=resultsQueue.begin();
+                for (int i=0; i<std::min(indexHolder,(int)resultsQueue.size()); i++)
+                    iter++;
+                iterStart = iter;
             }
             
         }
@@ -352,7 +416,14 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         //{
         //    cout <<"couldn't get lock"<<endl;
         //}
-    }
+        iter++;
+        indexHolder++;
+        if (iter==resultsQueue.end())
+        {
+            iter=resultsQueue.begin();
+            indexHolder=0;
+        }
+    } while (iter!=iterStart);
     if (batch==NULL)
     {
         pthread_rwlock_unlock(&semResultsQueue);//just in case
@@ -448,8 +519,8 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
     pthread_rwlock_rdlock(&semResults);
     if (results.find(id)!=results.end())
     {
-        sem_t* sem=results[id].first;
-        SpottingResults* res = results[id].second;
+        sem_t* sem=results.at(id).first;
+        SpottingResults* res = results.at(id).second;
         pthread_rwlock_unlock(&semResults);
         sem_wait(sem);
         int done=0;
@@ -481,24 +552,24 @@ vector<Spotting>* MasterQueue::feedback(unsigned long id, const vector<string>& 
     return ret;
 }
 
-void MasterQueue::addSpottingResults(SpottingResults* res, bool hasSemResults, bool toQueue)
+/*void MasterQueue::addSpottingResults(SpottingResults* res, bool hasSemResults, bool toQueue)
 {
     sem_t* sem = new sem_t();
     sem_init(sem,false,1);
     auto p = make_pair(sem,res);
+    //This may be a race condition, but would require someone to get and finish a batch between here...
+    if (!hasSemResults)
+        pthread_rwlock_wrlock(&semResults);
     if (toQueue)
     {
         pthread_rwlock_wrlock(&semResultsQueue);
         resultsQueue[res->getId()] = p;
         pthread_rwlock_unlock(&semResultsQueue);
     }
-    //This may be a race condition, but would require someone to get and finish a batch between here...
-    if (!hasSemResults)
-        pthread_rwlock_wrlock(&semResults);
     results[res->getId()] = p;
     if (!hasSemResults)
         pthread_rwlock_unlock(&semResults);
-}
+}*/
 
 
 void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings)
@@ -510,39 +581,23 @@ void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings
         cout <<s->ngram<<", ";
     cout<<endl;
 #endif
-    pthread_rwlock_rdlock(&semResults);
+    map<SpottingExemplar*,pair<sem_t*,SpottingResults*> > toUpdateSpottingTrueNoScore;
+    map<SpottingExemplar*,pair<sem_t*,SpottingResults*> > toAddTrueNoScore;
+
+    pthread_rwlock_wrlock(&semResults);
     for (SpottingExemplar* spotting : *spottings)
     {
         bool found=false;
         for (auto p : results)
         {
             
-            sem_t* sem=p.second.first;
             SpottingResults* res = p.second.second;
-            sem_wait(sem);
             if (res->ngram.compare(spotting->ngram) == 0)
             {
                 found=true;
-#ifdef TEST_MODE_LONG
-                cout<<"update for new ex: "<<spotting->ngram<<endl;
-#endif
-                //pthread_rwlock_unlock(&semResults);
-                //vector<Spotting>* toUpdate = new vector<Spotting>(1);
-                //toUpdate->at(0)=*(Spotting*)spotting;
-                res->updateSpottingTrueNoScore(*spotting);
-                /*if (resurrect)
-                {
-#ifdef TEST_MODE
-                    cout<<"Resurrect "<<res->ngram<<endl;
-#endif
-                    pthread_rwlock_wrlock(&semResultsQueue);
-                    resultsQueue[res->getId()] = make_pair(sem,res);
-                    pthread_rwlock_unlock(&semResultsQueue);
-                }*/
+                toUpdateSpottingTrueNoScore[spotting] = p.second;
             }
 
-            
-            sem_post(sem);
             
         }
         if (!found)
@@ -552,26 +607,47 @@ void MasterQueue::updateSpottingsMix(const vector< SpottingExemplar*>* spottings
             cout <<"Creating SpottingResults for "<<spotting->ngram<<endl;
 #endif
             SpottingResults *n = new SpottingResults(spotting->ngram,contextPad);
-            n->addTrueNoScore(*spotting);
-            addSpottingResults(n,true,false);
+            sem_t* sem = new sem_t();
+            sem_init(sem,false,0);
+            auto p = make_pair(sem,n);
+
+            results[n->getId()] = p;
+            toAddTrueNoScore[spotting]=p;
         }
 
     }
     pthread_rwlock_unlock(&semResults);
+
+    for (auto p : toUpdateSpottingTrueNoScore)
+    {
+        sem_wait(p.second.first);
+#ifdef TEST_MODE_LONG
+        cout<<"update for new ex: "<<spotting->ngram<<endl;
+#endif
+        p.second.second->updateSpottingTrueNoScore(*(p.first));
+        sem_post(p.second.first);
+    }
+
+    for (auto p : toAddTrueNoScore)
+    {
+        p.second.second->addTrueNoScore(*(p.first));
+        sem_post(p.second.first);
+    }
+
 }
 
 unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, unsigned long id)
 {
 #ifdef TEST_MODE
-    cout<<"updateSpottingResults called from MasterQueue. "<<spottings->front().ngram<<endl;
+    //cout<<"updateSpottingResults called from MasterQueue. "<<spottings->front().ngram<<endl;
 #endif
     pthread_rwlock_rdlock(&semResults);
     if (id>0)
     {
         if (results.find(id)!=results.end())
         {
-            sem_t* sem=results[id].first;
-            SpottingResults* res = results[id].second;
+            sem_t* sem=results.at(id).first;
+            SpottingResults* res = results.at(id).second;
             pthread_rwlock_unlock(&semResults);
             sem_wait(sem);
             bool resurrect = res->updateSpottings(spottings);
@@ -579,7 +655,7 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
             if (resurrect)
             {
                 pthread_rwlock_wrlock(&semResultsQueue);
-                resultsQueue[id] = results[id];
+                resultsQueue[id] = results.at(id);
                 pthread_rwlock_unlock(&semResultsQueue);
             }
             return id;
@@ -591,6 +667,8 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
         }
     }
     
+    pthread_rwlock_unlock(&semResults);
+    pthread_rwlock_wrlock(&semResults);//we obtain a write-lock now in case we need to add a SpottingResults
     for (auto p : results)
     {
         
@@ -626,16 +704,24 @@ unsigned long MasterQueue::updateSpottingResults(vector<Spotting>* spottings, un
     cout <<"Creating SpottingResults for "<<spottings->front().ngram<<endl;
 #endif
     SpottingResults *n = new SpottingResults(spottings->front().ngram,contextPad);
+    sem_t* sem = new sem_t();
+    sem_init(sem,false,0);
+    auto p = make_pair(sem,n);
+    results[n->getId()] = p;
+    pthread_rwlock_unlock(&semResults);
+    unsigned long ret = n->getId();
+
     assert(spottings->size()>1);
     for (Spotting& s : *spottings)
     {
         n->add(s);
         //cout <<"added spotting : "<<s.id<<endl;
     }
+    sem_post(sem);
     delete spottings;
-    unsigned long ret = n->getId();
-    addSpottingResults(n,true);
-    pthread_rwlock_unlock(&semResults);
+    pthread_rwlock_wrlock(&semResultsQueue);
+    resultsQueue[n->getId()] = p;
+    pthread_rwlock_unlock(&semResultsQueue);
     return ret;
 }
 
@@ -701,6 +787,8 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     pthread_rwlock_init(&semResults,NULL);
 #if ROTATE
     pthread_rwlock_init(&semRotate,NULL);
+    testIter=0;	
+    test_rotate=0;
 #endif
     kill.store(false);
     
@@ -715,6 +803,7 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     {
         getline(in,line);
         unsigned long id = stoul(line);
+        //assert(id==i+1);
         SpottingResults* res = new SpottingResults(in,pageRef);
         assert(id==res->getId());
         sem_t* sem = new sem_t();
@@ -744,5 +833,7 @@ MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
     getline(in,line);
     contextPad = stoi(line);
     //in.close();
-    delete corpusRef;
+#ifdef TEST_MODE
+    forceNgram="";
+#endif
 }

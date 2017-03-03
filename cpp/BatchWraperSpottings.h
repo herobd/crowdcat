@@ -28,6 +28,11 @@ class BatchWraperSpottings: public BatchWraper
         string resultsId;
         string ngram;
         vector<string> gt;
+
+#ifdef TEST_MODE
+        double precAtPull, precAcceptT, precRejectT, precBetweenT;
+        int countAcceptT, countRejectT, countBetweenT;
+#endif
         
     public:
         BatchWraperSpottings(SpottingsBatch* batch);

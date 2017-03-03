@@ -29,6 +29,10 @@ BatchWraperTranscription::BatchWraperTranscription(TranscribeBatch* batch)
     wordIndex=to_string(batch->getBackPointer()->getSpottingIndex());
     gt=batch->getGT();
     scale=batch->getScale();
+#ifdef NO_NAN
+    images.resize(1);
+    images[0]=batch->getImage();
+#endif
 }
 #ifndef NO_NAN
 void BatchWraperTranscription::doCallback(Callback *callback)
@@ -83,7 +87,7 @@ void BatchWraperTranscription::doCallback(Callback *callback)
 void BatchWraperTranscription::getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt)
 {
     *batchId=this->batchId;
-    *wordIndex=this->wordIndex;
+    *wordIndex=stoi(this->wordIndex);
     *spottings=this->spottings;
     *poss=retPoss;
     *manual=this->manual;

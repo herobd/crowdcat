@@ -63,7 +63,7 @@ class SpottingPoint
             getline(in,line);
             x=stoi(line);
             getline(in,line);
-            page=stoi(line);
+            pad=stoi(line);
             getline(in,ngram);
             getline(in,color);
             getline(in,id);
@@ -87,6 +87,9 @@ public:
     
     SpottingsBatch(string ngram, unsigned long spottingResultsId) : 
         ngram(ngram), spottingResultsId(spottingResultsId)
+#ifdef TEST_MODE
+        , precAtPull(-1), precAcceptT(-1), precRejectT(-1), precBetweenT(-1)
+#endif
     {
         batchId = _batchId++;
     }
@@ -95,14 +98,14 @@ public:
     unsigned long spottingResultsId;
     
     
-    void push_back(SpottingImage im) {
+    void push_back(const SpottingImage& im) {
         if (im.img().cols>0)
 		instances.push_back(im);
     }
-    SpottingImage operator [](int i) const    {return instances.at(i);}
-    SpottingImage & operator [](int i) {return instances.at(i);}
-    SpottingImage at(int i) const    {return instances.at(i);}
-    SpottingImage & at(int i) {return instances.at(i);}
+    const SpottingImage& operator [](int i) const    {return instances.at(i);}
+    SpottingImage& operator [](int i) {return instances.at(i);}
+    const SpottingImage& at(int i) const    {return instances.at(i);}
+    SpottingImage& at(int i) {return instances.at(i);}
     unsigned int size() const { return instances.size();}
     
     virtual ~SpottingsBatch()
@@ -112,6 +115,21 @@ public:
     //For saving and loading
     static unsigned long getIdCounter() {return _batchId.load();}
     static void setIdCounter(unsigned long id) {_batchId.store(id);}
+
+#ifdef TEST_MODE
+    double precAtPull, precAcceptT, precRejectT, precBetweenT;
+    int countAcceptT, countRejectT, countBetweenT;
+    void addDebugInfo(double precAtPull, double precAcceptT, double precRejectT, double precBetweenT, int countAcceptT, int countRejectT, int countBetweenT)
+    {
+        this->precAtPull=precAtPull;
+        this->precAcceptT=precAcceptT;
+        this->precRejectT=precRejectT;
+        this->precBetweenT=precBetweenT;
+        this->countAcceptT=countAcceptT;
+        this->countRejectT=countRejectT;
+        this->countBetweenT=countBetweenT;
+    }
+#endif
     
 private:
     static std::atomic_ulong _batchId;
@@ -142,12 +160,19 @@ private:
     static cv::Vec3f wordHighlight;
     static std::atomic_ulong _id;
     static void highlightPix(cv::Vec3b &p, cv::Vec3f color);
+#if TRANS_DONT_WAIT     
+    bool lowPriority;
+#endif
 public:
     //TranscribeBatch(vector<string> possibilities, cv::Mat wordImg, cv::Mat ngramLocs) : 
     //    possibilities(possibilities), wordImg(wordImg), ngramLocs(ngramLocs) {id = ++_id;}
-    
+#if TRANS_DONT_WAIT     
+    bool isLowPriority() {return lowPriority;}
     //A normal transcription batch
+    TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKOWN$", unsigned long batchId=0, bool lowPriority=false);
+#else
     TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKOWN$", unsigned long batchId=0);
+#endif
     //A manual transcription batch
     TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt="$UNKNOWN$", unsigned long batchId=0);
     

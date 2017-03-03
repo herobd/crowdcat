@@ -49,14 +49,19 @@ var contextPads=[ 0,
                   0,
                   15
                 ];
+var avgCharWidths=[ 38,
+                    37,
+                    20
+                  ];
 
 
-var datasetNum=2;
+var datasetNum=1;
 var lexiconFile=lexiconFiles[datasetNum];
 var pageImageDir=pageImageDirs[datasetNum];
 var segmentationFile=segmentationFiles[datasetNum];
 var datasetName=datasetNames[datasetNum];
 var contextPad=contextPads[datasetNum];
+var avgCharWidth=avgCharWidths[datasetNum];
 var spottingModelPrefix="model/CATTSS_";//+'GW' ;//datasetName;
 var savePrefix="save/2_";
 var numThreadsSpotting=5;
@@ -66,12 +71,12 @@ var showHeight=1000;
 var showMilli=4000;
 
 var saveMode=false;
-var timingTestMode=true;
-var trainUsers=true;
-var debug=false;
+var timingTestMode=false;
+var trainUsers=false;
+var debug=true;
 
-if (saveMode)
-    savePrefix+=datasetName
+//if (saveMode)
+savePrefix+=datasetName
 if (timingTestMode)
 {
     numThreadsSpotting=0;
@@ -238,6 +243,29 @@ var ControllerApp = function(port) {
                 var appName = 'app_full';
                 if (!saveMode)
                     res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
+                else
+                    res.redirect('/');
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/app-demo', function(req, res) {
+            //if (debug) {
+                var appName = 'app_full';
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:true, save:false, message: req.flash('error') });
+                else
+                    res.redirect('/');
+            //} else {
+            //    res.redirect('/login');
+            //}
+        });
+        self.app.get('/app-prep', function(req, res) {
+            if (req.user || debug) {
+
+                var appName = 'app_prep';
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_prep', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {
@@ -435,6 +463,34 @@ var ControllerApp = function(port) {
                 res.redirect('/login');
             }
         });
+        self.app.get('/xxx/show', function(req, res) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
+                var page = 1;
+                if (req.query.page) {
+                    page = +req.query.page;
+                }
+                spottingaddon.showInteractive(page,function (err) {
+                    if (err) console.log(err);
+                    res.send('ok');
+                });
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/xxx/force', function(req, res) {
+            if ((req.user && req.user.id=='herobd@gmail.com') || debug) {
+                var ngram = '';
+                if (req.query.ngram) {
+                    ngram = req.query.ngram;
+                }
+                spottingaddon.forceNgram(ngram,function (err) {
+                    if (err) console.log(err);
+                    res.send('ok');
+                });
+            } else {
+                res.redirect('/login');
+            }
+        });
         self.app.get('/xxx/show_toggle', function(req, res) {
             if (req.user || debug) {
                 if (self.showing)
@@ -568,7 +624,7 @@ var ControllerApp = function(port) {
                                             self.nextBatch(req,res);
                                         }
                                     } else {
-                                        res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5});
+                                        res.send({batchType:batchType,batchId:batchId,resultsId:arg3,ngram:arg4,spottings:arg5, debug:err});
                                     }
                                 }
                                 else if (batchType==='transcription' || batchType==='manual') {
@@ -891,6 +947,7 @@ var ControllerApp = function(port) {
                                 segmentationFile,
                                 spottingModelPrefix+datasetName,
                                 savePrefix,
+                                avgCharWidth,
                                 numThreadsSpotting,
                                 numThreadsUpdating,
                                 showHeight,

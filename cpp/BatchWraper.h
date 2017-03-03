@@ -1,27 +1,23 @@
 #ifndef BATCH_WRAPER
 #define BATCH_WRAPER
 
+#include "Location.h"
+
 #ifndef NO_NAN
 #include <nan.h>
 using namespace Nan;
 using namespace v8;
 #else
+#include "opencv2/core/core.hpp"
+using namespace cv;
 #define SPOTTINGS 1
 #define NEW_EXEMPLARS 2
 #define TRANSCRIPTION 3
+#define RAN_OUT 4
+#include "batches.h"
 #endif
 using namespace std;
 
-struct Location
-{
-    int pageId, x1,y1,x2,y2;
-    Location() {}
-    Location(int pageId, int x1, int y1, int x2, int y2) : pageId(pageId), 
-                                                            x1(x1), 
-                                                            y1(y1), 
-                                                            x2(x2), 
-                                                            y2(y2) {}
-};
 
 class BatchWraper
 {
@@ -35,6 +31,12 @@ class BatchWraper
         virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {}
         virtual void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs) {}
         virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt) {}
+        virtual vector<Mat> getImages()
+        {
+            return images;
+        }
+    protected:
+        vector<Mat> images;
 #endif
 };
 
@@ -65,4 +67,14 @@ class BatchWraperBlank : public BatchWraper
 #endif
         
 };
+
+#ifdef NO_NAN
+class BatchWraperRanOut : public BatchWraper
+{
+    public:
+        virtual int getType(){return 4;}
+        
+};
+#endif
+
 #endif

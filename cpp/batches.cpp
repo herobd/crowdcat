@@ -2,7 +2,7 @@
 
 vector< cv::Vec3f > TranscribeBatch::colors = {cv::Vec3f(1.15,1.15,0.85),cv::Vec3f(1.15,0.85,1.15),cv::Vec3f(0.86,0.96,1.2),cv::Vec3f(0.87,1.2,0.87),cv::Vec3f(1.2,0.87,0.87),cv::Vec3f(0.87,0.87,1.2)};
 cv::Vec3f TranscribeBatch::wordHighlight(0.9,1.2,1.2);
-atomic_ulong TranscribeBatch::_id;//I'm assuming 0 is the default value
+atomic_ulong TranscribeBatch::_id(0);//I'm assuming 0 is the default value
 atomic_ulong SpottingsBatch::_batchId;
 atomic_ulong NewExemplarsBatch::_batchId;
 
@@ -14,7 +14,11 @@ void TranscribeBatch::highlightPix(cv::Vec3b &p, cv::Vec3f color)
     p[2] = min(255.f,p[2]*color[2]);
 }
 
+#if TRANS_DONT_WAIT     
+TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id, bool lowPriority) : manual(false), lowPriority(lowPriority)
+#else
 TranscribeBatch::TranscribeBatch(WordBackPointer* origin, multimap<float,string> scored, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id) : manual(false)
+#endif
 {
     for (auto p : scored)
     {
@@ -36,6 +40,9 @@ bool icompare(const string& a, const string& b)
 }
 TranscribeBatch::TranscribeBatch(WordBackPointer* origin, vector<string> prunedDictionary, const cv::Mat* origImg, const multimap<int,Spotting>* spottings, int tlx, int tly, int brx, int bry, string gt, unsigned long id) : manual(true)
 {
+#if TRANS_DONT_WAIT     
+    lowPriority=false;
+#endif
     possibilities=prunedDictionary;
     sort(possibilities.begin(), possibilities.end(), icompare);
     init(origin, origImg, spottings, tlx, tly, brx, bry, gt, id);
@@ -167,6 +174,7 @@ void TranscribeBatch::setWidth(unsigned int width, int contextPad)
 void TranscribeBatch::save(ofstream& out)
 {
     out<<"TRANSCRIBEBATCH"<<endl;
+    out<<lowPriority<<"\n";
     out<<origin->getSpottingIndex()<<"\n";
     out<<possibilities.size()<<"\n";
     for (string p : possibilities)
@@ -196,6 +204,10 @@ TranscribeBatch::TranscribeBatch(ifstream& in, CorpusRef* corpusRef)
     string line;
     getline(in,line);
     assert(line.compare("TRANSCRIBEBATCH")==0);
+#if TRANS_DONT_WAIT     
+    getline(in,line);
+    lowPriority=stoi(line);
+#endif
     getline(in,line);
     int wid = stoi(line);
     origin = corpusRef->getBackPointer(wid);
@@ -228,6 +240,7 @@ TranscribeBatch::TranscribeBatch(ifstream& in, CorpusRef* corpusRef)
     for (int i=0; i<size; i++)
     {
         spottingPoints[i] = SpottingPoint(in);
+        assert(corpusRef->verify(spottingPoints[i].page,spottingPoints[i].x1,spottingPoints[i].y1,spottingPoints[i].x2,spottingPoints[i].y2));
     }
     getline(in,gt);
     getline(in,line);

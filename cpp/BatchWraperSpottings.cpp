@@ -13,6 +13,9 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
     retId.resize(batchSize);
     locations.resize(batchSize);
     gt.resize(batchSize);
+#ifdef NO_NAN
+    images.resize(batchSize);
+#endif
     for (int index=0; index<batchSize; index++) 
     {
         retId[index]=to_string(batch->at(index).id);
@@ -39,7 +42,19 @@ BatchWraperSpottings::BatchWraperSpottings(SpottingsBatch* batch)
             gt[index]=batch->at(index).gt?"1":"0";
         else
             gt[index]="UNKNOWN";
+#ifdef NO_NAN
+        images[index] = batch->at(index).img();
+#endif
     }
+#ifdef TEST_MODE
+    precAtPull = batch->precAtPull;
+    precAcceptT = batch->precAcceptT;
+    precRejectT = batch->precRejectT;
+    precBetweenT = batch->precBetweenT;
+    countAcceptT = batch->countAcceptT;
+    countRejectT = batch->countRejectT;
+    countBetweenT = batch->countBetweenT;
+#endif
     //cout <<"readied batch of size "<<batchSize<<endl;
     delete batch;
 }
@@ -68,8 +83,24 @@ void BatchWraperSpottings::doCallback(Callback *callback)
 
         Nan::Set(gtArr, index, Nan::New(gt[index]).ToLocalChecked());
     }
+
+#ifdef TEST_MODE
+    v8::Local<v8::Object> debug = Nan::New<v8::Object>();
+    debug->Set(Nan::New("precAtPull").ToLocalChecked(), Nan::New(precAtPull));
+    debug->Set(Nan::New("precAcceptT").ToLocalChecked(), Nan::New(precAcceptT));
+    debug->Set(Nan::New("precRejectT").ToLocalChecked(), Nan::New(precRejectT));
+    debug->Set(Nan::New("precBetweenT").ToLocalChecked(), Nan::New(precBetweenT));
+    debug->Set(Nan::New("countAcceptT").ToLocalChecked(), Nan::New(countAcceptT));
+    debug->Set(Nan::New("countRejectT").ToLocalChecked(), Nan::New(countRejectT));
+    debug->Set(Nan::New("countBetweenT").ToLocalChecked(), Nan::New(countBetweenT));
+#endif
+
     Local<Value> argv[] = {
+#ifdef TEST_MODE
+        debug,
+#else
 	Nan::Null(),
+#endif
 	Nan::New("spottings").ToLocalChecked(),
 	Nan::New(batchId).ToLocalChecked(),
 	Nan::New(resultsId).ToLocalChecked(),

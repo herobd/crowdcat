@@ -18,14 +18,38 @@ vector<SpottingResult> AlmazanSpotter::runQuery(SpottingQuery* query) const
         refinePortion=0.25;
     }
     vector< SubwordSpottingResult > res;
+#ifdef NO_NAN
+    float ap, accumAP;
+#endif
     if (query->getImg().channels()==1)
+    {
+#ifdef NO_NAN
+       res = spotter->subwordSpot_eval(query->getImg(), query->getNgram(), alpha,refinePortion, GlobalK::knowledge()->accumResFor(query->getNgram()), GlobalK::knowledge()->getCorpusXLetterStartBounds(), GlobalK::knowledge()->getCorpusXLetterEndBounds(), &ap, &accumAP);
+       
+#else
        res = spotter->subwordSpot(query->getImg(), query->getNgram(), alpha,refinePortion);
+#endif
+    }
     else
     {
         cv::Mat gray;
         cv::cvtColor(query->getImg(),gray,CV_RGB2GRAY);
+#ifdef NO_NAN
+        res = spotter->subwordSpot_eval(gray, query->getNgram(), alpha,refinePortion, GlobalK::knowledge()->accumResFor(query->getNgram()), GlobalK::knowledge()->getCorpusXLetterStartBounds(), GlobalK::knowledge()->getCorpusXLetterEndBounds(), &ap, &accumAP);
+        
+#else
         res = spotter->subwordSpot(gray, query->getNgram(), alpha,refinePortion);
+#endif
     }
+#ifdef NO_NAN
+    GlobalK::knowledge()->storeSpottingAccum(query->getNgram(),accumAP);
+    if (query->getType()==SPOTTING_TYPE_EXEMPLAR)
+        GlobalK::knowledge()->storeSpottingExemplar(query->getNgram(),ap);
+    else if (query->getType()==SPOTTING_TYPE_APPROVED)
+        GlobalK::knowledge()->storeSpottingNormal(query->getNgram(),ap);
+    else 
+        GlobalK::knowledge()->storeSpottingOther(query->getNgram(),ap);
+#endif
 
     vector <SpottingResult> ret(res.size());
     for (int i=0; i<res.size(); i++)

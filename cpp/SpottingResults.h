@@ -18,12 +18,26 @@
 #define UPDATE_OVERLAP_THRESH 0.4
 #define UPDATE_OVERLAP_THRESH_TIGHT 0.7
 
+#define CHECK_IF_BAD_SPOTTING_START 50
+#define CHECK_IF_BAD_SPOTTING_THRESH 0.035
+
 using namespace std;
 
 
 
 
 
+class scoreCompById
+{
+  const map<unsigned long,Spotting>* instancesById;
+public:
+  scoreCompById(const map<unsigned long,Spotting>* instancesById) : instancesById(instancesById)
+    {}
+  bool operator() (unsigned long lhs, unsigned long rhs) const
+  {
+    return (instancesById->at(lhs).score<instancesById->at(rhs).score);
+  }
+};
 class scoreComp
 {
   bool reverse;
@@ -45,10 +59,15 @@ public:
   bool operator() (const Spotting* lhs, const Spotting* rhs) const
   {
       bool ret;
-      if (lhs->tlx == rhs->tlx)
-          ret=lhs->tly < rhs->tly;
+      if (lhs->pageId == rhs->pageId)
+      {
+          if (lhs->tlx == rhs->tlx)
+              ret=lhs->tly < rhs->tly;
+          else
+              ret = lhs->tlx < rhs->tlx;
+      }
       else
-          ret = lhs->tlx < rhs->tlx;
+          ret = lhs->pageId < rhs->pageId;
     if (reverse) return !ret;
     else return ret;
   }
@@ -113,6 +132,10 @@ public:
     vector<Spotting>* feedback(int* done, const vector<string>& ids, const vector<int>& userClassifications, int resent=false, vector<pair<unsigned long,string> >* retRemove=NULL);
     
     bool checkIncomplete();
+
+#ifdef TEST_MODE
+    void setDebugInfo(SpottingsBatch* b);
+#endif
     
 private:
     static atomic_ulong _id;
@@ -142,7 +165,8 @@ private:
     int numLeftInRange; //This actually has the count from the round previous, for efficency
 
     //This multiset orders the spotting results to ease the extraction of batches
-    multiset<Spotting*,scoreComp> instancesByScore; //This holds Spottings yet to be classified
+    //multiset<Spotting*,scoreComp> instancesByScore; //This holds Spottings yet to be classified
+    multiset<unsigned long,scoreCompById> instancesByScore; //This holds Spottings yet to be classified
     multiset<Spotting*,tlComp> instancesByLocation; //This is a convienince holder of all Spottings
     map<unsigned long,Spotting> instancesById; //This is all the Spottings
     map<unsigned long,bool> classById; //This is the classifications of Spottings
@@ -153,10 +177,12 @@ private:
     map<unsigned long, unsigned long> updateMap;
 #ifdef TEST_MODE
     map<unsigned long, unsigned long> testUpdateMap;
+    int atn, rtn;
 #endif
 
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from
-    multiset<Spotting*,scoreComp>::iterator tracer;
+    multiset<unsigned long,scoreCompById>::iterator tracer;
+    default_random_engine generator;
     
     //SpottingImage getNextSpottingImage(bool* done, int maxWidth,int color,string prevNgram);
    
@@ -167,10 +193,21 @@ private:
 
     //This returns the iterator of instancesByLocation for the spotting which overlaps (spatailly) the one given
     //It returns instancesByLocation.end() if none is found.
-    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting) const;
+    //It sets ratioOff to indicate how far off the overlap is, 1 beng the max allowed by the threshold, 0 being perfectly alligned
+    multiset<Spotting*,tlComp>::iterator findOverlap(const Spotting& spotting, float* ratioOff) const;
 
     //How much to pad (top and bottom) images sent to users
     int contextPad;
+    int batchesSinceChange;
+#ifdef GRAPH_SPOTTING_RESULTS
+    string undoneGraphName;
+    cv::Mat undoneGraph;
+    string fullGraphName;
+    cv::Mat fullGraph;
+    multiset<Spotting*,scoreComp> fullInstancesByScore;
+#endif
+    void debugState() const;
+    
 };
 
 #endif

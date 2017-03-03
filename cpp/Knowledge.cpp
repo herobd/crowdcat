@@ -2,12 +2,13 @@
 #include <time.h>
 
 int Knowledge::Page::_id=0;
+atomic_uint Knowledge::Word::_id(0);
 
-Knowledge::Corpus::Corpus(int contextPad) 
+Knowledge::Corpus::Corpus(int contextPad, int averageCharWidth) 
 {
     pthread_rwlock_init(&pagesLock,NULL);
     pthread_rwlock_init(&spottingsMapLock,NULL);
-    averageCharWidth=30;
+    averageCharWidth=averageCharWidth;
     countCharWidth=0;
     threshScoring= 1.0;
     manQueue.setContextPad(contextPad);
@@ -17,7 +18,8 @@ void Knowledge::Corpus::loadSpotter(string modelPrefix)
     spotter = new AlmazanSpotter(this,modelPrefix);
 
     //This is bad, it shouldn't be coming from here, but it prevents code dup.
-    averageCharWidth = spotter->getAverageCharWidth();
+    //averageCharWidth = spotter->getAverageCharWidth();
+
 }
 vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
@@ -253,6 +255,7 @@ vector<Spotting*> Knowledge::Word::result(string selected, unsigned long batchId
         done=true;
         transcription=selected;
         ret = harvest();
+        sentPoss.clear();
     }
     else
     {
@@ -280,6 +283,26 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
         //cout<<"[write] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
     pthread_rwlock_wrlock(&lock);
+#if TRANS_DONT_WAIT
+    //rejectedTrans.insert(sentPoss.begin(), sentPoss.end());
+    for (auto p : sentPoss)
+        rejectedTrans.insert(p.second);
+    sentPoss.clear();
+
+    if (notSent.size()>0)//send this low priority batch which still may have the correct transcription
+    {
+        int numToSend = std::min((int) notSent.size(),(int) THRESH_SCORING_COUNT);
+        auto iterNotSent = notSent.begin();
+        for (int i=0; i< numToSend; i++)
+            iterNotSent++;
+        sentPoss = multimap<float,string>(notSent.begin(), iterNotSent);
+        notSent = multimap<float,string>(iterNotSent, notSent.end());
+        newBatch = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId,true);//low priority
+        pthread_rwlock_unlock(&lock);
+        return newBatch;
+    }
+#endif
+
     if (!loose)
     {
         //Given most errors are caused by misalgined ngrams and bad char width predictions
@@ -290,32 +313,43 @@ TranscribeBatch* Knowledge::Word::error(unsigned long batchId, bool resend, vect
     }
     else
     {
-        if (resend)
+        bool removedSpotting = removeWorstSpotting(batchId);
+        if (removedSpotting)
         {
-            //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
-            auto s = removedSpottings.find(batchId);
-            if (s != removedSpottings.end())
+            newBatch=queryForBatch(newExemplars);
+        }
+        else
+        {
+            //This code should never run, now that removeWorstSpotting() removes a spotting each call
+            if (resend)
             {
-                for (Spotting& spotting : s->second)
-                    spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
-                removedSpottings.erase(s);
-            }
+                //This is a shortened reAddSpottings(), as we know we don't need to do anything else;
+                auto s = removedSpottings.find(batchId);
+                if (s != removedSpottings.end())
+                {
+                    for (Spotting& spotting : s->second)
+                        spottings.insert(make_pair(spotting.tlx,spotting));//multimap, so they are properly ordered
+                    removedSpottings.erase(s);
+                }
 
+            }
+            vector<Spotting> removed;
+            for (auto p : spottings)
+            {
+                removed.push_back(p.second);
+            }
+            removedSpottings[batchId]=removed;
+            spottings.clear();
+            toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
+            harvested.clear();
         }
-        vector<Spotting> removed;
-        for (auto p : spottings)
-        {
-            removed.push_back(p.second);
-        }
-        removedSpottings[batchId]=removed;
-        spottings.clear();
-        toRemoveExemplars->insert(toRemoveExemplars->end(),harvested.begin(),harvested.end());
-        harvested.clear();
     }
     pthread_rwlock_unlock(&lock);
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") error"<<endl;
 #endif
+    if (newBatch==NULL)
+        sentBatchId=0;
     return newBatch;
 }
 
@@ -346,6 +380,9 @@ TranscribeBatch* Knowledge::Word::addSpotting(Spotting s, vector<Spotting*>* new
     }
     if (!merged)
     {
+#if TRANS_DONT_WAIT
+        notSent.clear();
+#endif
         spottings.insert(make_pair(s.tlx,s));//multimap, so they are properly ordered
     }
     TranscribeBatch* ret=NULL;
@@ -367,7 +404,24 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
     if (query.compare(newQuery) !=0)
     {
         query=newQuery;
+#if TRANS_DONT_WAIT
+        vector<string> matches = Lexicon::instance()->search(query,meta,rejectedTrans);
+#else
         vector<string> matches = Lexicon::instance()->search(query,meta);
+#endif
+        /*
+#if TRANS_DONT_WAIT
+        //filter out matches we've previously rejected
+        auto iter = matches.begin();
+        while (iter != matches.end())
+        {
+            if (rejectedTrans.find(*iter) != rejectedTrans.end())
+                iter = matches.erase(iter);
+            else
+                iter++;
+        }
+#endif*/
+#if AUTO_TRANS_ON_ONE
         if (matches.size() == 1)
         {
             transcription=matches[0];
@@ -378,28 +432,89 @@ TranscribeBatch* Knowledge::Word::queryForBatch(vector<Spotting*>* newExemplars)
                 newExemplars->insert(newExemplars->end(),newE.begin(),newE.end());
             }
         }
-        else if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
+        else
+#endif 
+         if (matches.size() < THRESH_LEXICON_LOOKUP_COUNT)
         {
             multimap<float,string> scored = scoreAndThresh(matches);//,*threshScoring);
+#if TRANS_DONT_WAIT
+            if (scored.size() > 0)
+            {
+                int numToSend = min((int)scored.size(),(int)THRESH_SCORING_COUNT);
+                auto iterScored = scored.begin();
+                for (int i=0; i<numToSend; i++)
+                    iterScored++;
+                sentPoss = multimap<float,string>(scored.begin(), iterScored);
+                notSent = multimap<float,string>(iterScored, scored.end());
+                ret = new TranscribeBatch(this,sentPoss,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
+            }
+#else
             if (scored.size()>0 && scored.size()<THRESH_SCORING_COUNT)
             {
                 //ret= createBatch(scored);
                 ret = new TranscribeBatch(this,scored,pagePnt,&spottings,tlx,tly,brx,bry,gt,sentBatchId);
             }
+#endif
         }
         else if (matches.size()==0 && !loose)
         {
-            loose=true;
-            return queryForBatch(newExemplars);
-            //OoV or something is wrong. Return as manual batch.
-            //But we'll do it later to keep the state of the Corpus's queue good.
-            //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+            if (!loose)
+            {
+                loose=true;
+                return queryForBatch(newExemplars);
+            }
+            else
+            {
+                bool removedSpotting = removeWorstSpotting();
+                if (removedSpotting)
+                    return queryForBatch(newExemplars);
+                //OoV or something is wrong. Return as manual batch.
+                //But we'll do it later to keep the state of the Corpus's queue good.
+                //ret= new TranscribeBatch(this,vector<string>(),pagePnt,&spottings,tlx,tly,brx,bry,sentBatchId);
+            }
         }
     }
     if (ret!=NULL)
         sentBatchId=ret->getId();
     return ret;
 }
+
+bool Knowledge::Word::removeWorstSpotting(unsigned long batchId)
+{
+
+    if (spottings.size()==0)
+        return false;
+    //curretly removes auto-accepted spottings, and then the highest scored spotting
+    float maxScore=-9999;
+    auto maxIter = spottings.begin();
+    auto iter = spottings.begin();
+    while (iter!=spottings.end())
+    {
+        if (iter->second.type==SPOTTING_TYPE_THRESHED)
+        {
+            if (batchId!=0)
+                removedSpottings[batchId].push_back(iter->second);
+            iter=spottings.erase(iter);
+            return true;//only do first
+        }
+        else
+        {
+            if (iter->second.score>maxScore)
+            {
+                maxScore = iter->second.score;
+                maxIter=iter;
+            }
+            iter++;
+        }
+    }
+    if (batchId!=0)
+        removedSpottings[batchId].push_back(maxIter->second);
+    spottings.erase(maxIter);
+
+    //can we fix spotting boundaries? loose should do this to some degree...
+    return true;
+}
+
 vector<string> Knowledge::Word::getRestrictedLexicon(int max)
 {
 #ifdef TEST_MODE
@@ -450,6 +565,8 @@ TranscribeBatch* Knowledge::Word::removeSpotting(unsigned long sid, unsigned lon
 #ifdef TEST_MODE
         //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") removeSpotting"<<endl;
 #endif
+    if (ret==NULL)
+        this->sentBatchId=0;
     return ret;
 }
 
@@ -460,7 +577,7 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
     float min=999999;
     float max=-999999;
 #ifdef TEST_MODE
-    cout<<"Scoring poss  ";
+    //cout<<"Scoring poss  ";
 #endif
     for (string word : match)
     {
@@ -475,11 +592,11 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
             max=score;
 
 #ifdef TEST_MODE
-        cout<<word<<":"<<score<<", ";
+        //cout<<word<<":"<<score<<", ";
 #endif
     }
 #ifdef TEST_MODE
-    cout<<endl;
+    //cout<<endl;
 #endif
     if (min==max)
         return scores;
@@ -498,6 +615,16 @@ multimap<float,string> Knowledge::Word::scoreAndThresh(vector<string> match) con
         multimap<float,string> ret(scores.begin(),scores.lower_bound(thresh));
         //for (string m : match)
         //    ret.insert(make_pair(0.1,m));
+#ifdef TEST_MODE
+        for (auto iter =scores.lower_bound(thresh); iter!=scores.end(); iter++)
+            if (iter->second.compare(gt)==0)
+                cout<<"[!]Pruning discarded correct: "<<gt<<endl;
+#endif
+#ifdef NO_NAN
+        for (auto iter =scores.lower_bound(thresh); iter!=scores.end(); iter++)
+            if (iter->second.compare(gt)==0)
+                GlobalK::knowledge()->badPrune();
+#endif
         return ret;
     }
     else
@@ -600,7 +727,7 @@ string Knowledge::Word::generateQuery()
         if (-1*numChars<THRESH_UNKNOWN_EST/2)
             ret += "[a-zA-Z0-9]?";
     }*/
-    cout << "query : "<<ret<<endl;
+    //cout << "query : "<<ret<<endl;
     return ret;
 }
 
@@ -636,8 +763,12 @@ void Knowledge::Word::getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b)
 
 vector<Spotting*> Knowledge::Word::harvest()
 {
+#ifdef NO_EXEMPLARS
+    return vector<Spotting*>();
+#endif
+
 #ifdef TEST_MODE
-    cout<<"harvesting: "<<transcription<<endl;
+    //cout<<"harvesting: "<<transcription<<endl;
 #endif
     assert (transcription[0]!='$' || transcription[transcription.length()-1]!='$');
 
@@ -926,6 +1057,7 @@ vector<Spotting*> Knowledge::Word::harvest()
 
 inline void setEdge(int x1, int y1, int x2, int y2, GraphType* g, const cv::Mat &img)
 {
+    assert(x1>=0 && x1<img.cols && y1>=0 && y1<img.rows && x2>=0 && x2<img.cols && y2>=0 && y2<img.rows);
     float w = ((255-img.at<unsigned char>(y1,x1))+(255-img.at<unsigned char>(y2,x2)))/(255.0+255.0);
     //w = 1/(1+exp(-2*w));
     w = w*w*w;
@@ -987,7 +1119,12 @@ void Knowledge::Word::emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int e
 
 SpottingExemplar* Knowledge::Word::extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b)
 {
-    assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
+    //assert(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound);
+    if (!(leftLeftBound<=rightLeftBound && rightLeftBound<leftRightBound && leftRightBound<=rightRightBound))
+    {
+        cout<<"WARNING: extractExemplar given mixed up data ("<<leftLeftBound<<", "<<rightLeftBound<<", "<<leftRightBound<<", "<<rightRightBound<<"). Not extracting."<<endl;
+        return NULL;
+    }
 
     if (topBaseline==-1 || botBaseline==-1)
         findBaselines(wordImg,b);
@@ -1264,7 +1401,7 @@ void Knowledge::Word::getBaselines(int* top, int* bot)
 
 void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
 {
-    
+    assert(gray.cols==bin.cols && gray.rows==bin.rows); 
     //top and botBaseline should have page cords.
     int avgWhite=0;
     int countWhite=0;
@@ -1353,6 +1490,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
     float center=-1;
     for (int r=pad; r<gray.rows+pad; r++)
     {
+        assert(r<edges.rows);
         float v = edges.at<float>(r,0);
         if (v>maxEdge)
         {
@@ -1365,6 +1503,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             botBaseline=r-pad;
         }
 
+        assert(r-pad<blurred.rows);
         if (blurred.at<float>(r-pad,0) < minPeak) {
             center=r-pad;
             minPeak=blurred.at<float>(r-pad,0);
@@ -1379,6 +1518,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             maxEdge=-999999;
             for (int r=pad; r<center+pad; r++)
             {
+                assert(edges.rows>r);
                 float v = edges.at<float>(r,0);
                 if (v>maxEdge)
                 {
@@ -1397,6 +1537,7 @@ void Knowledge::Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
             minEdge=999999;
             for (int r=center+1; r<gray.rows+pad; r++)
             {
+                assert(edges.rows>r);
                 float v = edges.at<float>(r,0);
                 if (v<minEdge)
                 {
@@ -1439,6 +1580,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
         bool hitTop=false;
         for (int r=0; r<b.rows; r++)
         {
+            assert(c<hist.rows && r<orig.rows && c<orig.cols);
             hist.at<float>(c,0)+=orig.at<unsigned char>(r,c);
             if (b.at<unsigned char>(r,c))
             {
@@ -1725,6 +1867,7 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
 }*/
 cv::Mat Knowledge::inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg, double* std, bool show)
 {
+    assert(src.rows == mask.rows && src.cols==mask.cols);
     int x_start[4] = {0,0,mask.cols-1,mask.cols-1};
     int x_end[4] = {mask.cols,mask.cols,-1,-1};
     int y_start[4] = {0,mask.rows-1,0,mask.rows-1};
@@ -1872,7 +2015,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
                 }
             }
         }
-        cout<<"findPotentailWordBoundraies: "<<minX<<", "<<minY<<", "<<maxX<<", "<<maxY<<endl;
+       // cout<<"findPotentailWordBoundraies: "<<minX<<", "<<minY<<", "<<maxX<<", "<<maxY<<endl;
         *tlx=min(s.tlx,minX);
         *tly=min(s.tly,minY);
         *brx=max(s.brx,maxX);
@@ -1918,7 +2061,7 @@ void Knowledge::Corpus::show()
                             cv::cvtColor(*word->getPage(),draw[word->getPage()],CV_GRAY2BGR);
                         }
                     }
-                    cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_PLAIN,2.0,cv::Scalar(50,50,255));
+                    cv::putText(draw[word->getPage()],word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_TRIPLEX,4.0,cv::Scalar(50,50,255));
                 }
                 //else
                 //    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
@@ -1927,8 +2070,9 @@ void Knowledge::Corpus::show()
     }
     for (auto p : draw)
     {
-        int w=(1100.0/p.second.rows)*p.second.cols;
-        cv::resize(p.second, p.second, cv::Size(w,1100));
+        int h =1500;
+        int w=((h+0.0)/p.second.rows)*p.second.cols;
+        cv::resize(p.second, p.second, cv::Size(w,h));
         cv::imshow("a page",p.second);
         cv::waitKey();
     }
@@ -1937,6 +2081,109 @@ void Knowledge::Corpus::show()
 
     pthread_rwlock_unlock(&pagesLock);
 }
+
+
+void Knowledge::Corpus::mouseCallBackFunc(int event, int x, int y, int flags, void* page_p)
+{
+    x*=2;
+    y*=2;
+     Page* page = (Page*) page_p;
+     if  ( event == cv::EVENT_LBUTTONDOWN )
+     {
+          //cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+
+        vector<Line*> lines = page->lines();
+        for (Line* line : lines)
+        {
+            int line_ty, line_by;
+            vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+            for (Word* word : wordsForLine)
+            {
+                int tlx,tly,brx,bry;
+                bool done;
+                word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+                if (tlx<=x && x<=brx && tly<=y && y<=bry)
+                {
+                    string query, gt;
+                    word->getDoneAndGTAndQuery(&done, &gt, &query);
+                    cout<<"WORD: "<<gt<<"  query: "<<query<<endl;
+                    vector<Spotting> spots = word->getSpottings();
+                    cout<<"Spots: ";
+                    for (const Spotting & s : spots)
+                    {
+                        cout<<s.ngram<<", ";
+                    }
+                    cout<<endl<<"Poss trans: ";
+                    vector<string> poss = word->getRestrictedLexicon(100);
+                    for (string p : poss)
+                    {
+                        cout<<p<<", ";
+                    }
+                    cout<<endl;
+                }
+            }
+        }
+     }
+     else if  ( event == cv::EVENT_RBUTTONDOWN )
+     {
+          //cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+     }
+     else if  ( event == cv::EVENT_MBUTTONDOWN )
+     {
+          //cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+     }
+     else if ( event == cv::EVENT_MOUSEMOVE )
+     {
+          //cout << "Mouse move over the window - position (" << x << ", " << y << ")" << endl;
+
+     }
+}
+
+void Knowledge::Corpus::showInteractive(int pageId)
+{
+    cv::Mat draw;
+    pthread_rwlock_rdlock(&pagesLock);
+    
+    Page* page = pages[pageId];
+    vector<Line*> lines = page->lines();
+    for (Line* line : lines)
+    {
+        int line_ty, line_by;
+        vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
+        for (Word* word : wordsForLine)
+        {
+            if (draw.cols<2)
+            {
+                if (word->getPage()->type() == CV_8UC3)
+                    draw = word->getPage()->clone();
+                else
+                {
+                    cv::cvtColor(*word->getPage(),draw,CV_GRAY2BGR);
+                }
+            }
+            int tlx,tly,brx,bry;
+            bool done;
+            word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+            if (done)
+            {
+                cv::putText(draw,word->getTranscription(),cv::Point(tlx+(brx-tlx)/2,tly+(bry-tly)/2),cv::FONT_HERSHEY_TRIPLEX,4.0,cv::Scalar(50,50,255));
+            }
+            //else
+            //    cout<<"word not done at "<<tlx<<", "<<tly<<endl;
+        }
+    }
+    //int h =1500;
+    //int w=((h+0.0)/p.second.rows)*p.second.cols;
+    cv::resize(draw,draw, cv::Size(), 0.5,0.5);
+    cv::namedWindow("page");
+    cv::setMouseCallback("page", mouseCallBackFunc, page);
+    cv::imshow("page",draw);
+    cv::waitKey();
+
+    pthread_rwlock_unlock(&pagesLock);
+}
+
+
 void Knowledge::Corpus::showProgress(int height, int width)
 {
     pthread_rwlock_rdlock(&pagesLock);
@@ -1990,6 +2237,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                     for (int x=tlx; x<=brx; x++)
                         for (int y=tly; y<=bry; y++)
                         {
+                            assert(x<workingIm.cols && y<workingIm.rows);
                             workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
                             workingIm.at<cv::Vec3b>(y,x)[1] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
                             workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
@@ -2002,6 +2250,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                         for (int x=s.tlx; x<=s.brx; x++)
                             for (int y=s.tly; y<=s.bry; y++)
                             {
+                                assert(x<workingIm.cols && y<workingIm.rows);
                                 workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
                                 workingIm.at<cv::Vec3b>(y,x)[2] = min(255,workingIm.at<cv::Vec3b>(y,x)[2]+120);
                                 workingIm.at<cv::Vec3b>(y,x)[1] = 0.5*workingIm.at<cv::Vec3b>(y,x)[1];
@@ -2030,6 +2279,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
     pthread_rwlock_unlock(&pagesLock);
 }
 
+
+
 void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesFile)
 {
     ifstream in(queriesFile);
@@ -2054,11 +2305,13 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             strV.push_back(item);
         }
         
-        numWordsReadIn++;
         
         string imageFile = strV[0];
         string pageName = (strV[0]);
         string gt = strV[5];
+#ifdef NO_NAN
+        assert(gt.compare(GlobalK::knowledge()->getSegWord(numWordsReadIn))==0);
+#endif
         int tlx=stoi(strV[1]);
         int tly=stoi(strV[2]);
         int brx=stoi(strV[3]);
@@ -2067,7 +2320,10 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         //pageName = regex_replace (pageName,nonNum,"");
         //int pageId = stoi(pageName);
         if (pageIdMap.find(pageName)==pageIdMap.end())
-            pageIdMap[pageName]=pageIdMap.size();
+        {
+            int newId = pageIdMap.size()+1;
+            pageIdMap[pageName]=newId;
+        }
         int pageId = pageIdMap.at(pageName);
         Page* page;
         if (pages.find(pageId)==pages.end())
@@ -2080,6 +2336,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
             }*/
             page = new Page(&spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
             pages[page->getId()] = page;
+            //cout<<"new page "<<pageId<<endl;
         }
         else
         {
@@ -2127,6 +2384,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         {
             page->addWord(tlx,tly,brx,bry,gt);
         }
+        numWordsReadIn++;
     }
     
     /*double heightAvg=0;
@@ -2157,7 +2415,11 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
     pthread_rwlock_unlock(&pagesLock);
 
     in.close();
+
+    //TODO
+    //averageCharWidth = getAverageCharWidth();
 }
+
 
 
 const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
@@ -2227,6 +2489,10 @@ int Knowledge::Corpus::size() const
 const Mat Knowledge::Corpus::image(unsigned int i) const
 {
     return _wordImgs[i];
+}
+unsigned int Knowledge::Corpus::wordId(unsigned int i) const
+{
+    return _words[i]->getId();
 }
 Knowledge::Word* Knowledge::Corpus::getWord(unsigned int i) const
 {
@@ -2476,6 +2742,10 @@ CorpusRef* Knowledge::Corpus::getCorpusRef()
     for (int i=0; i<_words.size(); i++)
     {
         ret->addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i)->getSpottingsPointer());
+        int x1,y1,x2,y2;
+        bool toss;
+        _words.at(i)->getBoundsAndDone(&x1,&y1,&x2,&y2,&toss);
+        ret->addLoc(Location(_words.at(i)->getPageId(),x1,y1,x2,y2));
     }
     return ret;
 }
@@ -2486,6 +2756,16 @@ PageRef* Knowledge::Corpus::getPageRef()
     {
         ret->addPage(p.first,p.second->getImg());
     }
+
+    //For debugging
+    for (int i=0; i<_words.size(); i++)
+    {
+        int x1,y1,x2,y2;
+        bool toss;
+        _words.at(i)->getBoundsAndDone(&x1,&y1,&x2,&y2,&toss);
+        ret->addWord(Location(_words.at(i)->getPageId(),x1,y1,x2,y2));
+    }
+
     return ret;
 }
 
@@ -2562,6 +2842,7 @@ void Knowledge::Word::save(ofstream& out)
 {
     out<<"WORD"<<endl;
     pthread_rwlock_rdlock(&lock);
+    out<<id<<"\n";
     out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
     out<<query<<"\n"<<gt<<"\n";
     meta.save(out);
@@ -2594,12 +2875,14 @@ void Knowledge::Word::save(ofstream& out)
     }
     pthread_rwlock_unlock(&lock);
 }
-Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
 {
     pthread_rwlock_init(&lock,NULL);
     string line;
     getline(in,line);
     assert(line.compare("WORD")==0);
+    getline(in,line);
+    id = stoi(line);
     getline(in,line);
     tlx = stoi(line);
     getline(in,line);
@@ -2658,6 +2941,13 @@ Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
             removedSpottings.at(sid).at(j)=Spotting(pagePnt,in);
         }
     }
+#ifdef NO_NAN
+    assert(gt.compare(GlobalK::knowledge()->getSegWord(id))==0);
+    if (id == 3715)
+    {
+        cout <<id<<": "<<gt<<" ?= "<<GlobalK::knowledge()->getSegWord(id)<<endl;
+    }
+#endif
 }
 
 //For data collection, when I deleted all my trans... :(
@@ -2681,4 +2971,152 @@ TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
     transcription="";
     query="";
     return queryForBatch(newExemplars);
+}
+
+void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
+                                 float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV)
+{
+    int trueTrans, cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
+    trueTrans= cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
+    *misTrans="";
+
+    //IV is In-Vocabulary
+    int trueTrans_IV, cTrans_IV, c80_100_IV, c60_80_IV, c40_60_IV, c20_40_IV, c0_20_IV, c0_IV;
+    trueTrans_IV= cTrans_IV= c80_100_IV= c60_80_IV= c40_60_IV= c20_40_IV= c0_20_IV= c0_IV=0;
+    *misTrans_IV="";
+    
+    int numIV=0;
+    for (Word* w : _words)
+    {
+        bool done;
+        string gt, query;
+        w->getDoneAndGTAndQuery(&done,&gt,&query);
+        for (int i=0; i<gt.length(); i++)
+            gt[i]=tolower(gt[i]);
+        bool inVocab = Lexicon::instance()->inVocab(gt);
+        if (inVocab)
+            numIV++;
+        if (done)
+        {
+            cTrans++;
+            if (inVocab)
+                cTrans_IV++;
+            string trans = w->getTranscription();
+            for (int i=0; i<trans.length(); i++)
+                trans[i] = tolower(trans[i]);
+            if (gt.compare(trans)==0)
+                trueTrans++;
+            else
+            {
+                *misTrans+=trans+"("+gt+") ";
+                if (inVocab)
+                    *misTrans_IV+=trans+"("+gt+") ";
+            }
+        }
+        else if (query.length()==0)
+        {
+            c0++;
+            if (inVocab)
+                c0_IV++;
+        }
+        else
+        {
+            int numMatch=0;
+            int posGT=0;
+            bool skip=false;
+            char last='.';
+            for (int i=0; i<query.length(); i++)
+            {
+                if (skip)
+                {
+                    if (query[i]==']')
+                        skip=false;
+                }
+                else
+                {
+                    if (query[i]==']')
+                    {
+                        skip=true;
+                        last='.';
+                    }
+                    else if (query[i]>='a' && query[i]<='z')
+                    {
+                        if (query[i]==last)
+                        {
+                            if (query[i]==gt[posGT])
+                            {
+                                posGT++;
+                                numMatch++;
+                            }
+                        }
+                        else
+                        {
+                            for (;posGT<gt.length(); posGT++)
+                                if (gt[posGT]==query[i])
+                                {
+                                    numMatch++;
+                                    posGT++;
+                                    break;
+                                }
+                        }
+                        last=query[i];
+                    }
+                }
+            }
+            float p = numMatch/(0.0+gt.length());
+            if (p>.8)
+            {
+                c80_100++;
+                if (inVocab)
+                    c80_100_IV++;
+            }
+            else if (p>.6)
+            {
+                c60_80++;
+                if (inVocab)
+                    c60_80_IV++;
+            }
+            else if (p>.4)
+            {
+                c40_60++;
+                if (inVocab)
+                    c40_60_IV++;
+            }
+            else if (p>.2)
+            {
+                c20_40++;
+                if (inVocab)
+                    c20_40_IV++;
+            }
+            else
+            {
+                c0_20++;
+                if (inVocab)
+                    c0_20_IV++;
+            }
+        }
+    }
+    if (cTrans>0)
+        *accTrans= trueTrans/(0.0+cTrans);
+    else
+        *accTrans=0;
+    *pWordsTrans= cTrans/(0.0+_words.size());
+    *pWords80_100= c80_100/(0.0+_words.size());
+    *pWords60_80= c60_80/(0.0+_words.size());
+    *pWords40_60= c40_60/(0.0+_words.size());
+    *pWords20_40= c20_40/(0.0+_words.size());
+    *pWords0_20= c0_20/(0.0+_words.size());
+    *pWords0= c0/(0.0+_words.size());
+
+    if (cTrans_IV>0)
+        *accTrans_IV= trueTrans_IV/(0.0+cTrans_IV);
+    else
+        *accTrans_IV=0;
+    *pWordsTrans_IV= cTrans_IV/(0.0+numIV);
+    *pWords80_100_IV= c80_100_IV/(0.0+numIV);
+    *pWords60_80_IV= c60_80_IV/(0.0+numIV);
+    *pWords40_60_IV= c40_60_IV/(0.0+numIV);
+    *pWords20_40_IV= c20_40_IV/(0.0+numIV);
+    *pWords0_20_IV= c0_20_IV/(0.0+numIV);
+    *pWords0_IV= c0_IV/(0.0+numIV);
 }

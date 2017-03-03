@@ -12,6 +12,7 @@ AlmazanDataset::AlmazanDataset(const Dataset* other)
         //patch = preprocess(patch,i);        
         wordImages.push_back(patch);
         _labels.push_back(other->labels()[i]);
+        ids.push_back(other->wordId(i));
     }
 
 }

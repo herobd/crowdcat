@@ -43,8 +43,6 @@ var ondeckColors = ['#eed3ff','#b3d389','#ddb185','#dfb8b7','#bbcbd1'];
 var colorIndex=0;
 
 function menu() {
-    if (!ondeck)
-        highlightLast();
     var m = document.getElementById('menu');
     m.classList.toggle('hidden');
     m.classList.toggle('show');
@@ -795,10 +793,10 @@ function getNextBatch() {
         return
     }
     var query='';
-    var prevNgram='.';
+    var prevNgram='~';
     var currentNum;
-    if (batchQueue.length>0)
-        prevNgram=batchQueue[batchQueue.length-1].ngram;
+    //if (batchQueue.length>0)
+    //    prevNgram=batchQueue[batchQueue.length-1].ngram;
 
     if (trainingMode) {
         currentNum=trainingNum;
@@ -1261,8 +1259,6 @@ function exit() {
 }
 
 function toggleMode() {
-    if (!ondeck)
-        highlightLast();
     tapMode=!tapMode;
     document.getElementById("modeButton").classList.toggle("tapModeOn");
     if (tapMode) {
@@ -1273,8 +1269,6 @@ function toggleMode() {
 }
 
 function showInstructions() {
-    if (!ondeck)
-        highlightLast();
     instructions.hidden=false;
     instructions.style.display='flex';
     setTimeout(function(){instructions.ready=true;},100);

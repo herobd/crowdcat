@@ -54,6 +54,15 @@ class NewExemplarsBatchQueue
 {
     public:
         NewExemplarsBatchQueue();
+        ~NewExemplarsBatchQueue()
+        {
+            for (auto p : doneMap)
+                delete p.second;
+            for (auto p : returnMap)
+                delete p.second;
+            for (auto p : queue)
+                delete p;
+        }
         void save(ofstream& out);
         void load(ifstream& in, PageRef* pageRef);
         void enqueue(const vector<Spotting*>& batch, vector<pair<unsigned long, string> >* toRemoveExemplars);

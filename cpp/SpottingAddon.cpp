@@ -197,6 +197,19 @@ NAN_METHOD(showCorpus) {
 
     AsyncQueueWorker(new MiscWorker(callback,cattss, "showCorpus"));
 }
+NAN_METHOD(showInteractive) {
+    int page = To<int>(info[0]).FromJust();
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "showInteractive:"+to_string(page)));
+}
+NAN_METHOD(forceNgram) {
+    v8::String::Utf8Value ngramNAN(info[0]);
+    string ngram = string(*ngramNAN);
+    Callback *callback = new Callback(info[1].As<Function>());
+
+    AsyncQueueWorker(new MiscWorker(callback,cattss, "forceNgram:"+ngram));
+}
 /*NAN_METHOD(showProgress) {
     int height = To<int>(info[0]).FromJust();
     int width = To<int>(info[1]).FromJust();
@@ -223,18 +236,20 @@ NAN_METHOD(start) {
     string spottingModelPrefix = string(*spottingModelPrefixNAN);
     v8::String::Utf8Value savePrefixNAN(info[4]);
     string savePrefix = string(*savePrefixNAN);
-    int numSpottingThreads = To<int>(info[5]).FromJust();
-    int numTaskThreads = To<int>(info[6]).FromJust();
-    int height = To<int>(info[7]).FromJust();
-    int width = To<int>(info[8]).FromJust();
-    int milli = To<int>(info[9]).FromJust();
-    int contextPad = To<int>(info[10]).FromJust();
+    int avgCharWidth = To<int>(info[5]).FromJust();
+    int numSpottingThreads = To<int>(info[6]).FromJust();
+    int numTaskThreads = To<int>(info[7]).FromJust();
+    int height = To<int>(info[8]).FromJust();
+    int width = To<int>(info[9]).FromJust();
+    int milli = To<int>(info[10]).FromJust();
+    int contextPad = To<int>(info[11]).FromJust();
     assert(cattss==NULL);
     cattss = new CATTSS(lexiconFile,
                         pageImageDir,
                         segmentationFile,
                         spottingModelPrefix,
                         savePrefix,
+                        avgCharWidth,
                         numSpottingThreads,
                         numTaskThreads,
                         height,
@@ -260,7 +275,7 @@ NAN_METHOD(loadTestingCorpus) {
     //GlobalK::knowledge()->setContextPad(contextPad);
 
     assert(testingCorpi.find(datasetName) == testingCorpi.end());
-    testingCorpi[datasetName] = new Knowledge::Corpus(contextPad);
+    testingCorpi[datasetName] = new Knowledge::Corpus(contextPad,30);
     testingCorpi[datasetName]->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
     testingInstances[datasetName]=new TestingInstances(testingCorpi[datasetName],contextPad);
 }
@@ -448,6 +463,10 @@ NAN_MODULE_INIT(Init) {
         GetFunction(New<FunctionTemplate>(manualFinish)).ToLocalChecked());
     Nan::Set(target, New<v8::String>("showCorpus").ToLocalChecked(),
         GetFunction(New<FunctionTemplate>(showCorpus)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("showInteractive").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(showInteractive)).ToLocalChecked());
+    Nan::Set(target, New<v8::String>("forceNgram").ToLocalChecked(),
+        GetFunction(New<FunctionTemplate>(forceNgram)).ToLocalChecked());
     //Nan::Set(target, New<v8::String>("showProgress").ToLocalChecked(),
     //    GetFunction(New<FunctionTemplate>(showProgress)).ToLocalChecked());
 

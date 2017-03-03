@@ -36,14 +36,18 @@ void NewExemplarsBatchQueue::enqueue(const vector<Spotting*>& batch, vector<pair
             while (iter!= queue.end())
             {
                 bool matched=false;
-                for (auto iter2=toRemoveExemplars->begin(); iter2!=toRemoveExemplars->end(); iter2++)
+                auto iter2=toRemoveExemplars->begin();
+                while(iter2!=toRemoveExemplars->end())
                 {
                     if ((*iter)->id == iter2->first)
                     {
                         matched=true;
                         iter=queue.erase(iter);
                         iter2=toRemoveExemplars->erase(iter2);    
+                        break;
                     }
+                    else
+                        iter2++;
                 }
                 if (!matched)
                     iter++;
@@ -85,6 +89,9 @@ void NewExemplarsBatchQueue::remove(unsigned long id)
 
 NewExemplarsBatch* NewExemplarsBatchQueue::dequeue(int batchSize, unsigned int maxWidth, int color, bool any)
 {
+#ifdef NO_EXEMPLARS
+    return NULL;///////////////////
+#endif
     lock();
     NewExemplarsBatch* ret=NULL;
     if (queue.size()>0)
@@ -254,7 +261,13 @@ void NewExemplarsBatchQueue::needExemplar(string ngram)
 void NewExemplarsBatchQueue::save(ofstream& out)
 {
     lock();
-    out<<(queue.size()+returnMap.size())<<"\n";
+    int returnMapSize = 0;
+    for (auto p : returnMap)
+    {
+        returnMapSize+=p.second->size();
+    }
+
+    out<<(queue.size()+returnMapSize)<<"\n";
     for (auto p : returnMap)
     {
         for (int i=0; i<p.second->size(); i++)

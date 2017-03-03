@@ -1,5 +1,5 @@
 #include "CATTSS.h"
-
+//
 
 void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c)
 {
@@ -7,21 +7,57 @@ void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c
     nice(3);
     //this_thread::sleep_for(chrono::hours(1));
     //cout <<"kill is "<<q->kill.load()<<endl;
-    while(!q->kill.load()) {
+#ifdef NO_NAN
+    int count=0;
+#endif
+    while(!q->kill.load() && cattss->getCont()) {
         //cout <<"begin sleep"<<endl;
         this_thread::sleep_for(chrono::minutes(CHECK_SAVE_TIME));
-        q->checkIncomplete();
-        c->checkIncomplete();
-        cattss->save();
+        if (!q->kill.load() && cattss->getCont())
+        {
+            cattss->save();
+#ifdef NO_NAN
+            GlobalK::knowledge()->writeTrack();
+            if (++count % 39 == 0)
+            {
+                q->checkIncomplete();
+                c->checkIncomplete();
+            }
+#else
+            q->checkIncomplete();
+            c->checkIncomplete();
+#endif
+        }
     }
 }
-void showSleeper(MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
+void showSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
 {
     //This is the lowest priority of the systems threads
     nice(3);
-    while(!q->kill.load()) {
+#ifdef NO_NAN
+    int count=0;
+#endif
+    while(!q->kill.load() && cattss->getCont()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
-        c->showProgress(height,width);
+        if (!q->kill.load() && cattss->getCont())
+        {
+            c->showProgress(height,width);
+#ifdef NO_NAN
+            if (count++ % 5==0) //every 20 seconds
+            {
+                string misTrans;
+                float accTrans,pWordsTrans;
+                float pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0;
+                string misTrans_IV;
+                float accTrans_IV,pWordsTrans_IV;
+                float pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV;
+                c->getStats(&accTrans,&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0, &misTrans,
+                            &accTrans_IV,&pWordsTrans_IV, &pWords80_100_IV, &pWords60_80_IV, &pWords40_60_IV, &pWords20_40_IV, &pWords0_20_IV, &pWords0_IV, &misTrans_IV);
+                GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0, misTrans,
+                                                accTrans_IV,pWordsTrans_IV, pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV, misTrans_IV);
+            }
+#endif
+        }
     }
 }
 
@@ -30,6 +66,7 @@ CATTSS::CATTSS( string lexiconFile,
                 string segmentationFile, 
                 string spottingModelPrefix,
                 string savePrefix,
+                int avgCharWidth,
                 int numSpottingThreads,
                 int numTaskThreads,
                 int showHeight,
@@ -43,10 +80,15 @@ CATTSS::CATTSS( string lexiconFile,
     ifstream in (savePrefix+"_CATTSS.sav");
     if (in.good())
     {
+        cout<<"Load file found."<<endl;
         Lexicon::instance()->load(in);
         corpus = new Knowledge::Corpus(in);
         corpus->loadSpotter(spottingModelPrefix);
-        masterQueue = new MasterQueue(in,corpus->getCorpusRef(),corpus->getPageRef());
+        CorpusRef* corpusRef = corpus->getCorpusRef();
+        PageRef* pageRef = corpus->getPageRef();
+        masterQueue = new MasterQueue(in,corpusRef,pageRef);
+        delete corpusRef;
+        delete pageRef;
         spottingQueue = new SpottingQueue(in,masterQueue,corpus);
 
         string line;
@@ -55,7 +97,8 @@ CATTSS::CATTSS( string lexiconFile,
         for (int i=0; i<tSize; i++)
         {
 
-            taskQueue.push_back(new UpdateTask(in));
+            UpdateTask burn(in); //we simply burn these as we don't save the appropriate data in other objects
+            //taskQueue.push_back(new UpdateTask(in));
             sem_post(&semLock);
         }
         getline(in,line);
@@ -64,6 +107,8 @@ CATTSS::CATTSS( string lexiconFile,
         NewExemplarsBatch::setIdCounter(stoul(line));
         getline(in,line);
         TranscribeBatch::setIdCounter(stoul(line));
+        getline(in,line);
+        cout<<"Loaded. Begins from time: "<<line<<endl;
         in.close();
     }
     else
@@ -71,7 +116,7 @@ CATTSS::CATTSS( string lexiconFile,
     
         masterQueue = new MasterQueue(contextPad);
         Lexicon::instance()->readIn(lexiconFile);
-        corpus = new Knowledge::Corpus(contextPad);
+        corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         corpus->loadSpotter(spottingModelPrefix);
         spottingQueue = new SpottingQueue(masterQueue,corpus);
@@ -126,14 +171,53 @@ CATTSS::CATTSS( string lexiconFile,
     //#endif
 #endif
     }
+
+#ifdef TEST_MODE
+    in.open(segmentationFile+".char");
+    string line;
+    //getline(in,line);//header
+    while (getline(in,line))
+    {
+        string s;
+        std::stringstream ss(line);
+        getline(ss,s,',');
+        string word=s;
+        getline(ss,s,',');
+        int pageId = (stoi(s)+1); //+1 is correction from my creation of segmentation file
+        getline(ss,s,',');//x1
+        int x1=stoi(s);
+        getline(ss,s,',');
+        int y1=stoi(s);
+        getline(ss,s,',');//x2
+        int x2=stoi(s);
+        getline(ss,s,',');
+        int y2=stoi(s);
+        vector<int> lettersStart, lettersEnd;
+        //vector<int> lettersStartRel, lettersEndRel;
+
+        while (getline(ss,s,','))
+        {
+            lettersStart.push_back(stoi(s));
+            //lettersStartRel.push_back(stoi(s)-x1);
+            getline(ss,s,',');
+            lettersEnd.push_back(stoi(s));
+            //lettersEndRel.push_back(stoi(s)-x1);
+            //getline(ss,s,',');//conf
+        }
+        GlobalK::knowledge()->addWordBound(word,pageId,x1,y1,x2,y2,lettersStart,lettersEnd);
+    }
+    in.close();
+#endif
     
    
     //should be priority 77 
     incompleteChecker = new thread(checkIncompleteSleeper,this,masterQueue,corpus);//This could be done by a thread for each sr
     incompleteChecker->detach();
-    showChecker = new thread(showSleeper,masterQueue,corpus,showHeight,showWidth,showMilli);
+    showChecker = new thread(showSleeper,this,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
+//#ifndef GRAPH_SPOTTING_RESULTS
     spottingQueue->run(numSpottingThreads);
+//#endif
     run(numTaskThreads);
     //test
     /*
@@ -183,7 +267,7 @@ CATTSS::CATTSS( string lexiconFile,
 }
 BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 {
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     try
     {
 #else
@@ -209,7 +293,7 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
             return ret;
         else
             return new BatchWraperBlank();
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     }
     catch (exception& e)
     {
@@ -241,13 +325,18 @@ void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
 
 void CATTSS::misc(string task)
 {
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     try
     {
 #endif
         if (task.compare("showCorpus")==0)
         {
             corpus->show();
+        }
+        else if (task.length()>16 && task.substr(0,16).compare("showInteractive:")==0)
+        {
+            int pageNum = stoi(task.substr(16));
+            corpus->showInteractive(pageNum);
         }
 /*        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {
@@ -269,7 +358,22 @@ void CATTSS::misc(string task)
         else if (task.compare("manualFinish")==0)
         {
             masterQueue->setFinish(true);
+            cout<<"Manual Finish engaged."<<endl;
         }
+        else if (task.compare("save")==0)
+        {
+            save();
+        }
+#ifdef TEST_MODE
+        else if (task.length()>11 && task.substr(0,11).compare("forceNgram:")==0)
+        {
+            masterQueue->forceNgram = task.substr(11);
+        }
+        else if (task.compare("unforce")==0 || task.compare("unforceNgram")==0)
+        {
+            masterQueue->forceNgram="";
+        }
+#endif
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
             int num = stoi(task.substr(14));
@@ -279,7 +383,7 @@ void CATTSS::misc(string task)
             else
                 cout<<"ERROR: tried to start spotting with "<<num<<" threads"<<endl;
         }*/
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
     }
     catch (exception& e)
     {
@@ -332,13 +436,17 @@ void CATTSS::threadLoop()
     while(1)
     {
         
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
         try
         {
 #endif
             updateTask = dequeue();
             if (!cont.load())
+            {
+                if (updateTask!=NULL)
+                    delete updateTask;
                 break; //END
+            }
             
             if (updateTask!=NULL)
             {
@@ -418,7 +526,7 @@ void CATTSS::threadLoop()
             }
             else
                 break; //END
-#ifndef TEST_MODE
+#if !defined(TEST_MODE) && !defined(NO_NAN)
         }
         catch (exception& e)
         {
@@ -459,10 +567,14 @@ void CATTSS::save()
     if (savePrefix.length()>0)
     {
 #ifdef TEST_MODE
-        cout<<"START save"<<endl;
+        cout<<"START save.    "<<GlobalK::currentDateTime()<<endl;
         clock_t t;
         t = clock();
 #endif
+
+        time_t timeSec;
+        time(&timeSec);
+
         string saveName = savePrefix+"_CATTSS.sav";
         //In the event of a crash while saveing, keep a backup of the last save
         rename( saveName.c_str() , (saveName+".bck").c_str() );
@@ -485,10 +597,11 @@ void CATTSS::save()
         out<<SpottingsBatch::getIdCounter()<<"\n";
         out<<NewExemplarsBatch::getIdCounter()<<"\n";
         out<<TranscribeBatch::getIdCounter()<<"\n";
+        out<<timeSec<<"\n";
         out.close();
 #ifdef TEST_MODE
         t = clock() - t;
-        cout<<"END save: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
+        cout<<"END save: "<<((float)t)/CLOCKS_PER_SEC<<" secs.    "<<endl;
 #endif
     }
 }

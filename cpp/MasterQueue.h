@@ -21,6 +21,7 @@
 #include "BatchWraperTranscription.h"
 #include "BatchWraperNewExemplars.h"
 #include <fstream>
+#include <assert.h>
 
 #include "CorpusRef.h"
 #include "PageRef.h"
@@ -82,7 +83,7 @@ public:
     SpottingsBatch* getSpottingsBatch(unsigned int numberOfInstances, bool hard, unsigned int maxWidth, int color, string prevNgram, bool need=true);
     vector<Spotting>* feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications, int resent, vector<pair<unsigned long,string> >* remove);
     virtual unsigned long updateSpottingResults(vector<Spotting>* spottings, unsigned long id=0);//a negative id means add a new spottingresult
-    void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
+    //void addSpottingResults(SpottingResults* res, bool hasSemResults=false, bool toQueue=true);
     
     
     //TranscribeBatch* getTranscriptionBatch(unsigned int maxWidth) {return transcribeBatchQueue.dequeue(maxWidth);}
@@ -111,6 +112,17 @@ public:
         cout << "***********"<<endl;*/
         pthread_rwlock_destroy(&semResultsQueue);
         pthread_rwlock_destroy(&semResults);
+#if ROTATE
+        //pthread_rwlock_wrlock(semRotate);
+        pthread_rwlock_destroy(&semRotate);
+#endif
+        //destory semRotate
+        for (auto p : results)
+        {
+            sem_destroy(p.second.first);//sem
+            delete p.second.first;//sem
+            delete p.second.second;
+        }
     }
     void checkIncomplete();
     atomic_bool kill;
@@ -119,5 +131,8 @@ public:
     //test
     vector<Spotting>* test_feedback(unsigned long id, const vector<string>& ids, const vector<int>& userClassifications);
     bool test_autoBatch();
+#ifdef TEST_MODE
+    string forceNgram;
+#endif
 };
 #endif
