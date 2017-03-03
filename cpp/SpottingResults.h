@@ -177,6 +177,7 @@ private:
     map<unsigned long, unsigned long> updateMap;
 #ifdef TEST_MODE
     map<unsigned long, unsigned long> testUpdateMap;
+    int atn, rtn;
 #endif
 
     //This acts as a pointer to where we last extracted a batch to speed up searching for the correct score area to extract a batch from

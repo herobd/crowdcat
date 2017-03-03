@@ -275,7 +275,7 @@ NAN_METHOD(loadTestingCorpus) {
     //GlobalK::knowledge()->setContextPad(contextPad);
 
     assert(testingCorpi.find(datasetName) == testingCorpi.end());
-    testingCorpi[datasetName] = new Knowledge::Corpus(contextPad);
+    testingCorpi[datasetName] = new Knowledge::Corpus(contextPad,30);
     testingCorpi[datasetName]->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
     testingInstances[datasetName]=new TestingInstances(testingCorpi[datasetName],contextPad);
 }

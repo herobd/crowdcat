@@ -197,7 +197,8 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
         {
             atPull=false;
 #ifdef GRAPH_SPOTTING_RESULTS
-            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+
+            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,200,200);
 #endif
         }
         if (spotting.score >=acceptThreshold && acceptT)
@@ -205,7 +206,12 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
             acceptT=false;
             betweenT=true;
 #ifdef GRAPH_SPOTTING_RESULTS
-            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+            if (atn==0)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+            else if (atn==1)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,200,0);
+            else if (atn==2)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,200);
 #endif
         }
         if (spotting.score >rejectThreshold && betweenT)
@@ -213,7 +219,12 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
             rejectT=true;
             betweenT=false;
 #ifdef GRAPH_SPOTTING_RESULTS
-            newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+            if (rtn==0)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,0);
+            else if (rtn==1)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,200,0);
+            else if (rtn==2)
+                newUndoneLine.at<cv::Vec3b>(0,inUndone++) = cv::Vec3b(255,0,200);
 #endif
         }
 
@@ -309,19 +320,29 @@ void SpottingResults::setDebugInfo(SpottingsBatch* b)
         if ((*iter)->score >=pullFromScore && atPull)
         {
             atPull=false;
-            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,200,190);
         }
         if ((*iter)->score >=acceptThreshold && acceptT)
         {
             acceptT=false;
             betweenT=true;
-            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+            if (atn==0)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+            else if (atn==1)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,200,0);
+            else if (atn==2)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,200);
         }
         if ((*iter)->score >rejectThreshold && betweenT)
         {
             rejectT=true;
             betweenT=false;
-            newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+            if (rtn==0)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,0);
+            else if (rtn==1)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,200,0);
+            else if (rtn==2)
+                newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(255,0,200);
         }
         if (t)
             newFullLine.at<cv::Vec3b>(0,inFull++) = cv::Vec3b(0,color,0);
@@ -740,8 +761,8 @@ bool SpottingResults::EMThresholds(int swing)
                 if (classById[id])
                 {
                     expectedTrue.push_back(instancesById.at(id).score);
-                    expectedTrue.push_back(instancesById.at(id).score);
-                    sumTrue+=2*instancesById.at(id).score;
+                    //expectedTrue.push_back(instancesById.at(id).score);
+                    sumTrue+=1*instancesById.at(id).score;
                     
 #ifdef TEST_MODE
                     //test
@@ -751,8 +772,8 @@ bool SpottingResults::EMThresholds(int swing)
                 else
                 {
                     expectedFalse.push_back(instancesById.at(id).score);
-                    expectedFalse.push_back(instancesById.at(id).score);
-                    sumFalse+=2*instancesById.at(id).score;
+                    //expectedFalse.push_back(instancesById.at(id).score);
+                    sumFalse+=1*instancesById.at(id).score;
                     
 #ifdef TEST_MODE
                     //test
@@ -822,7 +843,8 @@ bool SpottingResults::EMThresholds(int swing)
         if (falseVariance!=0 && trueVariance!=0)
         {
             acceptThreshold = max( min(acceptThreshold1,acceptThreshold2), minScore);
-            rejectThreshold = min( max(rejectThreshold1,rejectThreshold2), maxScore);
+            //rejectThreshold = min( max(rejectThreshold1,rejectThreshold2), maxScore);
+            rejectThreshold = min( rejectThreshold2, maxScore);//This seems to work better
         }
         else if (falseVariance==0)
         {
@@ -834,6 +856,22 @@ bool SpottingResults::EMThresholds(int swing)
             rejectThreshold = rejectThreshold2;
             acceptThreshold = falseMean-2*numStdDevs*sqrt(falseVariance);
         }
+
+#ifdef TEST_MODE
+        if (rejectThreshold==rejectThreshold1)
+            rtn=1;
+        else if (rejectThreshold==rejectThreshold2)
+            rtn=2;
+        else
+            rtn=0;
+        
+        if (acceptThreshold==acceptThreshold1)
+            atn=1;
+        else if (acceptThreshold==acceptThreshold2)
+            atn=2;
+        else
+            atn=0;
+#endif //TEST_MODE
 
         /*if (!init)
         {
@@ -1225,6 +1263,17 @@ bool SpottingResults::updateSpottings(vector<Spotting>* spottings)
 
                 //Actually, averaging seems to do better
                 float combScore = (spotting.score + (best)->score)/2.0f;
+                //prevent incorrect changes to score
+                auto iii = classById.find(best->id);
+                if (iii != classById.end())
+                {
+                    if ( (iii->second && combScore>(best)->score) ||
+                            ((!iii->second) && combScore<(best)->score)
+                       )
+                    {
+                        combScore = (best)->score;
+                    }
+                }
 
                 if (spotting.score < (best)->score)//then replace the spotting, this happens to skip NaN in the case of a harvested exemplar
                 {
@@ -1469,6 +1518,10 @@ SpottingResults::SpottingResults(ifstream& in, PageRef* pageRef) :
     //cv::namedWindow(undoneGraphName);
     fullGraphName="save/graph/graph_full_"+ngram+".png";
 #endif
+#ifdef TEST_MODE
+    rtn=0;
+    atn=0;
+#endif //TEST_MODE
     ///debugState();
     
 }

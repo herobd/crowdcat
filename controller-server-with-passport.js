@@ -21,8 +21,8 @@ var Database = require('./database')();
 var passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy;
 
-var spottingaddon = require("./cpp/build/Debug/spottingaddon");
-//var spottingaddon = require("./cpp/build/Release/spottingaddon")
+//var spottingaddon = require("./cpp/build/Debug/spottingaddon");
+var spottingaddon = require("./cpp/build/Release/spottingaddon")
 
 numberOfTests=2;
 
@@ -243,6 +243,29 @@ var ControllerApp = function(port) {
                 var appName = 'app_full';
                 if (!saveMode)
                     res.render(appName, {app_version:'app_full', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
+                else
+                    res.redirect('/');
+            } else {
+                res.redirect('/login');
+            }
+        });
+        self.app.get('/app-demo', function(req, res) {
+            //if (debug) {
+                var appName = 'app_full';
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_full', testMode:false, trainMode:true, save:false, message: req.flash('error') });
+                else
+                    res.redirect('/');
+            //} else {
+            //    res.redirect('/login');
+            //}
+        });
+        self.app.get('/app-prep', function(req, res) {
+            if (req.user || debug) {
+
+                var appName = 'app_prep';
+                if (!saveMode)
+                    res.render(appName, {app_version:'app_prep', testMode:false, trainMode:false, save:saveMode, message: req.flash('error') });
                 else
                     res.redirect('/');
             } else {

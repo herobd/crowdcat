@@ -231,6 +231,19 @@ BatchWraper* MasterQueue::getBatch(unsigned int numberOfInstances, bool hard, un
     ngramQueueCount=resultsQueue.size();
     pthread_rwlock_unlock(&semResultsQueue);
 
+    //for setting up, just do some spottings
+    if (prevNgram.compare("~")==0)
+    {
+            SpottingsBatch* batch = getSpottingsBatch(numberOfInstances,hard,maxWidth,color,prevNgram,true);
+            if (batch!=NULL)
+            {
+#ifdef NO_NAN
+                GlobalK::knowledge()->sentSpottings();
+#endif
+                return new BatchWraperSpottings(batch);
+            }
+    }
+
     BatchWraper* ret=NULL;
     if (finish.load())
     {
@@ -306,25 +319,50 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
     //cout<<"getting rw lock"<<endl;
     pthread_rwlock_rdlock(&semResultsQueue);
     //cout<<"got rw lock"<<endl;
-#if ROTATE
-    int test_loc=0;
-    pthread_rwlock_rdlock(&semRotate);
-#endif
-    for (auto ele : resultsQueue)
+
+    auto iter = resultsQueue.begin();
+    int indexHolder=0;
+    //for (auto ele : resultsQueue)
+    for (; iter!=resultsQueue.end(); iter++, indexHolder++)
     {
-#if ROTATE
-        if (test_loc++<test_rotate/2) //TODO add var to control
-            continue;
-#endif
-        
-        sem_t* sem = ele.second.first;
-        SpottingResults* res = ele.second.second;
+        SpottingResults*  res = iter->second.second;
+        if (prevNgram.compare(res->ngram)==0)
+        {
+            break;
+        }
+
 #ifdef TEST_MODE
-        if (!need && forceNgram.size()>0 && forceNgram.compare(res->ngram)!=0)
-            continue;
-        if (forceNgram.size()>0)
-            cout<<"Force ngram is on : "<<forceNgram<<endl;
+        if (!need && forceNgram.size()>0 && forceNgram.compare(res->ngram)==0)
+        {
+            cout<<"Forcing ngram : "<<forceNgram<<endl;
+            break;
+        }
 #endif
+    }
+
+
+    if (iter==resultsQueue.end())
+    {
+        iter = resultsQueue.begin();
+        indexHolder=0;
+#if ROTATE
+        int test_loc=0;
+        pthread_rwlock_rdlock(&semRotate);
+        for (; iter!=resultsQueue.end(); iter++,indexHolder++)
+            if (test_loc++>=test_rotate/2) //TODO add var to control
+                break;
+        assert(iter!=resultsQueue.end());
+        pthread_rwlock_unlock(&semRotate);
+#endif
+    }
+
+    auto iterStart=iter;
+    do
+    {
+        
+        sem_t* sem = iter->second.first;
+        SpottingResults* res = iter->second.second;
+
         bool succ = 0==sem_trywait(sem);
         if (succ)
         {
@@ -332,11 +370,11 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             
             //test
 #if ROTATE
-            pthread_rwlock_unlock(&semRotate);
             int qSize = resultsQueue.size();
             pthread_rwlock_wrlock(&semRotate);
             if (test_rotate++>2*(qSize-1))
                 test_rotate=0;
+            //cout<<"rotated to "<<test_rotate<<endl;
             pthread_rwlock_unlock(&semRotate);
 #endif
             //test
@@ -366,9 +404,11 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
             else
             {
                 pthread_rwlock_rdlock(&semResultsQueue);
-#if ROTATE
-                pthread_rwlock_rdlock(&semRotate);
-#endif
+                //reset iter as results queue may have changed (race)
+                iter=resultsQueue.begin();
+                for (int i=0; i<std::min(indexHolder,(int)resultsQueue.size()); i++)
+                    iter++;
+                iterStart = iter;
             }
             
         }
@@ -376,7 +416,14 @@ SpottingsBatch* MasterQueue::getSpottingsBatch(unsigned int numberOfInstances, b
         //{
         //    cout <<"couldn't get lock"<<endl;
         //}
-    }
+        iter++;
+        indexHolder++;
+        if (iter==resultsQueue.end())
+        {
+            iter=resultsQueue.begin();
+            indexHolder=0;
+        }
+    } while (iter!=iterStart);
     if (batch==NULL)
     {
         pthread_rwlock_unlock(&semResultsQueue);//just in case
