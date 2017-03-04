@@ -1,10 +1,9 @@
-#ifndef CATTSS_H
-#define CATTSS_H
+#ifndef CrowdCAT_H
+#define CrowdCAT_H
 
 #include "MasterQueue.h"
-#include "Knowledge.h"
 #include "SpottingQueue.h"
-#include "spotting.h"
+#include "Knowledge.h"
 #include "Lexicon.h"
 #include "BatchWraper.h"
 #include "opencv2/core/core.hpp"
@@ -28,16 +27,16 @@ struct UpdateTask
 {
     int type;
     string id;
-    vector<int> labels;
+    //vector<int> labels;
     int resent_manual_bool;
-    vector<string> strings;
-    UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
+    //vector<string> strings;
+    //UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
     UpdateTask(string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
-    UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 
+    //UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 
 
     UpdateTask(ifstream& in)
     {
-        string line;
+        /*string line;
         getline(in,line);
         type = stoi(line);
         getline(in,id);
@@ -57,11 +56,11 @@ struct UpdateTask
         for (int i=0; i<size; i++)
         {
             getline(in,strings.at(i));
-        }
+        }*/
     }
     void save(ofstream& out)
     {
-        out<<type<<"\n";
+        /*out<<type<<"\n";
         out<<id<<"\n";
         out<<labels.size()<<"\n";
         for (int i : labels)
@@ -73,11 +72,11 @@ struct UpdateTask
         for (string s : strings)
         {
             out<<s<<"\n";
-        }
+        }*/
     }
 };
 
-class CATTSS
+class CrowdCAT
 {
     private:
     MasterQueue* masterQueue;
@@ -102,7 +101,7 @@ class CATTSS
     void stop();
 
     public:
-    CATTSS( string lexiconFile,
+    CrowdCAT( string lexiconFile,
             string pageImageDir, 
             string segmentationFile, 
             string spottingModelPrefix,
@@ -114,7 +113,7 @@ class CATTSS
             int showWidth,      //Width of showProgress image
             int showMilli,      //How frequently to save showProgress
             int contextPad );    //how many pixels to arbitrarly pad to the bottom of images sent to users (for NAMES)
-    ~CATTSS()
+    ~CrowdCAT()
     {
         delete incompleteChecker;
         delete showChecker;
@@ -129,9 +128,9 @@ class CATTSS
     void save();
 
     BatchWraper* getBatch(int num, int width, int color, string prevNgram);
-    void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);
+    //void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);
     void updateTranscription(string id, string transcription, bool manual);
-    void updateNewExemplars(string resultsId,  vector<int> labels, int resent);
+    //void updateNewExemplars(string resultsId,  vector<int> labels, int resent);
     void misc(string task);
     const Knowledge::Corpus* getCorpus() const {return corpus;}
 

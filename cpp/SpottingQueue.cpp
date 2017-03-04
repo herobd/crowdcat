@@ -13,6 +13,7 @@ SpottingQueue::SpottingQueue(MasterQueue* masterQueue, Knowledge::Corpus* corpus
     //int _setId=0;
     cont.store(1);
     sem_init(&semLock, 0, 0);
+    //TODO enqueue the corpus
 }
 SpottingQueue::~SpottingQueue()
 {

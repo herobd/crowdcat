@@ -17,6 +17,7 @@
 #include <regex>
 #include <assert.h>
 
+#include "Word.h"
 #include "spotting.h"
 #include "Lexicon.h"
 #include "Global.h"
@@ -75,217 +76,6 @@ void findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int* brx, int* 
 
 
 
-class Word: public WordBackPointer
-{
-private:
-    pthread_rwlock_t lock;
-    int tlx, tly, brx, bry; // top y and bottom y
-    string query;
-    string gt;
-    SearchMeta meta;
-    const cv::Mat* pagePnt;
-    const Spotter* const* spotter;
-    const float* averageCharWidth;
-    int* countCharWidth;
-    int pageId;
-    int spottingIndex;
-   
-    int topBaseline, botBaseline;
-
-    multimap<int,Spotting> spottings;
-    bool done;
-    bool loose; //If the user reports and error during trans (not spotting error), we give it a second chance but loosen the regex to take in more possibilities
-    unsigned long sentBatchId;
-
-    set<pair<unsigned long,string> > harvested;
-
-    multimap<float,string> scoreAndThresh(vector<string> match) const;
-    TranscribeBatch* createBatch(multimap<float,string> scored);
-    string generateQuery();
-    TranscribeBatch* queryForBatch(vector<Spotting*>* newExemplars);
-    vector<Spotting*> harvest();
-    bool removeWorstSpotting(unsigned long batchId=0);//Returns whether a spotting was removed. Accepts batchId to add to removedSpottings so it can be redeemed in a resend of the batch
-#ifdef TEST_MODE
-    void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word, cv::Mat& showA);
-#else
-    void emergencyAnchor(cv::Mat& b, GraphType* g,int startX, int endX, float sum_anchor, float goal_sum, bool word);
-#endif
-    SpottingExemplar* extractExemplar(int leftLeftBound, int rightLeftBound, int leftRightBound, int rightRightBound, string newNgram, cv::Mat& wordImg, cv::Mat& b);
-    void findBaselines(const cv::Mat& gray, const cv::Mat& bin);
-    void getWordImgAndBin(cv::Mat& wordImg, cv::Mat& b);
-    const cv::Mat getWordImg() const;
-    cv::Point wordCord(int r, int c)
-    {
-        return cv::Point(c-tlx,r-tly);
-    }
-    int wordIndex(int r, int c)
-    {
-        return (c-tlx) + (brx-tlx+1)*(r-tly);
-    }
-
-    string transcription;
-
-    map<unsigned long, vector<Spotting> > removedSpottings;
-    void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
-#if TRANS_DONT_WAIT
-    set<string> rejectedTrans;
-    multimap<float,string> sentPoss;
-    multimap<float,string> notSent;
-#endif
-    unsigned int id;
-protected:
-    static atomic_uint _id;
-
-public:
-    //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
-    //{
-    //    pthread_rwlock_init(&lock,NULL);
-    //}    
-    
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
-    {
-        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
-        pthread_rwlock_init(&lock,NULL);
-        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
-        id = _id++;
-    }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
-    {
-        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
-        pthread_rwlock_init(&lock,NULL);
-        assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
-        id = _id++;
-    }
-    Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
-    void save(ofstream& out);
-    
-    ~Word()
-    {
-        pthread_rwlock_destroy(&lock);
-    }
-    
-    TranscribeBatch* addSpotting(Spotting s,vector<Spotting*>* newExemplars, bool findBatch=true);
-    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, unsigned long* sentBatchId, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
-    TranscribeBatch* removeSpotting(unsigned long sid, unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars) {return removeSpotting(sid,batchId,resend,NULL,newExemplars,toRemoveExemplars);}
-    
-    vector<Spotting*> result(string selected, unsigned long batchId, bool resend, vector< pair<unsigned long, string> >* toRemoveExemplars);
-
-    TranscribeBatch* error(unsigned long batchId, bool resend, vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
-
-    void getBaselines(int* top, int* bot);
-    void getBoundsAndDone(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone)
-    {
-        pthread_rwlock_rdlock(&lock);
-        *word_tlx=tlx;
-        *word_tly=tly;
-        *word_brx=brx;
-        *word_bry=bry;
-	*isDone=done;
-        pthread_rwlock_unlock(&lock);
-    }
-    void getBoundsAndDoneAndSent(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent)
-    {
-        pthread_rwlock_rdlock(&lock);
-        *word_tlx=tlx;
-        *word_tly=tly;
-        *word_brx=brx;
-        *word_bry=bry;
-	*isDone=done;
-        *isSent=sentBatchId!=0;
-        pthread_rwlock_unlock(&lock);
-    }
-    void getBoundsAndDoneAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, string* gt)
-    {
-        pthread_rwlock_rdlock(&lock);
-        *word_tlx=tlx;
-        *word_tly=tly;
-        *word_brx=brx;
-        *word_bry=bry;
-	*isDone=done;
-        *gt=this->gt;
-        pthread_rwlock_unlock(&lock);
-    }
-    void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
-    {
-        pthread_rwlock_rdlock(&lock);
-	*isDone=done;
-        *gt=this->gt;
-        *query=this->query;
-        pthread_rwlock_unlock(&lock);
-    }
-    void getBoundsAndDoneAndSentAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent, string* gt)
-    {
-        pthread_rwlock_rdlock(&lock);
-        *word_tlx=tlx;
-        *word_tly=tly;
-        *word_brx=brx;
-        *word_bry=bry;
-	*isDone=done;
-        *isSent=sentBatchId!=0;
-        *gt=this->gt;
-        pthread_rwlock_unlock(&lock);
-    }
-
-
-    vector<Spotting> getSpottings() 
-    {
-        pthread_rwlock_rdlock(&lock);
-        vector<Spotting> ret;
-        for (auto p : spottings)
-            ret.push_back(p.second);
-        pthread_rwlock_unlock(&lock);
-        return ret;
-    }
-    void sent(unsigned long id)
-    {
-        pthread_rwlock_wrlock(&lock);
-        sentBatchId=id;
-        pthread_rwlock_unlock(&lock);
-    }
-    void setSpottingIndex(int index)
-    {
-        pthread_rwlock_wrlock(&lock);
-        spottingIndex=index;
-        pthread_rwlock_unlock(&lock);
-    }
-    int getSpottingIndex()
-    {
-        int ret;
-        pthread_rwlock_rdlock(&lock);
-        ret=spottingIndex;
-        pthread_rwlock_unlock(&lock);
-        return ret;
-    }
-    const multimap<int,Spotting>* getSpottingsPointer() {return & spottings;}
-    vector<string> getRestrictedLexicon(int max);
-
-    const cv::Mat* getPage() const {return pagePnt;}
-    int getPageId() const {return pageId;}
-    const cv::Mat getImg();// const;
-    string getTranscription() 
-    {
-#ifdef TEST_MODE
-        //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getTranscription"<<endl;
-#endif
-        pthread_rwlock_rdlock(&lock); 
-        string ret;
-        if (done) 
-            ret= transcription; 
-        else 
-            ret = "$ERROR_NONE$"; 
-        pthread_rwlock_unlock(&lock);
-#ifdef TEST_MODE
-        //cout<<"[unlock] "<<gt<<" ("<<tlx<<","<<tly<<") getTranscription"<<endl;
-#endif
-        return ret;
-    }
-    string getGT() {return gt;}
-    void preapproveSpotting(Spotting* spotting);
-    unsigned int getId(){return id;}
-
-    //For data collection, when I deleted all my trans... :(
-    TranscribeBatch* reset_(vector<Spotting*>* newExemplars);
-};
 
 class Line
 {
@@ -477,8 +267,8 @@ private:
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 
     vector<string> _gt;
-    vector<Word*> _words;
-    vector<Mat> _wordImgs;
+    map<unsigned long, Word*> _words;
+    mat<unsinged long, Mat> _wordImgs;
     bool changed;
     void recreateDatasetVectors(bool lockPages);
 

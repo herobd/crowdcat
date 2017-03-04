@@ -1,7 +1,7 @@
-#include "CATTSS.h"
+#include "CrowdCAT.h"
 //
 
-void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c)
+void checkIncompleteSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c)
 {
     //This is the lowest priority of the systems threads
     nice(3);
@@ -30,7 +30,7 @@ void checkIncompleteSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c
         }
     }
 }
-void showSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
+void showSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c, int height, int width, int milli)
 {
     //This is the lowest priority of the systems threads
     nice(3);
@@ -61,7 +61,7 @@ void showSleeper(CATTSS* cattss, MasterQueue* q, Knowledge::Corpus* c, int heigh
     }
 }
 
-CATTSS::CATTSS( string lexiconFile, 
+CrowdCAT::CrowdCAT( string lexiconFile, 
                 string pageImageDir, 
                 string segmentationFile, 
                 string spottingModelPrefix,
@@ -77,7 +77,7 @@ CATTSS::CATTSS( string lexiconFile,
     cont.store(1);
     sem_init(&semLock, 0, 0);
 
-    ifstream in (savePrefix+"_CATTSS.sav");
+    ifstream in (savePrefix+"_CrowdCAT.sav");
     if (in.good())
     {
         cout<<"Load file found."<<endl;
@@ -91,23 +91,8 @@ CATTSS::CATTSS( string lexiconFile,
         delete pageRef;
         spottingQueue = new SpottingQueue(in,masterQueue,corpus);
 
-        string line;
-        getline(in,line);
-        int tSize = stoi(line);
-        for (int i=0; i<tSize; i++)
-        {
 
-            UpdateTask burn(in); //we simply burn these as we don't save the appropriate data in other objects
-            //taskQueue.push_back(new UpdateTask(in));
-            sem_post(&semLock);
-        }
-        getline(in,line);
-        SpottingsBatch::setIdCounter(stoul(line));
-        getline(in,line);
-        NewExemplarsBatch::setIdCounter(stoul(line));
-        getline(in,line);
-        TranscribeBatch::setIdCounter(stoul(line));
-        getline(in,line);
+       
         cout<<"Loaded. Begins from time: "<<line<<endl;
         in.close();
     }
@@ -119,60 +104,15 @@ CATTSS::CATTSS( string lexiconFile,
         corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         corpus->loadSpotter(spottingModelPrefix);
-        spottingQueue = new SpottingQueue(masterQueue,corpus);
-
-#ifdef TEST_MODE_LONG
-        int pageId=0;
-
-        //Spotting er1 (433,14,472,36,pageId,corpus->imgForPageId(pageId),"er",0.0);//[1]
-        //vector<Spotting > init = {er1};
-        //masterQueue->updateSpottingResults(new vector<Spotting>(init));
-        Spotting* er1 = new Spotting(811,18,842,40,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
-        vector<Spotting* > init = {er1};
-        spottingQueue->addQueries(init);
-#else
-    //#ifdef TEST_MODE
-        /*int pageId=2700270;
-        
-        Spotting* th1 = new Spotting(586,319,687,390,pageId,corpus->imgForPageId(pageId),"th",0);//[1]
-        Spotting* he1 = new Spotting(462,588,535,646,pageId,corpus->imgForPageId(pageId),"he",0);//[1]
-        Spotting* in1 = new Spotting(504,857,584,902,pageId,corpus->imgForPageId(pageId),"in",0);//[1]
-        Spotting* er1 = new Spotting(593,621,652,645,pageId,corpus->imgForPageId(pageId),"er",0);//[1]
-        Spotting* an1 = new Spotting(358,968,466,988,pageId,corpus->imgForPageId(pageId),"an",0);//[1]
-        Spotting* re1 = new Spotting(1712,787,1766,815,pageId,corpus->imgForPageId(pageId),"re",0);//[1]
-        Spotting* on1 = new Spotting(618,956,703,987,pageId,corpus->imgForPageId(pageId),"on",0);//[1]
-        Spotting* at1 = new Spotting(774,1027,876,1072,pageId,corpus->imgForPageId(pageId),"at",0);//[1]
-        Spotting* en1 = new Spotting(1589,452,1670,480,pageId,corpus->imgForPageId(pageId),"en",0);//[1]
-        Spotting* nd1 = new Spotting(1609,600,1732,640,pageId,corpus->imgForPageId(pageId),"nd",0);//[1]
-        Spotting* ti1 = new Spotting(1709,342,1776,388,pageId,corpus->imgForPageId(pageId),"ti",0);//[1]
-        Spotting* es1 = new Spotting(1678,956,1729,988,pageId,corpus->imgForPageId(pageId),"es",0);//[1]
-        Spotting* or1 = new Spotting(582,1561,632,1590,pageId,corpus->imgForPageId(pageId),"or",0);//[1]
-        Spotting* te1 = new Spotting(1245,1618,1306,1668,pageId,corpus->imgForPageId(pageId),"te",0);//[1]
-        Spotting* of1 = new Spotting(870,507,966,590,pageId,corpus->imgForPageId(pageId),"of",0);//[1]
-        Spotting* ed1 = new Spotting(812,770,914,816,pageId,corpus->imgForPageId(pageId),"ed",0);//[1]
-        Spotting* is1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"is",0);//[1]
-        Spotting* it1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"it",0);//[1]
-        Spotting* al1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"al",0);//[1]
-        Spotting* ar1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ar",0);//[1]
-        Spotting* st1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"st",0);//[1]
-        Spotting* to1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"to",0);//[1]
-        Spotting* nt1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"nt",0);//[1]
-        Spotting* ng1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ng",0);//[1]
-        Spotting* se1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"se",0);//[1]
-        Spotting* ha1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"ha",0);//[1]
-        Spotting* as1 = new Spotting(111,111,222,222,pageId,corpus->imgForPageId(pageId),"as",0);//[1]*/
-        /*vector<Spotting* > init_first = {th1,at1,or1,er1};
-        spottingQueue->addQueries(init_first);
-        vector<Spotting* > init = {th1,he1,in1,er1,an1,re1,on1,at1,en1,nd1,ti1,es1,or1,te1,of1,ed1,is1,it1,al1,ar1,st1,to1,nt1,ng1,se1,ha1,as1};
-        spottingQueue->addQueries(init);*/
-        vector<string> top100Bigrams={"th","he","in","er","an","re","on","at","en","nd","ti","es","or","te","of","ed","is","it","al","ar","st","to","nt","ng","se","ha","as","ou","io","le","ve","co","me","de","hi","ri","ro","ic","ne","ea","ra","ce","li","ch","ll","be","ma","si","om","ur","ca","el","ta","la","ns","di","fo","ho","pe","ec","pr","no","ct","us","ac","ot","il","tr","ly","nc","et","ut","ss","so","rs","un","lo","wa","ge","ie","wh","ee","wi","em","ad","ol","rt","po","we","na","ul","ni","ts","mo","ow","pa","im","mi","ai","sh"};
-        spottingQueue->addQueries(top100Bigrams);
+        spottingQueue = new SpottingQueue(masterQueue,corpus); //should enqueue the corpus
+        //??spottingQueue->transcribeCorpus();
 
     //#endif
 #endif
     }
 
 #ifdef TEST_MODE
+    /*
     in.open(segmentationFile+".char");
     string line;
     //getline(in,line);//header
@@ -207,6 +147,7 @@ CATTSS::CATTSS( string lexiconFile,
         GlobalK::knowledge()->addWordBound(word,pageId,x1,y1,x2,y2,lettersStart,lettersEnd);
     }
     in.close();
+    */
 #endif
     
    
@@ -265,7 +206,7 @@ CATTSS::CATTSS( string lexiconFile,
     //test
 
 }
-BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
+BatchWraper* CrowdCAT::getBatch(int width)
 {
 #if !defined(TEST_MODE) && !defined(NO_NAN)
     try
@@ -273,15 +214,10 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
 #else
         //cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
-        bool hard=true;
-        if (num==-1) {
-            num=5;
-            hard=false;
-
-        }
-        BatchWraper* ret= masterQueue->getBatch(num,hard,width,color,prevNgram);
+        BatchWraper* ret= masterQueue->getBatch(width);
         if (ret==NULL)
         {
+            //TODO, I don't think this will be needed
             TranscribeBatch* bat = corpus->getManualBatch(width);
             if (bat!=NULL)
                 ret = new BatchWraperTranscription(bat);
@@ -297,33 +233,25 @@ BatchWraper* CATTSS::getBatch(int num, int width, int color, string prevNgram)
     }
     catch (exception& e)
     {
-        cout <<"Exception in CATTSS::getBatch(), "<<e.what()<<endl;
+        cout <<"Exception in CrowdCAT::getBatch(), "<<e.what()<<endl;
     }
     catch (...)
     {
-        cout <<"Exception in CATTSS::getBatch(), UNKNOWN"<<endl;
+        cout <<"Exception in CrowdCAT::getBatch(), UNKNOWN"<<endl;
     }
 #endif
     return new BatchWraperBlank();
 }
 
 
-void CATTSS::updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent)
-{
-    enqueue(new UpdateTask(resultsId,ids,labels,resent));
-}
 
-void CATTSS::updateTranscription(string id, string transcription, bool manual)
+void CrowdCAT::updateTranscription(string id, string transcription, bool manual)
 {
     enqueue(new UpdateTask(id,transcription,manual));
 }
 
-void CATTSS::updateNewExemplars(string batchId,  vector<int> labels, int resent)
-{
-    enqueue(new UpdateTask(batchId,labels,resent));
-}
 
-void CATTSS::misc(string task)
+void CrowdCAT::misc(string task)
 {
 #if !defined(TEST_MODE) && !defined(NO_NAN)
     try
@@ -340,7 +268,7 @@ void CATTSS::misc(string task)
         }
 /*        else if (task.length()>13 && task.substr(0,13).compare("showProgress:")==0)
         {
-            cout <<"CATTSS::showProgress()"<<endl;
+            cout <<"CrowdCAT::showProgress()"<<endl;
             string dims = task.substr(13);
             int split = dims.find_first_of(',');
             int split2 = dims.find_last_of(',');
@@ -387,11 +315,11 @@ void CATTSS::misc(string task)
     }
     catch (exception& e)
     {
-        cout <<"Exception in CATTSS::misc(), "<<e.what()<<endl;
+        cout <<"Exception in CrowdCAT::misc(), "<<e.what()<<endl;
     }
     catch (...)
     {
-        cout <<"Exception in CATTSS::misc(), UNKNOWN"<<endl;
+        cout <<"Exception in CrowdCAT::misc(), UNKNOWN"<<endl;
     }
 #endif
 }    
@@ -400,11 +328,11 @@ void* threadTask(void* cattss)
 {
     //signal(SIGPIPE, SIG_IGN);
     nice(1);
-    ((CATTSS*)cattss)->threadLoop();
+    ((CrowdCAT*)cattss)->threadLoop();
     //pthread_exit(NULL);
 }
 
-void CATTSS::run(int numThreads)
+void CrowdCAT::run(int numThreads)
 {
 
     taskThreads.resize(numThreads);
@@ -415,7 +343,7 @@ void CATTSS::run(int numThreads)
         
     }
 }
-void CATTSS::stop()
+void CrowdCAT::stop()
 {
     cont.store(0);
     for (int i=0; i<taskThreads.size(); i++)
@@ -423,14 +351,14 @@ void CATTSS::stop()
 }
 
 //For data collection, when I deleted all my trans... :(
-void CATTSS::resetAllWords_()
+void CrowdCAT::resetAllWords_()
 {
     vector<TranscribeBatch*> bs = corpus->resetAllWords_();
     vector<unsigned long> toRemoveBatches;        
     masterQueue->enqueueTranscriptionBatches(bs,&toRemoveBatches);
 }
 
-void CATTSS::threadLoop()
+void CrowdCAT::threadLoop()
 {
     UpdateTask* updateTask;
     while(1)
@@ -450,26 +378,7 @@ void CATTSS::threadLoop()
             
             if (updateTask!=NULL)
             {
-                if (updateTask->type==NEW_EXEMPLAR_TASK)
-                {
-#ifdef TEST_MODE
-                    //cout<<"START NewExemplarsTask: ["<<updateTask->id<<"]"<<endl;
-                    //clock_t t;
-                    //t = clock();
-#endif
-                    vector<pair<unsigned long,string> > toRemoveExemplars;        
-                    vector<SpottingExemplar*> toSpot = masterQueue->newExemplarsFeedback(stoul(updateTask->id),
-                                                                                         updateTask->labels,
-                                                                                         &toRemoveExemplars);
-
-                    spottingQueue->removeQueries(&toRemoveExemplars);
-                    spottingQueue->addQueries(toSpot);
-#ifdef TEST_MODE
-                    //t = clock() - t;
-                    //cout<<"END NewExemplarsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
-#endif
-                }
-                else if (updateTask->type==TRANSCRIPTION_TASK)
+                if (updateTask->type==TRANSCRIPTION_TASK)
                 {
 #ifdef TEST_MODE
                     //cout<<"START TranscriptionTask: ["<<updateTask->id<<"]"<<endl;
@@ -492,35 +401,10 @@ void CATTSS::threadLoop()
                     //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
                 }
-                else if (updateTask->type==SPOTTINGS_TASK)
+                else
                 {
-#ifdef TEST_MODE
-                    //cout<<"START SpottingsTask: ["<<updateTask->id<<"]"<<endl;
-                    //clock_t t;
-                    //t = clock();
-#endif
-                    vector<pair<unsigned long,string> > toRemoveSpottings;        
-                    vector<unsigned long> toRemoveBatches;        
-                    vector<Spotting>* toAdd = masterQueue->feedback(stoul(updateTask->id),updateTask->strings,updateTask->labels,updateTask->resent_manual_bool,&toRemoveSpottings);
-                    if (toAdd!=NULL)
-                    {
-                        vector<Spotting*> newExemplars;
-                        vector<pair<unsigned long,string> > toRemoveExemplars;        
-                        vector<TranscribeBatch*> newBatches = corpus->updateSpottings(toAdd,&toRemoveSpottings,&toRemoveBatches,&newExemplars,&toRemoveExemplars);
-                        masterQueue->enqueueTranscriptionBatches(newBatches,&toRemoveBatches);
-                        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
-                        //cout <<"Enqueued "<<newBatches.size()<<" new trans batches"<<endl;            
-                        //if (toRemoveBatches.size()>0)
-                        //    cout <<"Removed "<<toRemoveBatches.size()<<" trans batches"<<endl;     
-                        toRemoveExemplars.insert(toRemoveExemplars.end(),toRemoveSpottings.begin(),toRemoveSpottings.end());
-                        spottingQueue->removeQueries(&toRemoveExemplars);
-                        spottingQueue->addQueries(*toAdd);
-                        delete toAdd;
-                    }
-#ifdef TEST_MODE
-                    //t = clock() - t;
-                    //cout<<"END SpottingsTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
-#endif
+                    cout<<"Error, unknown update type"<<endl;
+                    assert(false && "Error, unknown update type");
                 }
                 delete updateTask;
             }
@@ -530,17 +414,17 @@ void CATTSS::threadLoop()
         }
         catch (exception& e)
         {
-            cout <<"Exception in CATTSS:threadLoop ["<<updateTask->type<<"], "<<e.what()<<endl;
+            cout <<"Exception in CrowdCAT:threadLoop ["<<updateTask->type<<"], "<<e.what()<<endl;
         }
         catch (...)
         {
-            cout <<"Exception in CATTSS::threadLoop ["<<updateTask->type<<"], UNKNOWN"<<endl;
+            cout <<"Exception in CrowdCAT::threadLoop ["<<updateTask->type<<"], UNKNOWN"<<endl;
         }
 #endif
     }
 }
 
-void CATTSS::enqueue(UpdateTask* task)
+void CrowdCAT::enqueue(UpdateTask* task)
 {
      
     taskQueueLock.lock();
@@ -548,7 +432,7 @@ void CATTSS::enqueue(UpdateTask* task)
     sem_post(&semLock);
     taskQueueLock.unlock();
 }
-UpdateTask* CATTSS::dequeue()
+UpdateTask* CrowdCAT::dequeue()
 {
     sem_wait(&semLock);
     UpdateTask* ret=NULL; 
@@ -562,7 +446,7 @@ UpdateTask* CATTSS::dequeue()
     return ret;
 }
 
-void CATTSS::save()
+void CrowdCAT::save()
 {
     if (savePrefix.length()>0)
     {
@@ -575,7 +459,7 @@ void CATTSS::save()
         time_t timeSec;
         time(&timeSec);
 
-        string saveName = savePrefix+"_CATTSS.sav";
+        string saveName = savePrefix+"_CrowdCAT.sav";
         //In the event of a crash while saveing, keep a backup of the last save
         rename( saveName.c_str() , (saveName+".bck").c_str() );
 
@@ -586,17 +470,6 @@ void CATTSS::save()
         masterQueue->save(out);
         spottingQueue->save(out);
 
-        taskQueueLock.lock();
-        out<<taskQueue.size()<<"\n";
-        for (UpdateTask* u : taskQueue)
-        {
-            u->save(out);
-        }
-        taskQueueLock.unlock();
-
-        out<<SpottingsBatch::getIdCounter()<<"\n";
-        out<<NewExemplarsBatch::getIdCounter()<<"\n";
-        out<<TranscribeBatch::getIdCounter()<<"\n";
         out<<timeSec<<"\n";
         out.close();
 #ifdef TEST_MODE

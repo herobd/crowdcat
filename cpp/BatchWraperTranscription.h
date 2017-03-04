@@ -10,7 +10,6 @@
 #include <b64/encode.h>
 #include "opencv2/highgui/highgui.hpp"
 #include "batches.h"
-#include "spotting.h"
 #include "BatchWraper.h"
 
 #ifndef NO_NAN
@@ -24,22 +23,19 @@ class BatchWraperTranscription: public BatchWraper
         //output
         string batchId;
         string wordImgStr;
-        string ngramImgStr;
-        string wordIndex;
         string gt;
         double scale;
         vector<string> retPoss;
-        vector<SpottingPoint> spottings;
         bool manual;
 
     public:
-        BatchWraperTranscription(TranscribeBatch* batch);
+        BatchWraperTranscription(Word* word, int width, int contextPad, bool allowManual);
         ~BatchWraperTranscription() {}
 #ifndef NO_NAN
         virtual void doCallback(Callback* callback);
 #else
         virtual int getType(){return TRANSCRIPTION;}
-        virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt);
+        virtual void getTranscription(int* batchId, vector<string>* poss, bool* manual, string* gt);
 #endif
 };
 #endif
