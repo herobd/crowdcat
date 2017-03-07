@@ -19,6 +19,8 @@
 
 #include "CorpusRef.h"
 #include "PageRef.h"
+#include "Word.h"
+#include "CorpusDataset.h"
 
 using namespace std;
 
@@ -28,7 +30,7 @@ enum MasterQueueState {EMPTY, TOP_RESULTS, PAUSED, REMAINDER, CLEAN_UP, DONE};
 class MasterQueue {
 private:
     multimap<float,Word*> wordsByScore;
-    map<unsigned long, Word*> words;
+    CorpusDataset* words;
     map<unsigned long, Word*> returnMap;
     map<unsigned long, chrono::system_clock::time_point> timeMap;
     //map<unsigned long, WordBackPointer*> doneMap;
@@ -41,7 +43,7 @@ private:
     MasterQueueState state;
 
 public:
-    MasterQueue(int contextPad);
+    MasterQueue(CorpusDataset* words, int contextPad);
     MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef);
     void save(ofstream& out);
 

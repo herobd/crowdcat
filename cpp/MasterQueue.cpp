@@ -4,7 +4,6 @@
 void MasterQueue::checkIncomplete()
 {
     queueLock.lock();
-    pthread_rwlock_rdlock(&wordsLockLock);
     for (auto iter=timeMap.begin(); iter!=timeMap.end(); iter++)
     {
         unsigned long id = iter->first;
@@ -12,7 +11,7 @@ void MasterQueue::checkIncomplete()
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed
         {
-            wordsByScore.insert(words.at(id)->score,words.at(id));
+            wordsByScore.insert(words->word(id)->score,words->word(id));
 
             iter = timeMap.erase(iter);
             if (iter!=timeMap.begin())
@@ -22,14 +21,12 @@ void MasterQueue::checkIncomplete()
                 break;
         }
     }
-    pthread_rwlock_unlock(&wordsLockLock);
     queueLock.unlock();
 }
 
-MasterQueue::MasterQueue(int contextPad) : contextPad(contextPad)
+MasterQueue::MasterQueue(CorpusDataset* words, int contextPad) : words(words), contextPad(contextPad)
 {
     finish.store(false);
-    pthread_rwlock_init(&wordsLockLock,NULL);
 
 
 }
@@ -78,13 +75,11 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
 
 void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string transcription, bool manual) 
 {
-    pthread_rwlock_rdlock(&wordsLock);
-    auto iii = words.find(id);
-    if (iii != words.end())
+    Word* word = words->word(id);
+    if (word!=NULL)
     {
         if (transcription.find('\n') != string::npos)
             transcription="$PASS$";
-        Word* word = iii->second;
         queueLock.lock();
         timeMap.erase(word->getId());
         if (transcription[0]=='$')
@@ -100,9 +95,9 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
                 if (state!=CLEAN_UP)
                 {
                     queueLock.unlock();
-                    pthread_rwlock_unlock(&wordsLock);
-                    pthread_rwlock_wrlock(&wordsLock);
+                    pthread_rwlock_wrlock(&undoneLock);
                     undoneWords.insert(word);
+                    pthread_rwlock_unlock(&undoneLock);
                 }
                 else
                 {
@@ -122,7 +117,6 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
     {
         cout<<"WARNING (MasterQueue::transcriptionFeedback): Unrecognized word id("<<id<<"), trans: "<<transcription<<endl;
     }
-    pthread_rwlock_unlock(&wordsLock);
 }
 
 

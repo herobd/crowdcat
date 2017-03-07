@@ -245,7 +245,7 @@ public:
 
 
 
-class Corpus : public Dataset
+class Corpus : public CorpusDataset
 {
 private:
     pthread_rwlock_t pagesLock;
@@ -314,6 +314,9 @@ public:
     const cv::Mat image(unsigned int i) const;
     unsigned int wordId(unsigned int i) const;
     Word* getWord(unsigned int i) const;
+    Word* word(unsigned int i);
+    const Word* word(unsigned int i) const;
+    
     CorpusRef* getCorpusRef();
     PageRef* getPageRef();
 

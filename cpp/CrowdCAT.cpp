@@ -89,7 +89,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         masterQueue = new MasterQueue(in,corpusRef,pageRef);
         delete corpusRef;
         delete pageRef;
-        spottingQueue = new SpottingQueue(in,masterQueue,corpus);
+        spottingQueue = new SpottingQueue(in,masterQueue);
 
 
        
@@ -99,10 +99,10 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     else
     {
     
-        masterQueue = new MasterQueue(contextPad);
         Lexicon::instance()->readIn(lexiconFile);
         corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
+        masterQueue = new MasterQueue(contextPad,corpus->getWords());
         corpus->loadSpotter(spottingModelPrefix);
         spottingQueue = new SpottingQueue(masterQueue,corpus); //should enqueue the corpus
         //??spottingQueue->transcribeCorpus();
@@ -226,7 +226,14 @@ BatchWraper* CrowdCAT::getBatch(int width)
         return ret;
 #endif
         if (ret!=NULL)
+        {
+            if (masterQueue->getState()==PAUSED)
+            {
+                cout<<"Saving retrain data..."<<endl;
+                enqueue(new SaveRetrainDataTask());
+            }
             return ret;
+        }
         else
             return new BatchWraperBlank();
 #if !defined(TEST_MODE) && !defined(NO_NAN)
@@ -400,6 +407,11 @@ void CrowdCAT::threadLoop()
                     //t = clock() - t;
                     //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
+                }
+                else if (updateTask->type==SAVE_RETRAIN_TASK)
+                {
+                    //TODO
+                    cout<<"Finished saving retrain data."<<endl;
                 }
                 else
                 {

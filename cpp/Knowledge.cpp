@@ -1171,6 +1171,21 @@ const Mat Knowledge::Corpus::image(unsigned int i) const
 //}
 Knowledge::Word* Knowledge::Corpus::getWord(unsigned int i) const
 {
+    //TODO, resource lock
+    return _words.at(i);
+}
+Word* word(unsigned int i)
+{
+    //TODO, resource lock
+    if (_words.find(i)==_words.end())
+        return NULL;
+    return _words.at(i);
+}
+const Word* word(unsigned int i) const
+{
+    //TODO, resource lock
+    if (_words.find(i)==_words.end())
+        return NULL;
     return _words.at(i);
 }
 
