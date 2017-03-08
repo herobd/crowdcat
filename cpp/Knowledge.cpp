@@ -1272,6 +1272,27 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
     return ret;
 }
 
+void Knowledge::Corpus::writeTranscribed(string retrainFile)
+{
+    ofstream out(retrainFile);
+    pthread_rwlock_rdlock(&pagesLock);
+    for (auto p : _words)
+    {
+        Word* word = p->second;
+        int tlx, tly, brx, bry;
+        bool done;
+        word->getBoundsAndDone(&tlx,&tly,&brx,&bry,&done);
+        if (done)
+        {
+            string trans = word->getTranscription();
+            //toWrite[trans].push_back(pages.at(pageId)->getPageImgLoc()+" "+to_string(tlx)+" "+to_string(tly)+" "+to_string(brx)+" "+to_string(bry)+" "+trans);
+            out << pages.at(pageId)->getPageImgLoc()<<" "<<tlx<<" "<<tly<<" "<<brx<<" "<<bry<<" "<<trans<<endl;;
+        }
+    }
+    pthread_rwlock_unlock(&pagesLock);
+    out.close();
+}
+
 
 CorpusRef* Knowledge::Corpus::getCorpusRef()
 {

@@ -103,9 +103,11 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         masterQueue = new MasterQueue(contextPad,corpus->getWords());
-        corpus->loadSpotter(spottingModelPrefix);
-        spottingQueue = new SpottingQueue(masterQueue,corpus); //should enqueue the corpus
-        //??spottingQueue->transcribeCorpus();
+        transcriber = new ??(numTransThreads);
+        
+        //spotter = new ??;
+        //corpus->loadSpotter(spotter);//spottingModelPrefix);
+        //spottingQueue = new SpottingQueue(masterQueue,corpus); //should enqueue the corpus
 
     //#endif
 #endif
@@ -157,7 +159,8 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     showChecker = new thread(showSleeper,this,masterQueue,corpus,showHeight,showWidth,showMilli);
     showChecker->detach();
 //#ifndef GRAPH_SPOTTING_RESULTS
-    spottingQueue->run(numSpottingThreads);
+    //spottingQueue->run(numSpottingThreads);
+    transcriber->transcribe(corpus->getWords(),&masterQueue);
 //#endif
     run(numTaskThreads);
     //test
@@ -215,13 +218,6 @@ BatchWraper* CrowdCAT::getBatch(int width)
         //cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
         BatchWraper* ret= masterQueue->getBatch(width);
-        if (ret==NULL)
-        {
-            //TODO, I don't think this will be needed
-            TranscribeBatch* bat = corpus->getManualBatch(width);
-            if (bat!=NULL)
-                ret = new BatchWraperTranscription(bat);
-        }
 #ifdef TEST_MODE_C
         return ret;
 #endif
@@ -410,7 +406,8 @@ void CrowdCAT::threadLoop()
                 }
                 else if (updateTask->type==SAVE_RETRAIN_TASK)
                 {
-                    //TODO
+                    
+                    corpus->writeTranscribed(retrainFile);
                     cout<<"Finished saving retrain data."<<endl;
                 }
                 else

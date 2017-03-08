@@ -327,6 +327,7 @@ public:
 
     static void mouseCallBackFunc(int event, int x, int y, int flags, void* page_p);
     void showInteractive(int pageId);
+    void writeTranscribed(string retrainFile);
 };
 
 }

@@ -119,6 +119,20 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
     }
 }
 
+void MasterQueue::setTranscriptions()
+{
+    queueLock.lock();
+    for (Word* word : words)
+    {
+        if (goodEnough(word))
+        {
+            wordsByScore[word->getTopScore()] = word;
+        }
+    }
+    state=TOP_RESULTS;
+    queueLock.unlock();
+}
+
 
 void MasterQueue::save(ofstream& out)
 {

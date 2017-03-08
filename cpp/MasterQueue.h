@@ -33,8 +33,6 @@ private:
     CorpusDataset* words;
     map<unsigned long, Word*> returnMap;
     map<unsigned long, chrono::system_clock::time_point> timeMap;
-    //map<unsigned long, WordBackPointer*> doneMap;
-    mutex otherLock;
     mutex queueLock;//.lock(), .unlock()
     int contextPad;
 
