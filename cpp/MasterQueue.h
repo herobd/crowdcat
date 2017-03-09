@@ -50,6 +50,8 @@ public:
     
     void transcriptionFeedback(unsigned long id, string transcription);
     void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
+    void setTranscriptions();
+
     virtual ~MasterQueue()
     {
     }

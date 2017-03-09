@@ -90,13 +90,14 @@ public:
         pthread_rwlock_destroy(&lock);
     }
 
-    vector<string> getTopXPossibilities(int x)
+    vector<string> popTopXPossibilities(int x)
     {
         vector<string> toRet;
         auto iter=notSent.begin();
         for (int i=0; i<min(x,notSent.size()); i++)
         {
             toRet.push_back(*iter);
+            sentPoss.insert(*iter);
             iter = notSent.erase(iter);
         }
         return toRet;
@@ -182,7 +183,7 @@ public:
     }
 
 
-    void setScores(?? scores)
+    void setScores(const multimap<float,string>& scores)
     {
         pthread_rwlock_wrlock(&lock);
         notSent = scores;

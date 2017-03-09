@@ -4,7 +4,8 @@
 class Transcriber
 {
     public:
-    void transcribe(CorpusDataset* words, MasterQueue* queue);
+    vector< multimap<float,string> > transcribe(Dataset* words);
+    multimap<float,string> transcribe(const Mat& image);
 
 };
 

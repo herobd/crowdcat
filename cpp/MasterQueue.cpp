@@ -133,94 +133,58 @@ void MasterQueue::setTranscriptions()
     queueLock.unlock();
 }
 
+bool MasterQueue::goodEnough()
+{
+    //TODO Train a network to look at top 10 scores and predict if correct in top 5
+    assert(false);
+    return true;
+}
+
 
 void MasterQueue::save(ofstream& out)
 {
-    //ofstream out(savePrefix);
 
-    //This is a costly lockdown, but bad things might happen if the queue is changed between writing the two
-    pthread_rwlock_rdlock(&semResults);
-    pthread_rwlock_rdlock(&semResultsQueue);
+    queueLock.lock();
     out<<"MASTERQUEUE"<<endl;
-    out<<results.size()<<"\n";
-    for (auto p : results)
+    out<<wordsByScore.size()+returnMap.size()<<"\n";
+    for (auto p : wordsByScore)
+    {
+        //out<<p.first<<"\n";
+        out<<p.second->getId()<<"\n";
+    }
+    for (auto p : returnMap)
     {
         out<<p.first<<"\n";
-        sem_wait(p.second.first);
-        p.second.second->save(out);
-        sem_post(p.second.first);
     }
+    queue.unlock();
 
-    out<<resultsQueue.size()<<"\n";
-    for (auto p : resultsQueue)
-    {
-        out<<p.first<<"\n";
-    }
-    pthread_rwlock_unlock(&semResultsQueue);
-    pthread_rwlock_unlock(&semResults);
-        
-    transcribeBatchQueue.save(out);
-    newExemplarsBatchQueue.save(out);
 
     out<<finish.load()<<"\n";
-    out<<numCTrue<<"\n"<<numCFalse<<"\n";
     out<<contextPad<<"\n";
-    //out.close();    
+    out<state<<endl;
 }
-MasterQueue::MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef)
+MasterQueue::MasterQueue(ifstream& in, CorpusDataset* words) : words(words)
 {
     finish.store(false);
-    pthread_rwlock_init(&semResultsQueue,NULL);
-    pthread_rwlock_init(&semResults,NULL);
-#if ROTATE
-    pthread_rwlock_init(&semRotate,NULL);
-    testIter=0;	
-    test_rotate=0;
-#endif
-    kill.store(false);
-    
-    //ifstream in(loadPrefix);
 
     string line;
     getline(in,line);
     assert(line.compare("MASTERQUEUE")==0);
     getline(in,line);
-    int rSize = stoi(line);
-    for (int i=0; i<rSize; i++)
+    int wSize = stoi(line);
+    for (int i=0; i<wSize; i++)
     {
         getline(in,line);
         unsigned long id = stoul(line);
-        //assert(id==i+1);
-        SpottingResults* res = new SpottingResults(in,pageRef);
-        assert(id==res->getId());
-        sem_t* sem = new sem_t();
-        sem_init(sem,false,1);
-        auto p = make_pair(sem,res);
-        results[res->getId()] = p;
+        wordsByScore.emplace(words->word(id)->getTopScore(),words->word(id));
     }
-    getline(in,line);
-    rSize = stoi(line);
-    for (int i=0; i<rSize; i++)
-    {
-        getline(in,line);
-        unsigned long id = stoul(line);
-        resultsQueue[results[id].second->getId()] = results[id];
-    }
-    transcribeBatchQueue.load(in,corpusRef);
-    newExemplarsBatchQueue.load(in,pageRef);
 
     getline(in,line);
     finish.store(stoi(line));
  
-    getline(in,line);
-    numCTrue = stoi(line);
-    getline(in,line);
-    numCFalse = stoi(line);
 
     getline(in,line);
     contextPad = stoi(line);
-    //in.close();
-#ifdef TEST_MODE
-    forceNgram="";
-#endif
+    getline(in,line);
+    state = stoi(line);
 }

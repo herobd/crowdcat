@@ -66,6 +66,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
                 string segmentationFile, 
                 string spottingModelPrefix,
                 string savePrefix,
+                string transLoadSaveFile,
                 int avgCharWidth,
                 int numSpottingThreads,
                 int numTaskThreads,
@@ -103,14 +104,57 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         masterQueue = new MasterQueue(contextPad,corpus->getWords());
-        transcriber = new ??(numTransThreads);
+        transcriber = new CNNSPPSpotter(featurizerModel, embedderModel, netWeights);
         
         //spotter = new ??;
         //corpus->loadSpotter(spotter);//spottingModelPrefix);
         //spottingQueue = new SpottingQueue(masterQueue,corpus); //should enqueue the corpus
+        vector< multimap<float,string> > corpus_transcribed;
+        ifstream transIn(transLoadSaveFile);
+        if (transIn.good())
+        {
+            cout<<"Loading ["<<transLoadSaveFile<<"]..."<<endl;
+            int size;
+            transIn >> size;
+            corpus_transcribed.resize(size);
+            for (int i=0; i<size; i++)
+            {
+                int size2;
+                transIn >> size2;
+                for (int j=0; j<size2; j++)
+                {
+                    float score;
+                    string text;
+                    transIn >> score;
+                    readline(transIn,text);
+                    corpus_transcribed.at(i).emplace(score,text);
+                }
+            }
+            transIn.close();
+        }
+        else
+        {
+            cout<<"Transcribing ["<<transLoadSaveFile<<"]..."<<endl;
+            corpus_transcribed = transcriber->transcribe(corpus);
+            cout<<" writing ["<<transLoadSaveFile<<"]..."<<endl;
+            ofstream transOut(transLoadSaveFile);
+            transOut<<corpus_transcribed.size()<<"\n";
+            for (const auto& t : corpus_transcribed)
+            {
+                transOut<<t.size()<<"\n";
+                for (auto p : t)
+                {
+                    transOut<<p.first<<"\n"<<p.second<<"\n";
+                }
+            }
+            transOut.close();
+        }
+        for (int i=0; i<corpus->size(); i++)
+        {
+            corpus->getWord(i)->setScores(corpus_transcribed.at(i));
+        }
+        masterQueue->setTranscriptions();
 
-    //#endif
-#endif
     }
 
 #ifdef TEST_MODE
@@ -160,7 +204,6 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     showChecker->detach();
 //#ifndef GRAPH_SPOTTING_RESULTS
     //spottingQueue->run(numSpottingThreads);
-    transcriber->transcribe(corpus->getWords(),&masterQueue);
 //#endif
     run(numTaskThreads);
     //test
