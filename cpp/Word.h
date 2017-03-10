@@ -22,15 +22,15 @@ class Word: public WordBackPointer
 private:
     pthread_rwlock_t lock;
     int tlx, tly, brx, bry; // top y and bottom y
-    string query;
+    //string query;
     string gt;
-    SearchMeta meta;
+    //SearchMeta meta;
     const cv::Mat* pagePnt;
     const Spotter* const* spotter;
     const float* averageCharWidth;
     int* countCharWidth;
     int pageId;
-    int spottingIndex;
+    //int spottingIndex;
    
     int topBaseline, botBaseline;
 
@@ -49,9 +49,6 @@ private:
 
     string transcription;
     string transcribedBy;
-
-    map<unsigned long, vector<Spotting> > removedSpottings;
-    void reAddSpottings(unsigned long batchId, vector<Spotting*>* newExemplars);
 
     set<string> rejectedTrans;
     multimap<float,string> sentPoss;
@@ -161,14 +158,22 @@ public:
         *gt=this->gt;
         pthread_rwlock_unlock(&lock);
     }
-    void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
+    /*void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
     {
         pthread_rwlock_rdlock(&lock);
 	*isDone=done;
         *gt=this->gt;
         *query=this->query;
         pthread_rwlock_unlock(&lock);
+    }*/
+    bool isDone()
+    {
+        pthread_rwlock_rdlock(&lock);
+        bool ret=done;
+        pthread_rwlock_unlock(&lock);
+        return ret;
     }
+
     void getBoundsAndDoneAndSentAndGT(int* word_tlx, int* word_tly, int* word_brx, int* word_bry, bool* isDone, bool* isSent, string* gt)
     {
         pthread_rwlock_rdlock(&lock);

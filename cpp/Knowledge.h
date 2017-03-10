@@ -268,7 +268,7 @@ private:
 
     vector<string> _gt;
     map<unsigned long, Word*> _words;
-    mat<unsinged long, Mat> _wordImgs;
+    mat<unsigned long, Mat> _wordImgs;
     bool changed;
     void recreateDatasetVectors(bool lockPages);
 

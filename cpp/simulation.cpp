@@ -3,12 +3,12 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "Simulator.h"
-#include "CATTSS.h"
+#include "CrowdCAT.h"
 
 using namespace std;
 using namespace cv;
 
-void controlLoop(CATTSS* cattss, atomic_bool* cont)
+void controlLoop(CrowdCAT* crowdcat, atomic_bool* cont)
 {
     while(1)
     {
@@ -17,26 +17,26 @@ void controlLoop(CATTSS* cattss, atomic_bool* cont)
         getline(cin, line);
         if (line.compare("quit")==0)
         {
-            cattss->misc("stopSpotting");
+            crowdcat->misc("stopSpotting");
             cont->store(false);
             break;
         }
         else if (line.compare("show")==0)
         {
-            cattss->misc("showCorpus");
+            crowdcat->misc("showCorpus");
         }
         else if (line.compare("manual")==0)
         {
-            cattss->misc("manualFinish");
+            crowdcat->misc("manualFinish");
         }
         else if (line.compare("save")==0)
         {
-            cattss->misc("save");
+            crowdcat->misc("save");
         }
     }
 }
 
-void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
+void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
 {
     string prevNgram="";
     int slept=0;
@@ -46,8 +46,8 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
     string thread = ss.str();
     while (cont->load())
     {
-        BatchWraper* batch = cattss->getBatch(5,500,0,prevNgram);
-        if (batch->getType()==SPOTTINGS)
+        BatchWraper* batch = crowdcat->getBatch(5,500,0,prevNgram);
+        /*if (batch->getType()==SPOTTINGS)
         {
             string id;
             vector<string> ids;
@@ -78,7 +78,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             }
 #endif
 
-            cattss->updateSpottings(id,ids,labels,0);
+            crowdcat->updateSpottings(id,ids,labels,0);
             prevNgram = ngram;
         }
         else if (batch->getType()==NEW_EXEMPLARS)
@@ -105,10 +105,10 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
                 while(waitKey() != 10);//enter
             }
 #endif
-            cattss-> updateNewExemplars(id,labels,0);
+            crowdcat-> updateNewExemplars(id,labels,0);
             prevNgram=ngrams.back();
         }
-        else if (batch->getType()==TRANSCRIPTION)
+        else*/ if (batch->getType()==TRANSCRIPTION)
         {
             string batchId;
             int wordIndex;
@@ -130,7 +130,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             }
 #ifdef DEBUG_AUTO
 #endif
-            cattss->updateTranscription(batchId,trans,manual);
+            crowdcat->updateTranscription(batchId,trans,manual);
         }
         else if (batch->getType()==RAN_OUT)
         {
@@ -138,7 +138,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             //slept+=15;
             prevNgram="_";
             cout<<"ran out, so manual finish."<<endl;
-            cattss->misc("manualFinish");
+            crowdcat->misc("manualFinish");
         }
         else
         {
@@ -147,7 +147,7 @@ void threadLoop(CATTSS* cattss, Simulator* sim, atomic_bool* cont)
             slept+=5;
             if (prevNgram.compare("-")==0)
             {
-                cattss->misc("stopSpotting");
+                crowdcat->misc("stopSpotting");
                 cont->store(false);
             }
 
@@ -170,9 +170,9 @@ int main(int argc, char** argv)
     string dataname="BENTHAM";
     string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
     string pageImageDir = "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages";
-    string segmentationFile = "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp";
+    string segmentationFile = "/home/brian/intel_index/data/bentham/ben_crowdcat_c_corpus.gtp";
     string charSegFile = "/home/brian/intel_index/data/bentham/manual_segmentations.csv";
-    string spottingModelPrefix = "model/CATTSS_BENTHAM";
+    string spottingModelPrefix = "model/CrowdCAT_BENTHAM";
     string savePrefix = "save/sim_BENTHAM";
     if (argc>1)
         savePrefix=argv[1];
@@ -201,13 +201,13 @@ int main(int argc, char** argv)
     int height = 1000;
     int width = 2500;
     int milli = 7000;
-    CATTSS* cattss = new CATTSS(lexiconFile,
+    CrowdCAT* crowdcat = new CrowdCAT(lexiconFile,
                         pageImageDir,
-                        segmentationFile,
-                        spottingModelPrefix,
+                        //segmentationFile,
+                        transcriberPrefix,
                         savePrefix,
-                        avgCharWidth,
-                        numSpottingThreads,
+                        //avgCharWidth,
+                        //numSpottingThreads,
                         numTaskThreads,
                         height,
                         width,
@@ -216,22 +216,22 @@ int main(int argc, char** argv)
                         );
     atomic_bool cont(true);
     vector<thread*> taskThreads(numSimThreads);
-    string line;
-    cout<<"WAITING FOR ENTRY BEFORE BEGINNING SIM"<<endl;
-    getline(cin, line);
-    cout<<"SIMULATION STARTED"<<endl;
+    //string line;
+    //cout<<"WAITING FOR ENTRY BEFORE BEGINNING SIM"<<endl;
+    //getline(cin, line);
+    cout<<"CrowdCAT SIMULATION STARTED"<<endl;
     for (int i=0; i<numSimThreads; i++)
     {
-        taskThreads[i] = new thread(threadLoop,cattss,&sim,&cont);
+        taskThreads[i] = new thread(threadLoop,crowdcat,&sim,&cont);
         taskThreads[i]->detach();
         
     }
-    controlLoop(cattss,&cont);
+    controlLoop(crowdcat,&cont);
 
     cout<<"---DONE---"<<endl;
-    //delete cattss;
+    //delete crowdcat;
     for (int i=0; i<numSimThreads; i++)
         delete taskThreads[i];
     this_thread::sleep_for(chrono::seconds(40));
-    delete cattss;
+    delete crowdcat;
 }

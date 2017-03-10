@@ -190,108 +190,114 @@ void Word::findBaselines(const cv::Mat& gray, const cv::Mat& bin)
     botBaseline += tly;
 }
 
-void Corpus::save(ofstream& out)
+void Word::save(ofstream& out)
 {
-    //string saveName = savePrefix+"_Corpus.sav";
-    //ofstream out(saveName);
-    out<<"CORPUS"<<endl;
-    out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
-    pthread_rwlock_rdlock(&pagesLock);
-    out<<pages.size()<<"\n";
-    for (auto p : pages)
+    out<<"WORD"<<endl;
+    pthread_rwlock_rdlock(&lock);
+    out<<id<<"\n";
+    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
+    //out<<query<<"\n";
+    out<<gt<<"\n";
+    //meta.save(out);
+    out<<pageId<<"\n";
+    //out<<spottingIndex<<"\n";
+    out<<topBaseline<<"\n"<<botBaseline<<"\n";
+    out<<done<<"\n"<<loose<<"\n";
+    //?? out<<sentBatchId<<"\n";
+    out << transcription<<"\n";
+    out << transcribedBy<<"\n";
+
+    out<<rejectedTrans.size()<<"\n";
+    for (string s : rejectedTrans)
     {
-        out<<p.first<<"\n";
-        p.second->save(out);
+        out<<s<<"\n";
     }
-    out<<pageIdMap.size()<<"\n";
-    for (auto p : pageIdMap)
+    out<<sentPoss.size()<<"\n";
+    for (auto p : sentPoss)
     {
         out<<p.first<<"\n"<<p.second<<"\n";
     }
-    out<<numWordsReadIn<<"\n";
-    pthread_rwlock_unlock(&pagesLock);
-
-    pthread_rwlock_rdlock(&spottingsMapLock);
-    out<<spottingsToWords.size()<<"\n";
-    for (auto p : spottingsToWords)
+    out<<notSent.size()<<"\n";
+    for (auto p : notSent)
     {
-        out<<p.first<<"\n"<<p.second.size()<<"\n";
-        for (Word* w : p.second)
-            out<<w->getSpottingIndex()<<"\n";
+        out<<p.first<<"\n"<<p.second<<"\n";
     }
-    pthread_rwlock_unlock(&spottingsMapLock);
+    out<<bannedUsers.size()<<endl;
+    for (string s : bannedUsers)
+    {
+        out<<s<<endl;
+    }
 
-    //spotter->save(out); use normal load
-    manQueue.save(out);
-    /*out<<_gt.size()<<"\n";
-    for (string g : _gt)
-        out<<g<<"\n";
-    out<<_words.size()<<"\n";
-    for (auto w : _words)
-        out<<w->getSpottingIndex()<<"\n";
-    out<<_wordImgs.size()<<"\n";
-    for (const Mat& m : _wordImages)*/
-    //just call recreateDatasetVectors
-    //out.close();
+    pthread_rwlock_unlock(&lock);
 }
-
-Corpus::Corpus(ifstream& in)
+Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
 {
-    //string loadName = loadPrefix+"_Corpus.sav";
-    //ifstream in(loadName);
-
-    pthread_rwlock_init(&pagesLock,NULL);
-    pthread_rwlock_init(&spottingsMapLock,NULL);
-
+    pthread_rwlock_init(&lock,NULL);
     string line;
     getline(in,line);
-    assert(line.compare("CORPUS")==0);
+    assert(line.compare("WORD")==0);
     getline(in,line);
-    averageCharWidth = stof(line);
+    id = stoi(line);
     getline(in,line);
-    countCharWidth = stoi(line);
+    tlx = stoi(line);
     getline(in,line);
-    threshScoring = stof(line);
+    tly = stoi(line);
     getline(in,line);
-    int pagesSize = stoi(line);
-    for (int i=0; i<pagesSize; i++)
-    {
-        getline(in,line);
-        int pageId = stoi(line);
-        Page* page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
-        pages[pageId]=page;
-    }
+    brx = stoi(line);
     getline(in,line);
-    pagesSize = stoi(line);
-    for (int i=0; i<pagesSize; i++)
-    {
-        string s;
-        getline(in,s);
-        getline(in,line);
-        int pageId = stoi(line);
-        pageIdMap[s]=pageId;
-    }
+    bry = stoi(line);
+    //getline(in,query);
+    getline(in,gt);
+    //meta = SearchMeta(in);
     getline(in,line);
-    numWordsReadIn=stoi(line);
-    recreateDatasetVectors(false);
+    pageId = stoi(line);
+    //getline(in,line);
+    //spottingIndex = stoi(line);
+    getline(in,line);
+    topBaseline = stoi(line);
+    getline(in,line);
+    botBaseline = stoi(line);
+    getline(in,line);
+    
+    getline(in,line);
+    done= stoi(line);
+    getline(in,line);
+    loose= stoi(line);
+    //getline(in,line);
+    //sentBatchId= stoul(line);
 
+    getline(in,transcription);
+    getline(in,transcribedBy);
     getline(in,line);
-    int spottingsToWordsSize=stoi(line);
-    for (int i=0; i<spottingsToWordsSize; i++)
+    int sSize= stoi(line);
+    rejectedTrans.resize(sSize);
+    for (int i=0; i<sSize; i++)
     {
         getline(in,line);
-        unsigned long sid=stoul(line);
-        getline(in,line);
-        int wordLen=stoi(line);
-        for (int j=0; j<wordLen; j++)
-        {
-            getline(in,line);
-            int spottingIndex=stoi(line);
-            spottingsToWords[sid].push_back(_words[spottingIndex]);
-        }
+        rejectedTrans[i]=line;
     }
-    CorpusRef* cr = getCorpusRef();
-    manQueue.load(in,cr);
-    delete cr;
-    //in.close();
+    getline(in,line);
+    sSize=stoi(line);
+    for (int i=0; i<sSize; i++)
+    {
+        getline(in,line);
+        float score=stof(line);
+        getline(in,line);
+        sentPoss.emplace(score,line);
+    }
+    getline(in,line);
+    sSize=stoi(line);
+    for (int i=0; i<sSize; i++)
+    {
+        getline(in,line);
+        float score=stof(line);
+        getline(in,line);
+        notSent.emplace(score,line);
+    }
+    int sSize= stoi(line);
+    for (int i=0; i<sSize; i++)
+    {
+        getline(in,line);
+        bannedUsers.insert(line);
+    }
 }

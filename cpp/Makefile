@@ -1,17 +1,19 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS_NO_G =  -std=c++11 -pthread  -DNO_NAN -DNO_EXEMPLARS -DTEST_MODE -DGRAPH_SPOTTING_RESULTS #-DDEBUG_AUTO#-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
-CXX_FLAGS =  $(CXX_FLAGS_NO_G) -O3 #-g
+CXX_FLAGS_NO_G =  -std=c++11 -pthread  -DNO_NAN -DTEST_MODE #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS =  $(CXX_FLAGS_NO_G) -g #-O3 #-g
 
 LIBS += -lpthread
 
 LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
-LIBS += -L/home/brian/intel_index/EmbAttSpotter -lembattspotter -larmadillo
-LIBS += -L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/ -l:libvl.so
+#LIBS += -L/home/brian/intel_index/EmbAttSpotter -lembattspotter -larmadillo
+#LIBS += -L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/ -l:libvl.so
+LIBS += -L/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter -lcnnspp_spotter
+INCLUDE += -I/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter
 LIBS += -lb64 -pthread 
-#LIBS += -L/home/brian/Projects/caffe/build/lib -lcaffe
-#INCLUDE +=-I /home/brian/Projects/caffe/include
-INCLUDE +=-I. -I/home/brian/intel_index/EmbAttSpotter
+LIBS += -L/home/brian/Projects/brian_caffe/build/lib -lcaffe
+INCLUDE +=-I /home/brian/Projects/brian_caffe/include
+#INCLUDE +=-I. -I/home/brian/intel_index/EmbAttSpotter
 PROGRAM_NAME = test
 
 OBJECTS = obj/TranscribeBatchQueue.o \

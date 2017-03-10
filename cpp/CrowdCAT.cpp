@@ -63,12 +63,12 @@ void showSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c, int hei
 
 CrowdCAT::CrowdCAT( string lexiconFile, 
                 string pageImageDir, 
-                string segmentationFile, 
-                string spottingModelPrefix,
+                //string segmentationFile, 
+                string transcriberPrefix,
                 string savePrefix,
                 string transLoadSaveFile,
-                int avgCharWidth,
-                int numSpottingThreads,
+                //int avgCharWidth,
+                //int numSpottingThreads,
                 int numTaskThreads,
                 int showHeight,
                 int showWidth,
@@ -78,22 +78,23 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     cont.store(1);
     sem_init(&semLock, 0, 0);
 
+    string featurizerModel=transcriberPrefix+"featurizer.prototxt";
+    string embedderModel=transcriberPrefix+"embedder.prototxt";
+    string netWeights =transcriberPrefix+".caffemodel";
+
     ifstream in (savePrefix+"_CrowdCAT.sav");
     if (in.good())
     {
         cout<<"Load file found."<<endl;
         Lexicon::instance()->load(in);
         corpus = new Knowledge::Corpus(in);
-        corpus->loadSpotter(spottingModelPrefix);
-        CorpusRef* corpusRef = corpus->getCorpusRef();
-        PageRef* pageRef = corpus->getPageRef();
-        masterQueue = new MasterQueue(in,corpusRef,pageRef);
+        //corpus->loadSpotter(spottingModelPrefix);
+        masterQueue = new MasterQueue(in,corpus);
         delete corpusRef;
         delete pageRef;
-        spottingQueue = new SpottingQueue(in,masterQueue);
-
-
-       
+        //spottingQueue = new SpottingQueue(in,masterQueue);
+        stromg line;
+        readline(in,line);
         cout<<"Loaded. Begins from time: "<<line<<endl;
         in.close();
     }
@@ -269,7 +270,7 @@ BatchWraper* CrowdCAT::getBatch(int width)
             if (masterQueue->getState()==PAUSED)
             {
                 cout<<"Saving retrain data..."<<endl;
-                enqueue(new SaveRetrainDataTask());
+                enqueue(SaveRetrainDataTask);
             }
             return ret;
         }
@@ -447,7 +448,7 @@ void CrowdCAT::threadLoop()
                     //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
 #endif
                 }
-                else if (updateTask->type==SAVE_RETRAIN_TASK)
+                else if (updateTask->type==SAVE_RETRAIN_DATA_TASK)
                 {
                     
                     corpus->writeTranscribed(retrainFile);
@@ -520,7 +521,7 @@ void CrowdCAT::save()
         Lexicon::instance()->save(out);
         corpus->save(out);
         masterQueue->save(out);
-        spottingQueue->save(out);
+        //spottingQueue->save(out);
 
         out<<timeSec<<"\n";
         out.close();

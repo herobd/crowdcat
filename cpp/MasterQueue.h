@@ -21,17 +21,16 @@
 #include "PageRef.h"
 #include "Word.h"
 #include "CorpusDataset.h"
+#include "Global.h"
 
 using namespace std;
 
 
-enum MasterQueueState {EMPTY, TOP_RESULTS, PAUSED, REMAINDER, CLEAN_UP, DONE};
 
 class MasterQueue {
 private:
     multimap<float,Word*> wordsByScore;
     CorpusDataset* words;
-    map<unsigned long, Word*> returnMap;
     map<unsigned long, chrono::system_clock::time_point> timeMap;
     mutex queueLock;//.lock(), .unlock()
     int contextPad;
@@ -42,7 +41,7 @@ private:
 
 public:
     MasterQueue(CorpusDataset* words, int contextPad);
-    MasterQueue(ifstream& in, CorpusRef* corpusRef, PageRef* pageRef);
+    MasterQueue(ifstream& in, CorpusDataset* words);
     void save(ofstream& out);
 
     BatchWraper* getBatch(unsigned int maxWidth);

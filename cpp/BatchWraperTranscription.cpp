@@ -80,14 +80,14 @@ void BatchWraperTranscription::doCallback(Callback *callback)
     Local<Value> argv[] = {
 	Nan::Null(),
 	Nan::New(batchId).ToLocalChecked(),
+        Nan::New(batchType).ToLocalChecked()
 	Nan::New(wordImgStr).ToLocalChecked(),
 	Nan::New(possibilities),
         Nan::New(gt).ToLocalChecked()
-        Nan::New(batchType).ToLocalChecked()
     };
     
 
-    callback->Call(5, argv);
+    callback->Call(6, argv);
 }
 #else
 void BatchWraperTranscription::getTranscription(int* batchId, vector<string>* poss, bool* manual, string* gt)

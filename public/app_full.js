@@ -1227,12 +1227,24 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
     selectionDiv.style.height = (screenHeight - totalHeight - menuHeaderHeight)+'px';
     addWordButtons(selectionDiv,possibilities,id);
 
+    if (manual)
+    {
+        //TODO insert text box
+    }
 
     var errDiv = document.createElement("div");
     errDiv.classList.toggle('selection');
     errDiv.classList.toggle('error');
-    errDiv.innerHTML="<div>[None / Error]</div>";
-    errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
+    if (manual)
+    {
+        errDiv.innerHTML="<div>[Error]</div>";
+        errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
+    }
+    else
+    {
+        errDiv.innerHTML="<div>[None]</div>";
+        errDiv.addEventListener('mouseup', classify(id,'$NONE$'), false);
+    }
     //errDiv.addEventListener('touchstart', classify(id,'$ERROR$'), false);
     selectionDiv.appendChild(errDiv);
     

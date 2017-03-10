@@ -2,10 +2,11 @@
 #define CrowdCAT_H
 
 #include "MasterQueue.h"
-#include "SpottingQueue.h"
+//#include "SpottingQueue.h"
 #include "Knowledge.h"
 #include "Lexicon.h"
 #include "BatchWraper.h"
+#include "CNNSPPSpotter.h"
 #include "opencv2/core/core.hpp"
 #include <exception>
 #include <pthread.h>
@@ -20,16 +21,20 @@ using namespace std;
 
 #define CHECK_SAVE_TIME 6
 
+#define SaveRetrainDataTask (new UpdateTask())
+
 #define NEW_EXEMPLAR_TASK 1
 #define TRANSCRIPTION_TASK 2
 #define SPOTTINGS_TASK 3
+#define SAVE_RETRAIN_DATA_TASK 4
 struct UpdateTask
 {
     int type;
     string id;
     //vector<int> labels;
     int resent_manual_bool;
-    //vector<string> strings;
+    vector<string> strings;
+    UpdateTask() : type(SAVE_RETRAIN_DATA_TASK) {}
     //UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
     UpdateTask(string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
     //UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 

@@ -1,16 +1,17 @@
 #include "tester.h"
-#include "CATTSS.h"
+#include "CrowdCAT.h"
 #include <iostream>
 #include <fstream>
 #include "Simulator.h"
 
 void Tester::testSave()
 {
-    CATTSS* cattss = new CATTSS( "/home/brian/intel_index/data/wordsEnWithNames.txt",
+    string savePrefix="save/0_BENTHAM"
+    CrowdCAT* cattss = new CrowdCAT( "/home/brian/intel_index/data/wordsEnWithNames.txt",
                                 "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
                                 "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
-                                "model/CATTSS_BENTHAM",
-                                "save/0_BENTHAM",
+                                "model/CrowdCAT_BENTHAM",
+                                savePrefix,
                                 30,
                                 0,
                                 0,
@@ -22,15 +23,15 @@ void Tester::testSave()
     cattss->save();
     delete cattss;
 
-    ifstream firstCATTSS("save/0_BENTHAM_CATTSS.sav");
-    ifstream secondCATTSS("save/test_CATTSS.sav");
+    ifstream firstCrowdCAT(savePrefix+"_CrowdCAT.sav");
+    ifstream secondCrowdCAT("save/test_CrowdCAT.sav");
 
     vector<string> p1,p2;
-    while (firstCATTSS.good() && secondCATTSS.good())
+    while (firstCrowdCAT.good() && secondCrowdCAT.good())
     {
         string line1, line2;
-        getline(firstCATTSS,line1);
-        getline(secondCATTSS,line2);
+        getline(firstCrowdCAT,line1);
+        getline(secondCrowdCAT,line2);
         if (line1.compare(line2) != 0)
         {
             cout<<line1<<" != "<<line2<<endl;
@@ -40,7 +41,7 @@ void Tester::testSave()
         p1.push_back(line1);
         p2.push_back(line2);
     }
-    assert(!(firstCATTSS.good()) && !(secondCATTSS.good()));
+    assert(!(firstCrowdCAT.good()) && !(secondCrowdCAT.good()));
     cout<<"testSave() passed"<<endl;
 }
 

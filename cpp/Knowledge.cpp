@@ -1220,10 +1220,10 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
         }
     }
     assert(_words.size()==numWordsReadIn);
-    for (Word& w : _words)
+    for (auto p : _words)
     {
-        assert(w->getId() == _gt.size());
-        _gt.push_back(w->getGT());
+        assert(p.second->getId() == _gt.size());
+        _gt.push_back(p.second->getGT());
     }
     if (lockPages)
         pthread_rwlock_unlock(&pagesLock);
@@ -1396,116 +1396,99 @@ Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     pageId = stoi(line);
 }
 
-void Knowledge::Word::save(ofstream& out)
+void Corpus::save(ofstream& out)
 {
-    out<<"WORD"<<endl;
-    pthread_rwlock_rdlock(&lock);
-    out<<id<<"\n";
-    out<<tlx<<"\n"<<tly<<"\n"<<brx<<"\n"<<bry<<"\n";
-    out<<query<<"\n"<<gt<<"\n";
-    meta.save(out);
-    out<<pageId<<"\n"<<spottingIndex<<"\n";
-    out<<topBaseline<<"\n"<<botBaseline<<"\n";
-    out<<spottings.size()<<"\n";
-    for (auto p : spottings)
+    out<<"CORPUS"<<endl;
+    out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
+    pthread_rwlock_rdlock(&pagesLock);
+    out<<pages.size()<<"\n";
+    for (auto p : pages)
     {
         out<<p.first<<"\n";
-        p.second.save(out);
+        p.second->save(out);
     }
-    out<<done<<"\n"<<loose<<"\n";
-    //?? out<<sentBatchId<<"\n";
-    out<<harvested.size()<<"\n";
-    for (auto p : harvested)
+    out<<pageIdMap.size()<<"\n";
+    for (auto p : pageIdMap)
     {
-        out<<p.first<<"\n";
-        out<<p.second<<"\n";
+        out<<p.first<<"\n"<<p.second<<"\n";
     }
-    out << transcription<<"\n";
-    out<<removedSpottings.size()<<"\n";
-    for (auto p : removedSpottings)
+    out<<numWordsReadIn<<"\n";
+    pthread_rwlock_unlock(&pagesLock);
+
+    pthread_rwlock_rdlock(&spottingsMapLock);
+    out<<spottingsToWords.size()<<"\n";
+    for (auto p : spottingsToWords)
     {
-        out<<p.first<<"\n";
-        out<<p.second.size()<<"\n";
-        for (Spotting& s : p.second)
-        {
-            s.save(out);
-        }
+        out<<p.first<<"\n"<<p.second.size()<<"\n";
+        for (Word* w : p.second)
+            out<<w->getSpottingIndex()<<"\n";
     }
-    pthread_rwlock_unlock(&lock);
+    pthread_rwlock_unlock(&spottingsMapLock);
+
+    /*out<<_gt.size()<<"\n";
+    for (string g : _gt)
+        out<<g<<"\n";
+    out<<_words.size()<<"\n";
+    for (auto w : _words)
+        out<<w->getSpottingIndex()<<"\n";
+    out<<_wordImgs.size()<<"\n";
+    for (const Mat& m : _wordImages)*/
+    //just call recreateDatasetVectors
 }
-Knowledge::Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
+
+Corpus::Corpus(ifstream& in)
 {
-    pthread_rwlock_init(&lock,NULL);
+
+    pthread_rwlock_init(&pagesLock,NULL);
+    pthread_rwlock_init(&spottingsMapLock,NULL);
+
     string line;
     getline(in,line);
-    assert(line.compare("WORD")==0);
+    assert(line.compare("CORPUS")==0);
     getline(in,line);
-    id = stoi(line);
+    averageCharWidth = stof(line);
     getline(in,line);
-    tlx = stoi(line);
+    countCharWidth = stoi(line);
     getline(in,line);
-    tly = stoi(line);
+    threshScoring = stof(line);
     getline(in,line);
-    brx = stoi(line);
-    getline(in,line);
-    bry = stoi(line);
-    getline(in,query);
-    getline(in,gt);
-    meta = SearchMeta(in);
-    getline(in,line);
-    pageId = stoi(line);
-    getline(in,line);
-    spottingIndex = stoi(line);
-    getline(in,line);
-    topBaseline = stoi(line);
-    getline(in,line);
-    botBaseline = stoi(line);
-    getline(in,line);
-    int sSize = stoi(line);
-    for (int i=0; i<sSize; i++)
+    int pagesSize = stoi(line);
+    for (int i=0; i<pagesSize; i++)
     {
         getline(in,line);
-        int x=stoi(line);
-        spottings.insert(make_pair(x,Spotting(pagePnt,in)));
+        int pageId = stoi(line);
+        Page* page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
+        pages[pageId]=page;
     }
     getline(in,line);
-    done= stoi(line);
-    getline(in,line);
-    loose= stoi(line);
-    //getline(in,line);
-    //sentBatchId= stoul(line);
-    getline(in,line);
-    sSize= stoi(line);
-    for (int i=0; i<sSize; i++)
+    pagesSize = stoi(line);
+    for (int i=0; i<pagesSize; i++)
     {
+        string s;
+        getline(in,s);
         getline(in,line);
-        unsigned long sid=stoul(line);
-        string ngram;
-        getline(in,ngram);
-        harvested.insert(make_pair(sid,ngram));
+        int pageId = stoi(line);
+        pageIdMap[s]=pageId;
     }
-    getline(in,transcription);
     getline(in,line);
-    sSize=stoi(line);
-    for (int i=0; i<sSize; i++)
+    numWordsReadIn=stoi(line);
+    recreateDatasetVectors(false);
+
+    getline(in,line);
+    int spottingsToWordsSize=stoi(line);
+    for (int i=0; i<spottingsToWordsSize; i++)
     {
         getline(in,line);
         unsigned long sid=stoul(line);
         getline(in,line);
-        int sSize2=stoi(line);
-        removedSpottings[sid].resize(sSize2);
-        for (int j=0; j<sSize2; j++)
+        int wordLen=stoi(line);
+        for (int j=0; j<wordLen; j++)
         {
-            removedSpottings.at(sid).at(j)=Spotting(pagePnt,in);
+            getline(in,line);
+            int spottingIndex=stoi(line);
+            spottingsToWords[sid].push_back(_words[spottingIndex]);
         }
     }
-#ifdef NO_NAN
-    assert(gt.compare(GlobalK::knowledge()->getSegWord(id))==0);
-    if (id == 3715)
-    {
-        cout <<id<<": "<<gt<<" ?= "<<GlobalK::knowledge()->getSegWord(id)<<endl;
-    }
-#endif
 }
 
 //For data collection, when I deleted all my trans... :(

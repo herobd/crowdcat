@@ -34,7 +34,7 @@ class BatchWraperTranscription: public BatchWraper
 #ifndef NO_NAN
         virtual void doCallback(Callback* callback);
 #else
-        virtual int getType(){return TRANSCRIPTION;}
+        virtual int getType(){return BW_TRANSCRIPTION;}
         virtual void getTranscription(int* batchId, vector<string>* poss, bool* manual, string* gt);
 #endif
 };

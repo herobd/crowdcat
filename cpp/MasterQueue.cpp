@@ -64,8 +64,33 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
                 //Wait for spotter/transcriber to stop, enqueue undoneWords.
                 state=PAUSED;
             }
+            else if (state==REMAINDER)
+            {
+                //enqueue all not done words
+                state=CLEAN_UP;
+                for (int i=0; i<words->size(); i++)
+                {
+                    if (!words.word(i)->isDone() && timeMap.find(i)==timeMap.end())
+                    {
+                        wordsByScore.emplace(words.word(i)->getTopScore(),words.word(i));
+                    }
+                }
+
+
+                    
+            }
+            else if (state==REMAINDER)
+            {
+                state=DONE;
+            }
         }
     }
+    else if (state==PAUSED)
+        ret = new BatchWraperPaused();
+    else if (state==DONE)
+        ret = new BatchWraperDone();
+    
+
     queueLock.unlock();
     return ret;
 } 
@@ -90,7 +115,7 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
                 wordsByScore.insert(word->topScore(), word);
                 queueLock.unlock();
             }
-            else if (transcription.compare("$ERROR$")==0)
+            else if (transcription.compare("$NONE$")==0)
             {
                 if (state!=CLEAN_UP)
                 {
@@ -101,10 +126,18 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
                 }
                 else
                 {
+                    word->banUser(userId);
+                    wordsByScore.insert(word->topScore(), word);
+                    queueLock.unlock();
+                    //??
+                    //word->setTrans(userId,"$ERROR-NONE$");
+                }
+            }
+            else if (transcription.compare("$ERROR$")==0)
+            {
                     queueLock.unlock();
                     //??
                     word->setTrans(userId,"$ERROR$");
-                }
             }
         }
         else
@@ -146,15 +179,11 @@ void MasterQueue::save(ofstream& out)
 
     queueLock.lock();
     out<<"MASTERQUEUE"<<endl;
-    out<<wordsByScore.size()+returnMap.size()<<"\n";
+    out<<wordsByScore.size()<<"\n";
     for (auto p : wordsByScore)
     {
         //out<<p.first<<"\n";
         out<<p.second->getId()<<"\n";
-    }
-    for (auto p : returnMap)
-    {
-        out<<p.first<<"\n";
     }
     queue.unlock();
 

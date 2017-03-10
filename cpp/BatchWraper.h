@@ -2,6 +2,7 @@
 #define BATCH_WRAPER
 
 #include "Location.h"
+#include "Global.h"
 
 #ifndef NO_NAN
 #include <nan.h>
@@ -10,10 +11,12 @@ using namespace v8;
 #else
 #include "opencv2/core/core.hpp"
 using namespace cv;
-#define SPOTTINGS 1
-#define NEW_EXEMPLARS 2
-#define TRANSCRIPTION 3
-#define RAN_OUT 4
+#define BW_SPOTTINGS 1
+#define BW_NEW_EXEMPLARS 2
+#define BW_TRANSCRIPTION 3
+#define BW_RAN_OUT 4
+#define BW_PAUSED 5
+#define BW_DONE 6
 #include "batches.h"
 #endif
 using namespace std;
@@ -54,12 +57,10 @@ class BatchWraperBlank : public BatchWraper
                 Nan::Null(),
                 Nan::Null(),
                 Nan::Null(),
-                Nan::Null(),
-                Nan::Null(),
                 Nan::Null()
             };
 
-            callback->Call(8, argv);
+            callback->Call(6, argv);
 
         }
 #else
@@ -68,10 +69,61 @@ class BatchWraperBlank : public BatchWraper
         
 };
 
+class BatchWraperDone : public BatchWraper
+{
+    public:
+#ifndef NO_NAN
+        virtual void doCallback(Callback* callback)
+        {
+
+            Nan:: HandleScope scope;
+            Local<Value> argv[] = {
+                Nan::Null(),
+                Nan::Null(),
+                Nan::New("done").ToLocalChecked(),
+                Nan::Null(),
+                Nan::Null(),
+                Nan::Null()
+            };
+
+            callback->Call(6, argv);
+
+        }
+#else
+        virtual int getType(){return BW_DONE;}
+#endif
+        
+};
+class BatchWraperPaused : public BatchWraper
+{
+    public:
+#ifndef NO_NAN
+        virtual void doCallback(Callback* callback)
+        {
+
+            Nan:: HandleScope scope;
+            Local<Value> argv[] = {
+                Nan::Null(),
+                Nan::Null(),
+                Nan::New("paused").ToLocalChecked(),
+                Nan::Null(),
+                Nan::Null(),
+                Nan::Null()
+            };
+
+            callback->Call(6, argv);
+
+        }
+#else
+        virtual int getType(){return BW_PAUSED;}
+#endif
+        
+};
+
 #ifdef NO_NAN
 class BatchWraperRanOut : public BatchWraper
 {
-    public:
+    public
         virtual int getType(){return 4;}
         
 };

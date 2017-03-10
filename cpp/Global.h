@@ -30,6 +30,8 @@
 
 using namespace std;
 
+enum MasterQueueState {EMPTY, TOP_RESULTS, PAUSED, REMAINDER, CLEAN_UP, DONE};
+
 #ifdef TEST_MODE
 class WordBound
 {
