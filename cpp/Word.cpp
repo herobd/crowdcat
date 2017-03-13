@@ -230,7 +230,7 @@ void Word::save(ofstream& out)
 
     pthread_rwlock_unlock(&lock);
 }
-Word::Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
+Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
 {
     pthread_rwlock_init(&lock,NULL);
     string line;

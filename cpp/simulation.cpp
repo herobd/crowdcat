@@ -46,7 +46,7 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
     string thread = ss.str();
     while (cont->load())
     {
-        BatchWraper* batch = crowdcat->getBatch(5,500,0,prevNgram);
+        BatchWraper* batch = crowdcat->getBatch(thread,500);
         /*if (batch->getType()==SPOTTINGS)
         {
             string id;
@@ -130,7 +130,7 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
             }
 #ifdef DEBUG_AUTO
 #endif
-            crowdcat->updateTranscription(batchId,trans,manual);
+            crowdcat->updateTranscription(thread,batchId,trans,manual);
         }
         else if (batch->getType()==RAN_OUT)
         {

@@ -26,9 +26,10 @@
 #include "TranscribeBatchQueue.h"
 #include "dataset.h"
 #include "Spotter.h"
-#include "AlmazanSpotter.h"
+//#include "AlmazanSpotter.h"
 #include "CorpusRef.h"
 #include "PageRef.h"
+#include "CorpusDataset.h"
 
 using namespace std;
 
@@ -120,17 +121,17 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addWord(Spotting s,vector<Spotting*>* newExemplars)
+    /*TranscribeBatch* addWord(Spotting s,vector<Spotting*>* newExemplars)
     {
         int tlx, tly, brx, bry;
         findPotentailWordBoundraies(s,&tlx,&tly,&brx,&bry);
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,spotter,averageCharWidth,countCharWidth,pageId);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
         
         return newWord->addSpotting(s,newExemplars);
-    }
+    }*/
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
         //Becuase this occurs with an absolute word boundary, we adjust the line to match the word
@@ -138,7 +139,7 @@ public:
             ty=tly;
         if (by<bry)
             by=bry;
-        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,spotter,averageCharWidth,countCharWidth,pageId,gt);
+        Word* newWord = new Word(tlx,tly,brx,bry,pagePnt,averageCharWidth,countCharWidth,pageId,gt);
         pthread_rwlock_wrlock(&lock);
          _words.push_back(newWord);
         pthread_rwlock_unlock(&lock);
@@ -210,7 +211,7 @@ public:
         return ret;
     }
     
-    TranscribeBatch* addLine(Spotting s,vector<Spotting*>* newExemplars)
+    /*TranscribeBatch* addLine(Spotting s,vector<Spotting*>* newExemplars)
     {
         Line* newLine = new Line(s.tly, s.bry, &pageImg, spotter, averageCharWidth, countCharWidth, id);
         
@@ -220,7 +221,7 @@ public:
         pthread_rwlock_unlock(&lock);
         
         return newLine->addWord(s,newExemplars);
-    }
+    }*/
 
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
@@ -268,7 +269,7 @@ private:
 
     vector<string> _gt;
     map<unsigned long, Word*> _words;
-    mat<unsigned long, Mat> _wordImgs;
+    map<unsigned long, Mat> _wordImgs;
     bool changed;
     void recreateDatasetVectors(bool lockPages);
 

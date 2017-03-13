@@ -14,10 +14,11 @@
 #include <regex>
 #include <assert.h>
 
-#include "Word.h"
+//#include "Word.h"
 #include "Global.h"
+#include "batches.h"
 
-class Word: public WordBackPointer
+class Word //: public WordBackPointer
 {
 private:
     pthread_rwlock_t lock;
@@ -26,7 +27,6 @@ private:
     string gt;
     //SearchMeta meta;
     const cv::Mat* pagePnt;
-    const Spotter* const* spotter;
     const float* averageCharWidth;
     int* countCharWidth;
     int pageId;
@@ -60,26 +60,26 @@ protected:
     static atomic_uint _id;
 
 public:
-    //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1), query(""), gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    //Word() : tlx(-1), tly(-1), brx(-1), bry(-1), pagePnt(NULL), averageCharWidth(NULL), countCharWidth(NULL), pageId(-1),  gt(""), done(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
     //{
     //    pthread_rwlock_init(&lock,NULL);
     //}    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(""), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), gt(""), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
-        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
+        //meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         id = _id++;
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const Spotter* const* spotter, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), query(""), gt(gt), done(false), loose(false), sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId),  gt(gt), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1)
     {
-        meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
+        //meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         id = _id++;
     }
-    Word(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
     
     ~Word()
@@ -91,9 +91,9 @@ public:
     {
         vector<string> toRet;
         auto iter=notSent.begin();
-        for (int i=0; i<min(x,notSent.size()); i++)
+        for (int i=0; i<min(x,(int)(notSent.size())); i++)
         {
-            toRet.push_back(*iter);
+            toRet.push_back(iter->second);
             sentPoss.insert(*iter);
             iter = notSent.erase(iter);
         }
@@ -101,7 +101,7 @@ public:
     }
     
     
-    void setTrans(string userId, string trans);
+    void setTrans(string userId, string trans)
     {
         pthread_rwlock_wrlock(&lock);
         transcription = trans;
@@ -224,6 +224,6 @@ public:
     string getGT() {return gt;}
     unsigned int getId(){return id;}
 
-}
+};
 
-#endif;
+#endif

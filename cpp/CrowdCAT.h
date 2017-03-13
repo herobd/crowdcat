@@ -31,12 +31,13 @@ struct UpdateTask
 {
     int type;
     string id;
+    string userId;
     //vector<int> labels;
     int resent_manual_bool;
     vector<string> strings;
     UpdateTask() : type(SAVE_RETRAIN_DATA_TASK) {}
     //UpdateTask(string batchId,  vector<int>& labels, int resent) : type(NEW_EXEMPLAR_TASK), id(batchId), labels(labels), resent_manual_bool(resent) {} 
-    UpdateTask(string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
+    UpdateTask(string userId, string id, string transcription, bool manual) : type(TRANSCRIPTION_TASK), userId(userId), id(id),  resent_manual_bool(manual) {strings.push_back(transcription);}
     //UpdateTask(string resultsId, vector<string>& ids, vector<int>& labels, int resent) : type(SPOTTINGS_TASK), id(resultsId), labels(labels), resent_manual_bool(resent), strings(ids) {} 
 
     UpdateTask(ifstream& in)
@@ -132,9 +133,9 @@ class CrowdCAT
     } 
     void save();
 
-    BatchWraper* getBatch(int num, int width, int color, string prevNgram);
+    BatchWraper* getBatch(string userId, int width);
     //void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);
-    void updateTranscription(string id, string transcription, bool manual);
+    void updateTranscription(string userId, string id, string transcription, bool manual);
     //void updateNewExemplars(string resultsId,  vector<int> labels, int resent);
     void misc(string task);
     const Knowledge::Corpus* getCorpus() const {return corpus;}

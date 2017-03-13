@@ -39,16 +39,17 @@ private:
 
     MasterQueueState state;
 
+    //network_t *pruningNet;
+
 public:
     MasterQueue(CorpusDataset* words, int contextPad);
     MasterQueue(ifstream& in, CorpusDataset* words);
     void save(ofstream& out);
 
-    BatchWraper* getBatch(unsigned int maxWidth);
+    BatchWraper* getBatch(string userId, unsigned int maxWidth);
     
     
-    void transcriptionFeedback(unsigned long id, string transcription);
-    void enqueueTranscriptionBatches(vector<TranscribeBatch*> newBatches, vector<unsigned long>* remove=NULL) {transcribeBatchQueue.enqueueAll(newBatches,remove);};
+    void transcriptionFeedback(string userId, unsigned long id, string transcription);
     void setTranscriptions();
 
     virtual ~MasterQueue()
@@ -57,5 +58,6 @@ public:
     void checkIncomplete();
     void setFinish(bool v) {finish.store(v);}
 
+    bool goodEnough(Word* word);
 };
 #endif

@@ -123,7 +123,7 @@ class BatchWraperPaused : public BatchWraper
 #ifdef NO_NAN
 class BatchWraperRanOut : public BatchWraper
 {
-    public
+    public:
         virtual int getType(){return 4;}
         
 };

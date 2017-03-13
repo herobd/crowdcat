@@ -12,15 +12,15 @@ Knowledge::Corpus::Corpus(int contextPad, int averageCharWidth)
     threshScoring= 1.0;
     manQueue.setContextPad(contextPad);
 }
-void Knowledge::Corpus::loadSpotter(string modelPrefix)
-{
-    spotter = new AlmazanSpotter(this,modelPrefix);
+//void Knowledge::Corpus::loadSpotter(string modelPrefix)
+//{
+    //spotter = new AlmazanSpotter(this,modelPrefix);
 
     //This is bad, it shouldn't be coming from here, but it prevents code dup.
     //averageCharWidth = spotter->getAverageCharWidth();
 
-}
-vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
+//}
+/*vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotting*>* newExemplars)
 {
     vector<TranscribeBatch*> ret;
     pthread_rwlock_rdlock(&pagesLock);
@@ -28,10 +28,6 @@ vector<TranscribeBatch*> Knowledge::Corpus::addSpotting(Spotting s,vector<Spotti
     pthread_rwlock_unlock(&pagesLock);
     if (page==NULL)
     {
-        /*page = new Page();
-        pthread_rwlock_wrlock(&pagesLock);
-        pages[s.pageId] = page;
-        pthread_rwlock_unlock(&pagesLock);*/
         assert(false && "ERROR, page not present");
     }
     
@@ -54,16 +50,6 @@ vector<TranscribeBatch*> Knowledge::Corpus::updateSpottings(vector<Spotting>* sp
         {
 
             assert(false && "ERROR, page not present");
-            /*if (!writing)
-            {
-                pthread_rwlock_unlock(&pagesLock);
-                cout <<"addSpottings: release lock"<<endl;
-                pthread_rwlock_wrlock(&pagesLock);
-                cout <<"addSpottings: got write lock"<<endl;
-                writing=true;
-            }
-            page = new Page();
-            pages[s.pageId] = page;*/
         }
         else
         {
@@ -155,15 +141,6 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
                     
                     if (newBatch != NULL)
                     {
-                        /*submit/update batch
-                        cout<<"Batch Possibilities: ";
-                        for (string pos : newBatch->getPossibilities())
-                        {
-                            cout << pos <<", ";
-                        }
-                        cout <<endl;
-                        cv::imshow("highligh",newBatch->getImage());
-                        cv::waitKey();*/
                         ret.push_back(newBatch);
                     }
                 }
@@ -180,19 +157,6 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
             
             //pthread_rwlock_unlock(&line->wordsLock);
             
-            /*if (possibleWords.size()>0)
-            {
-                for (Word* word : possibleWords)
-                {
-                    word->addSpottings(s);
-                    spottingsToWords[s.id].push_back(word);
-                }
-            }
-            else
-            {
-                //make a new word
-                assert(false);
-            }*/
         }
     }
     if (!oneLine)
@@ -204,28 +168,6 @@ void Knowledge::Corpus::addSpottingToPage(Spotting& s, Page* page, vector<Transc
     }
 }
 
-/*void Knowledge::Corpus::removeSpotting(unsigned long sid)
-{
-
-    pthread_rwlock_wrlock(&spottingsMapLock);
-    vector<Word*> words = spottingsToWords[sid];
-    spottingsToWords[sid].clear(); 
-    pthread_rwlock_unlock(&spottingsMapLock);
-    for (Word* word : words)
-    {
-        
-        unsigned long retractId=0;
-        TranscribeBatch* newBatch = word->removeSpotting(sid,&retractId);
-        if (retractId!=0 && newBatch==NULL)
-        {
-            //TODO retract the batch
-        }
-        else if (newBatch != NULL)
-        {
-            //TODO modify batch
-        }
-    }
-}*/
 
 
 
@@ -317,229 +259,6 @@ int Knowledge::getBreakPoint(int lxBound, int ty, int rxBound, int by, const cv:
 
     return retX+lxBound;
 }
-/*void Knowledge::computeInverseDistanceMap(const cv::Mat &src, int* out)
-{
-    int maxDist=0;
-    int g[src.cols*src.rows];
-    for (int x=0; x<src.cols; x++)
-    {
-        if (src.pixel(x,0))
-        {
-            g[x+0*src.cols]=0;
-        }
-        else
-        {
-            g[x+0*src.cols]=INT_POS_INFINITY;//src.cols*src.rows;
-        }
-        
-        for (int y=1; y<src.rows; y++)
-        {
-            if (src.pixel(x,y))
-            {
-                g[x+y*src.cols]=0;
-            }
-            else
-            {
-                if (g[x+(y-1)*src.cols] != INT_POS_INFINITY)
-                    g[x+y*src.cols]=1+g[x+(y-1)*src.cols];
-                else
-                    g[x+y*src.cols] = INT_POS_INFINITY;
-            }
-        }
-        
-        for (int y=src.rows-2; y>=0; y--)
-        {
-            if (g[x+(y+1)*src.cols]<g[x+y*src.cols])
-            {
-                if (g[x+(y+1)*src.cols] != INT_POS_INFINITY)
-                    g[x+y*src.cols]=1+g[x+(y+1)*src.cols];
-                else
-                    g[x+y*src.cols] = INT_POS_INFINITY;
-            }
-        }
-        
-    }
-    
-    int q;
-    int s[src.cols];
-    int t[src.cols];
-    int w;
-    for (int y=0; y<src.rows; y++)
-    {
-        q=0;
-        s[0]=0;
-        t[0]=0;
-        for (int u=1; u<src.cols;u++)
-        {
-            while (q>=0 && f(t[q],s[q],y,src.cols,g) > f(t[q],u,y,src.cols,g))
-            {
-                q--;
-            }
-            
-            if (q<0)
-            {
-                q=0;
-                s[0]=u;
-            }
-            else
-            {
-                w = SepPlusOne(s[q],u,y,src.cols,g);
-                if (w<src.cols)
-                {
-                    q++;
-                    s[q]=u;
-                    t[q]=w;
-                }
-            }
-        }
-        
-        for (int u=src.cols-1; u>=0; u--)
-        {
-            out[u+y*src.cols]= f(u,s[q],y,src.cols,g);
-            if (out[u+y*src.cols] > maxDist)
-                maxDist = out[u+y*src.cols];
-            if (u==t[q])
-                q--;
-        }
-    }
-    
-    
-    //    QImage debug(src.cols,src.rows,src.format());
-    //    debug.setColorTable(src.colorTable());
-    //    for (int i=0; i<debug.width(); i++)
-    //    {
-    //        for (int j=0; j<debug.height(); j++)
-    //            debug.setPixel(i,j,(int)((pow(out[i+j*debug.width()],.2)/((double)pow(maxDist,.2)))*255));
-            
-    //    }
-    //    debug.save("./reg_dist_map.pgm");
-    //    printf("image format:%d\n",debug.format());
-    
-    //invert
-//    printf("maxDist=%d\n",maxDist);
-    maxDist++;
-//    double normalizer = (25.0/maxDist);
-    double e = 10;
-    double b = 25;
-    double m = 2000;
-    double a = INV_A;
-    int max_cc_size=500;
-    
-//    double normalizer = (b/m);
-    BImage mark = src.makeImage();
-    QVector<QPoint> workingStack;
-    QVector<QPoint> growingComponent;
-    
-    
-    int newmax = 0;
-    int newmax2 = 0;
-    int newmin = INT_MAX;
-    for (int q = 0; q < src.cols*src.rows; q++)
-    {   
-        //out[q] = pow(6,24-out[q]*normalizer)/pow(6,20);
-        if (src.pixel(q%src.cols,q/src.cols) && mark.pixel(q%src.cols,q/src.cols))
-        {
-            //fill bias
-            QPoint p(q%src.cols,q/src.cols);
-            workingStack.push_back(p);
-            mark.setPixel(p,false);
-            while (!workingStack.isEmpty())
-            {   
-                QPoint cur = workingStack.back();
-                workingStack.pop_back();
-                growingComponent.append(cur);
-                
-                
-                
-                
-                if (cur.x()>0 && mark.pixel(cur.x()-1,cur.y()))
-                {
-                    QPoint pp(cur.x()-1,cur.y());
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-                
-                
-                if (cur.x()<mark.width()-1 && mark.pixel(cur.x()+1,cur.y()))
-                {
-                    QPoint pp(cur.x()+1,cur.y());
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                    
-                }
-                if (cur.y()<mark.height()-1 && mark.pixel(cur.x(),cur.y()+1))
-                {
-                    QPoint pp(cur.x(),cur.y()+1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-                if (cur.y()>0 && mark.pixel(cur.x(),cur.y()-1))
-                {
-                    QPoint pp(cur.x(),cur.y()-1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-                //diagonals
-                if (cur.x()>0 && cur.y()>0 && mark.pixel(cur.x()-1,cur.y()-1))
-                {
-                    QPoint pp(cur.x()-1,cur.y()-1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-                
-                
-                if (cur.x()<mark.width()-1 && cur.y()>0 && mark.pixel(cur.x()+1,cur.y()-1))
-                {
-                    QPoint pp(cur.x()+1,cur.y()-1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                    
-                }
-                if (cur.x()>0 && cur.y()<mark.height()-1 && mark.pixel(cur.x()-1,cur.y()+1))
-                {
-                    QPoint pp(cur.x()-1,cur.y()+1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-                if (cur.x()<mark.width()-1 && cur.y()>0 && mark.pixel(cur.x()+1,cur.y()-1))
-                {
-                    QPoint pp(cur.x()+1,cur.y()-1);
-                    workingStack.push_back(pp);
-                    mark.setPixel(pp,false);
-                }
-            }
-            int cc_size = growingComponent.size();
-            while (!growingComponent.isEmpty())
-            {
-                QPoint cur = growingComponent.back();
-                growingComponent.pop_back();
-                int index = cur.x()+src.cols*cur.y();
-                out[index] = pow(b-std::min(out[index]*(b/m),b),e)*a/(pow(b,e)) + std::min(cc_size,max_cc_size) + 1;
-                
-                if (out[index]>newmax)
-                    newmax=out[index];
-                
-                if (out[index]>newmax2 && out[index]<newmax)
-                    newmax2=out[index];
-                
-                if (out[index]<newmin)
-                    newmin=out[index];
-            }
-        }
-        else if (!src.pixel(q%src.cols,q/src.cols))
-        {
-            out[q] = pow(b-std::min(out[q]*(b/m),b),e)*a/(pow(b,e)) + 1;
-        }
-
-        if (out[q]>newmax)
-            newmax=out[q];
-        if (out[q]>newmax2 && out[q]<newmax)
-            newmax2=out[q];
-        if (out[q]<newmin)
-            newmin=out[q];
-    }
-    
-}*/
 cv::Mat Knowledge::inpainting(const cv::Mat& src, const cv::Mat& mask, double* avg, double* std, bool show)
 {
     assert(src.rows == mask.rows && src.cols==mask.cols);
@@ -704,7 +423,7 @@ void Knowledge::findPotentailWordBoundraies(Spotting s, int* tlx, int* tly, int*
         *brx=s.brx;
         *bry=s.bry;
     }
-}
+}*/
 
 void Knowledge::Corpus::show()
 {
@@ -768,7 +487,7 @@ void Knowledge::Corpus::mouseCallBackFunc(int event, int x, int y, int flags, vo
           //cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
 
         vector<Line*> lines = page->lines();
-        for (Line* line : lines)
+       /* for (Line* line : lines)
         {
             int line_ty, line_by;
             vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
@@ -797,7 +516,7 @@ void Knowledge::Corpus::mouseCallBackFunc(int event, int x, int y, int flags, vo
                     cout<<endl;
                 }
             }
-        }
+        }*/
      }
      else if  ( event == cv::EVENT_RBUTTONDOWN )
      {
@@ -918,7 +637,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                             workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
                         }
                 }
-                else
+                /*else
                 {
                     vector<Spotting> sps = word->getSpottings();
                     for (Spotting& s : sps)
@@ -930,7 +649,7 @@ void Knowledge::Corpus::showProgress(int height, int width)
                                 workingIm.at<cv::Vec3b>(y,x)[2] = min(255,workingIm.at<cv::Vec3b>(y,x)[2]+120);
                                 workingIm.at<cv::Vec3b>(y,x)[1] = 0.5*workingIm.at<cv::Vec3b>(y,x)[1];
                             }
-                }
+                }*/
             }
         }
         cv::resize(workingIm,workingIm,cv::Size(),resizeScale,resizeScale);
@@ -1104,6 +823,7 @@ const cv::Mat* Knowledge::Corpus::imgForPageId(int pageId) const
     return page->getImg();
 }
 
+/*
 TranscribeBatch* Knowledge::Corpus::makeManualBatch(int maxWidth, bool noSpottings)
 {
     TranscribeBatch* ret=NULL;
@@ -1151,7 +871,7 @@ vector<Spotting*> Knowledge::Corpus::transcriptionFeedback(unsigned long id, str
     if (transcription.find('\n') != string::npos)
         transcription="$PASS$";
     return manQueue.feedback(id,transcription,toRemoveExemplars);
-}
+}*/
 
 const vector<string>& Knowledge::Corpus::labels() const
 {

@@ -16,25 +16,17 @@ INCLUDE +=-I /home/brian/Projects/brian_caffe/include
 #INCLUDE +=-I. -I/home/brian/intel_index/EmbAttSpotter
 PROGRAM_NAME = test
 
-OBJECTS = obj/TranscribeBatchQueue.o \
-          obj/NewExemplarsBatchQueue.o \
-          obj/Global.o \
+OBJECTS = obj/Global.o \
           obj/MasterQueue.o \
-          obj/SpottingResults.o \
           obj/Knowledge.o \
           obj/Lexicon.o \
-          obj/maxflow.o \
-          obj/graph.o \
-          obj/SpottingQueue.o \
           obj/batches.o \
-          obj/AlmazanSpotter.o \
-          obj/AlmazanDataset.o \
           obj/tester.o \
-          obj/CATTSS.o \
-          obj/BatchWraperNewExemplars.o \
-          obj/BatchWraperSpottings.o \
+          obj/CrowdCAT.o \
           obj/BatchWraperTranscription.o \
-          obj/Simulator.o 
+          obj/Simulator.o  \
+          obj/NetSpotter.o \
+          obj/Word.o
 #          obj/test.o 
           #obj/FacadeSpotter.o \
           #obj/TestQueue.o 
@@ -193,6 +185,12 @@ obj/BatchWraperNewExemplars.o: BatchWraperNewExemplars.h BatchWraperNewExemplars
 
 obj/BatchWraperSpottings.o: BatchWraperSpottings.h BatchWraperSpottings.cpp spotting.h BatchWraper.h batches.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/BatchWraperSpottings.o BatchWraperSpottings.cpp $(LIBS)
+
+obj/Word.o: Word.h Word.cpp Global.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Word.o Word.cpp $(LIBS)
+
+obj/NetSpotter.o: NetSpotter.h NetSpotter.cpp Spotter.h 
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/NetSpotter.o NetSpotter.cpp $(LIBS)
 
 obj/maxflow.o: maxflow/maxflow.cpp maxflow/graph.h maxflow/block.h  maxflow/instances.inc
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/maxflow.o maxflow/maxflow.cpp

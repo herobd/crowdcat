@@ -11,7 +11,7 @@ void MasterQueue::checkIncomplete()
         chrono::minutes pass = chrono::duration_cast<chrono::minutes> (d);
         if (pass.count() > 20) //if 20 mins has passed
         {
-            wordsByScore.insert(words->word(id)->score,words->word(id));
+            wordsByScore.emplace(words->word(id)->topScore(),words->word(id));
 
             iter = timeMap.erase(iter);
             if (iter!=timeMap.begin())
@@ -28,7 +28,7 @@ MasterQueue::MasterQueue(CorpusDataset* words, int contextPad) : words(words), c
 {
     finish.store(false);
 
-
+    //pruningNet = net_load (net_filename);
 }
 
 
@@ -70,9 +70,9 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
                 state=CLEAN_UP;
                 for (int i=0; i<words->size(); i++)
                 {
-                    if (!words.word(i)->isDone() && timeMap.find(i)==timeMap.end())
+                    if (!words->word(i)->isDone() && timeMap.find(i)==timeMap.end())
                     {
-                        wordsByScore.emplace(words.word(i)->getTopScore(),words.word(i));
+                        wordsByScore.emplace(words->word(i)->topScore(),words->word(i));
                     }
                 }
 
@@ -98,7 +98,7 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
 
 
 
-void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string transcription, bool manual) 
+void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string transcription) 
 {
     Word* word = words->word(id);
     if (word!=NULL)
@@ -112,7 +112,7 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
             if (transcription.compare("$PASS$")==0)
             {
                 word->banUser(userId);
-                wordsByScore.insert(word->topScore(), word);
+                wordsByScore.emplace(word->topScore(), word);
                 queueLock.unlock();
             }
             else if (transcription.compare("$NONE$")==0)
@@ -120,14 +120,14 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
                 if (state!=CLEAN_UP)
                 {
                     queueLock.unlock();
-                    pthread_rwlock_wrlock(&undoneLock);
-                    undoneWords.insert(word);
-                    pthread_rwlock_unlock(&undoneLock);
+                    //pthread_rwlock_wrlock(&undoneLock);
+                    //undoneWords.insert(word);
+                    //pthread_rwlock_unlock(&undoneLock);
                 }
                 else
                 {
                     word->banUser(userId);
-                    wordsByScore.insert(word->topScore(), word);
+                    wordsByScore.emplace(word->topScore(), word);
                     queueLock.unlock();
                     //??
                     //word->setTrans(userId,"$ERROR-NONE$");
@@ -155,21 +155,28 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
 void MasterQueue::setTranscriptions()
 {
     queueLock.lock();
-    for (Word* word : words)
+    for (int i=0; i<words->size(); i++)
     {
+        Word* word = words->word(i);
         if (goodEnough(word))
         {
-            wordsByScore[word->getTopScore()] = word;
+            wordsByScore.emplace(word->topScore(), word);
         }
     }
     state=TOP_RESULTS;
     queueLock.unlock();
 }
 
-bool MasterQueue::goodEnough()
+bool MasterQueue::goodEnough(Word* word)
 {
     //TODO Train a network to look at top 10 scores and predict if correct in top 5
-    assert(false);
+    //network doesn't seem to work
+
+    //float input[10];
+    //float output[1];
+    //vector<float> scores = word->peakTopN(10);
+    //net_compute (pruningNet, &scores[0], output);
+    //return output>PRUNING_THRESH;
     return true;
 }
 
@@ -185,12 +192,12 @@ void MasterQueue::save(ofstream& out)
         //out<<p.first<<"\n";
         out<<p.second->getId()<<"\n";
     }
-    queue.unlock();
+    queueLock.unlock();
 
 
     out<<finish.load()<<"\n";
     out<<contextPad<<"\n";
-    out<state<<endl;
+    out<<(int)state<<endl;
 }
 MasterQueue::MasterQueue(ifstream& in, CorpusDataset* words) : words(words)
 {
@@ -205,7 +212,7 @@ MasterQueue::MasterQueue(ifstream& in, CorpusDataset* words) : words(words)
     {
         getline(in,line);
         unsigned long id = stoul(line);
-        wordsByScore.emplace(words->word(id)->getTopScore(),words->word(id));
+        wordsByScore.emplace(words->word(id)->topScore(),words->word(id));
     }
 
     getline(in,line);
@@ -215,5 +222,5 @@ MasterQueue::MasterQueue(ifstream& in, CorpusDataset* words) : words(words)
     getline(in,line);
     contextPad = stoi(line);
     getline(in,line);
-    state = stoi(line);
+    state = (MasterQueueState) stoi(line);
 }

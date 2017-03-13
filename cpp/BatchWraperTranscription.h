@@ -11,6 +11,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "batches.h"
 #include "BatchWraper.h"
+#include "Word.h"
 
 #ifndef NO_NAN
 using namespace Nan;

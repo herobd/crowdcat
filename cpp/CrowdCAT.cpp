@@ -253,7 +253,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     //test
 
 }
-BatchWraper* CrowdCAT::getBatch(int width)
+BatchWraper* CrowdCAT::getBatch(string userId, int width)
 {
 #if !defined(TEST_MODE) && !defined(NO_NAN)
     try
@@ -261,7 +261,7 @@ BatchWraper* CrowdCAT::getBatch(int width)
 #else
         //cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
-        BatchWraper* ret= masterQueue->getBatch(width);
+        BatchWraper* ret= masterQueue->getBatch(userId, width);
 #ifdef TEST_MODE_C
         return ret;
 #endif
@@ -292,9 +292,9 @@ BatchWraper* CrowdCAT::getBatch(int width)
 
 
 
-void CrowdCAT::updateTranscription(string id, string transcription, bool manual)
+void CrowdCAT::updateTranscription(string userId, string id, string transcription, bool manual)
 {
-    enqueue(new UpdateTask(id,transcription,manual));
+    enqueue(new UpdateTask(userId, id,transcription,manual));
 }
 
 
@@ -432,17 +432,7 @@ void CrowdCAT::threadLoop()
                     //clock_t t;
                     //t = clock();
 #endif
-                    vector<pair<unsigned long, string> > toRemoveExemplars;
-                    if (updateTask->resent_manual_bool)
-                    {
-                        vector<Spotting*> newExemplars = corpus->transcriptionFeedback(stoul(updateTask->id),updateTask->strings.front(),&toRemoveExemplars);
-                        masterQueue->enqueueNewExemplars(newExemplars,&toRemoveExemplars);
-                    }
-                    else
-                    {
-                        masterQueue->transcriptionFeedback(stoul(updateTask->id),updateTask->strings.front(),&toRemoveExemplars);
-                    }
-                    spottingQueue->removeQueries(&toRemoveExemplars);
+                    masterQueue->transcriptionFeedback(updateTask->userId,stoul(updateTask->id),updateTask->strings.front());
 #ifdef TEST_MODE
                     //t = clock() - t;
                     //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
