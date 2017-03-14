@@ -1,6 +1,6 @@
 CXX = g++-4.9 
 LINK = g++-4.9
-CXX_FLAGS_NO_G =  -std=c++11 -pthread  -DNO_NAN -DTEST_MODE #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
+CXX_FLAGS_NO_G =  -std=c++11 -pthread -DOPENCV2  -DNO_NAN -DTEST_MODE #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
 CXX_FLAGS =  $(CXX_FLAGS_NO_G) -g #-O3 #-g
 
 LIBS += -lpthread
@@ -11,7 +11,7 @@ LIBS += -lopencv_core -lopencv_highgui -lopencv_imgproc -fopenmp
 LIBS += -L/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter -lcnnspp_spotter
 INCLUDE += -I/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter
 LIBS += -lb64 -pthread 
-LIBS += -L/home/brian/Projects/brian_caffe/build/lib -lcaffe
+LIBS += -L/home/brian/Projects/brian_caffe/build/lib -lcaffe -l boost_system
 INCLUDE +=-I /home/brian/Projects/brian_caffe/include
 #INCLUDE +=-I. -I/home/brian/intel_index/EmbAttSpotter
 PROGRAM_NAME = test
@@ -120,13 +120,13 @@ train: $(OBJECTS)
 makeData: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o makeData makeData.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 	
-obj/tester.o: tester.cpp tester.h CATTSS.h Simulator.h
+obj/tester.o: tester.cpp tester.h CrowdCAT.h Simulator.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/tester.o tester.cpp $(LIBS)
 
 obj/test.o: test.cpp MasterQueue.h TestQueue.h MasterQueue.h Knowledge.h Spotter.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/test.o test.cpp $(LIBS)
 
-obj/Simulator.o: Simulator.h Simulator.cpp CATTSS.h
+obj/Simulator.o: Simulator.h Simulator.cpp CrowdCAT.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Simulator.o Simulator.cpp $(LIBS)
 
 obj/TranscribeBatchQueue.o: TranscribeBatchQueue.h TranscribeBatchQueue.cpp Knowledge.h CorpusRef.h PageRef.h
@@ -153,10 +153,10 @@ obj/batches.o: batches.h batches.cpp WordBackPointer.h
 obj/Global.o: Global.h Global.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Global.o Global.cpp $(LIBS)
 
-obj/CATTSS.o: CATTSS.h CATTSS.cpp MasterQueue.h Lexicon.h SpottingQueue.h Knowledge.h spotting.h BatchWraper.h
-	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/CATTSS.o CATTSS.cpp $(LIBS)
+obj/CrowdCAT.o: CrowdCAT.h CrowdCAT.cpp MasterQueue.h Lexicon.h SpottingQueue.h Knowledge.h spotting.h BatchWraper.h
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/CrowdCAT.o CrowdCAT.cpp $(LIBS)
 
-obj/MasterQueue.o: MasterQueue.h MasterQueue.cpp SpottingResults.h
+obj/MasterQueue.o: MasterQueue.h MasterQueue.cpp SpottingResults.h CorpusDataset.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/MasterQueue.o MasterQueue.cpp $(LIBS)
 
 obj/SpottingResults.o: SpottingResults.h SpottingResults.cpp 
@@ -165,7 +165,7 @@ obj/SpottingResults.o: SpottingResults.h SpottingResults.cpp
 obj/TestQueue.o: TestQueue.h TestQueue.cpp SpottingResults.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/TestQueue.o TestQueue.cpp $(LIBS)
 	
-obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h CorpusRef.h PageRef.h
+obj/Knowledge.o: Knowledge.h Knowledge.cpp Lexicon.h Global.h CorpusRef.h PageRef.h CorpusDataset.h
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Knowledge.o Knowledge.cpp $(LIBS)
 	
 obj/Lexicon.o: Lexicon.h Lexicon.cpp
@@ -202,13 +202,13 @@ obj/graph.o: maxflow/graph.cpp maxflow/graph.h \
 
 
 ############PP##################
-pp/tester.cpp: noinc/tester.cpp noinc/tester.h noinc/CATTSS.h noinc/Simulator.h
+pp/tester.cpp: noinc/tester.cpp noinc/tester.h noinc/CrowdCAT.h noinc/Simulator.h
 	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/tester.cpp noinc/tester.cpp $(LIBS)
 
 pp/test.cpp: noinc/test.cpp noinc/MasterQueue.h noinc/TestQueue.h noinc/MasterQueue.h noinc/Knowledge.h noinc/Spotter.h
 	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/test.cpp noinc/test.cpp $(LIBS)
 
-pp/Simulator.cpp: noinc/Simulator.h noinc/Simulator.cpp noinc/CATTSS.h
+pp/Simulator.cpp: noinc/Simulator.h noinc/Simulator.cpp noinc/CrowdCAT.h
 	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/Simulator.cpp noinc/Simulator.cpp $(LIBS)
 
 pp/TranscribeBatchQueue.cpp: noinc/TranscribeBatchQueue.h noinc/TranscribeBatchQueue.cpp noinc/Knowledge.h noinc/CorpusRef.h noinc/PageRef.h
@@ -235,8 +235,8 @@ pp/batches.cpp: noinc/batches.h noinc/batches.cpp noinc/WordBackPointer.h
 pp/Global.cpp: noinc/Global.h noinc/Global.cpp
 	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/Global.cpp noinc/Global.cpp $(LIBS)
 
-pp/CATTSS.cpp: noinc/CATTSS.h noinc/CATTSS.cpp noinc/MasterQueue.h noinc/Lexicon.h noinc/SpottingQueue.h noinc/Knowledge.h noinc/spotting.h noinc/BatchWraper.h
-	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/CATTSS.cpp noinc/CATTSS.cpp $(LIBS)
+pp/CrowdCAT.cpp: noinc/CrowdCAT.h noinc/CrowdCAT.cpp noinc/MasterQueue.h noinc/Lexicon.h noinc/SpottingQueue.h noinc/Knowledge.h noinc/spotting.h noinc/BatchWraper.h
+	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/CrowdCAT.cpp noinc/CrowdCAT.cpp $(LIBS)
 
 pp/MasterQueue.cpp: noinc/MasterQueue.h noinc/MasterQueue.cpp noinc/SpottingResults.h
 	$(CXX) -E -C -P $(CXX_FLAGS_NO_G) $(INCLUDE) -o pp/MasterQueue.cpp noinc/MasterQueue.cpp $(LIBS)
@@ -311,8 +311,8 @@ obj/batches2.o: pp/batches.cpp
 obj/Global2.o: pp/Global.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/Global2.o pp/Global.cpp $(LIBS)
 
-obj/CATTSS2.o: pp/CATTSS.cpp
-	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/CATTSS2.o pp/CATTSS.cpp $(LIBS)
+obj/CrowdCAT2.o: pp/CrowdCAT.cpp
+	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/CrowdCAT2.o pp/CrowdCAT.cpp $(LIBS)
 
 obj/MasterQueue2.o: pp/MasterQueue.cpp
 	$(CXX) -c $(CXX_FLAGS) $(INCLUDE) -o obj/MasterQueue2.o pp/MasterQueue.cpp $(LIBS)

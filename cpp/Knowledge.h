@@ -85,7 +85,7 @@ private:
     vector<Word*> _words;
     int ty, by; // top y and bottom y
     const cv::Mat* pagePnt;
-    const Spotter* const* spotter;
+    //const Spotter* const* spotter;
     float* averageCharWidth;
     int* countCharWidth;
     int pageId;
@@ -95,11 +95,11 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //}
     
-    Line(int ty, int by, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
+    Line(int ty, int by, const cv::Mat* pagePnt, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth, int pageId) : ty(ty), by(by), pagePnt(pagePnt), /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId)
     {
         pthread_rwlock_init(&lock,NULL);
     }
-    Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    Line(ifstream& in, const cv::Mat* pagePnt, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
     
     ~Line()
@@ -155,7 +155,7 @@ private:
     vector<Line*> _lines;
     cv::Mat pageImg; //I am owner of this Mat
     string pageImgLoc;
-    const Spotter* const* spotter;
+    //const Spotter* const* spotter;
     float* averageCharWidth;
     int* countCharWidth;
     static int _id;
@@ -166,24 +166,24 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //    id = ++_id;
     //}
-    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
+    Page(cv::Mat pageImg, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth) : pageImg(pageImg), /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
     {
         pthread_rwlock_init(&lock,NULL);
         id = ++_id;
     }
-    Page(cv::Mat pageImg, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth, int id) : pageImg(pageImg), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
+    Page(cv::Mat pageImg, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth, int id) : pageImg(pageImg), /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc("")
     {
         pthread_rwlock_init(&lock,NULL);
         this->id = id;
         _id = id;
     }
-    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
+    Page( /*const Spotter* const* spotter,*/ string imageLoc, float* averageCharWidth, int* countCharWidth) : /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         id = ++_id;
         pthread_rwlock_init(&lock,NULL);
     }
-    Page( const Spotter* const* spotter, string imageLoc, float* averageCharWidth, int* countCharWidth, int id) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
+    Page( /*const Spotter* const* spotter,*/ string imageLoc, float* averageCharWidth, int* countCharWidth, int id) : /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageImgLoc(imageLoc)
     {
         pageImg = cv::imread(imageLoc);//,CV_LOAD_IMAGE_GRAYSCALE
         if (pageImg.cols*pageImg.rows<=1)
@@ -193,7 +193,7 @@ public:
         _id = id;
         pthread_rwlock_init(&lock,NULL);
     }
-    Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth);
+    Page(ifstream& in, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
     
     ~Page()
@@ -225,7 +225,7 @@ public:
 
     TranscribeBatch* addWord(int tlx, int tly, int brx, int bry, string gt)
     {
-        Line* newLine = new Line(tly, bry, &pageImg, spotter, averageCharWidth, countCharWidth, id);
+        Line* newLine = new Line(tly, bry, &pageImg, /*spotter,*/ averageCharWidth, countCharWidth, id);
         
         
         pthread_rwlock_wrlock(&lock);
@@ -250,7 +250,7 @@ class Corpus : public CorpusDataset
 {
 private:
     pthread_rwlock_t pagesLock;
-    pthread_rwlock_t spottingsMapLock;
+    //pthread_rwlock_t spottingsMapLock;
     float averageCharWidth;
     int countCharWidth;
     float threshScoring;
@@ -260,10 +260,10 @@ private:
 
     int numWordsReadIn;
 
-    map<unsigned long, vector<Word*> > spottingsToWords;
-    Spotter* spotter;
-    TranscribeBatchQueue manQueue;
-    TranscribeBatch* makeManualBatch(int maxWidth, bool noSpottings);
+    //map<unsigned long, vector<Word*> > spottingsToWords;
+    //Spotter* spotter;
+    //TranscribeBatchQueue manQueue;
+    //TranscribeBatch* makeManualBatch(int maxWidth, bool noSpottings);
 
     void addSpottingToPage(Spotting& s, Page* page, vector<TranscribeBatch*>& ret,vector<Spotting*>* newExemplars);
 
@@ -274,61 +274,62 @@ private:
     void recreateDatasetVectors(bool lockPages);
 
 public:
-    Corpus(int contextPad, int averageCharWidth);
+    Corpus(int contextPad);//, int averageCharWidth);
     Corpus(ifstream& in);
     void save(ofstream& out);
     ~Corpus()
     {
         pthread_rwlock_wrlock(&pagesLock);
-        pthread_rwlock_wrlock(&spottingsMapLock);
+        //pthread_rwlock_wrlock(&spottingsMapLock);
         
         for (auto p : pages)
             delete p.second;
-        delete spotter;
+        //delete spotter;
         pthread_rwlock_destroy(&pagesLock);
-        pthread_rwlock_destroy(&spottingsMapLock);
+        //pthread_rwlock_destroy(&spottingsMapLock);
     }
-    void loadSpotter(string modelPrefix);
-    vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
+    //void loadSpotter(string modelPrefix);
+    //vector<TranscribeBatch*> addSpotting(Spotting s,vector<Spotting*>* newExemplars);
     //vector<TranscribeBatch*> addSpottings(vector<Spotting> spottings);
-    vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
+    //vector<TranscribeBatch*> updateSpottings(vector<Spotting>* spottings, vector<pair<unsigned long, string> >* removeSpottings, vector<unsigned long>* toRemoveBatches,vector<Spotting*>* newExemplars, vector< pair<unsigned long, string> >* toRemoveExemplars);
     //void removeSpotting(unsigned long sid);
-    TranscribeBatch* getManualBatch(int maxWidth);
-    vector<Spotting*> transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
+    //TranscribeBatch* getManualBatch(int maxWidth);
+    //vector<Spotting*> transcriptionFeedback(unsigned long id, string transcription, vector<pair<unsigned long, string> >* toRemoveExemplars);
     void addWordSegmentaionAndGT(string imageLoc, string queriesFile);
     const cv::Mat* imgForPageId(int pageId) const;
     int addPage(string imagePath) 
     {
-        Page* p = new Page(&spotter, imagePath,&averageCharWidth,&countCharWidth);
+        Page* p = new Page(/*&spotter,*/ imagePath,&averageCharWidth,&countCharWidth);
         pages[p->getId()]=p;
         return p->getId();
     }
 
-    vector<Spotting>* runQuery(SpottingQuery* query);// const;
+    //vector<Spotting>* runQuery(SpottingQuery* query);// const;
 
-    void checkIncomplete();
+    //void checkIncomplete();
     void show();
     void showProgress(int height, int width);
 
     const vector<string>& labels() const;
     int size() const;
     const cv::Mat image(unsigned int i) const;
-    unsigned int wordId(unsigned int i) const;
+    unsigned int wordId(unsigned int i) const {return i;}
     Word* getWord(unsigned int i) const;
     Word* word(unsigned int i);
     const Word* word(unsigned int i) const;
     
-    CorpusRef* getCorpusRef();
-    PageRef* getPageRef();
+    //CorpusRef* getCorpusRef();
+    //PageRef* getPageRef();
 
     //For data collection, when I deleted all my trans... :(
     vector<TranscribeBatch*> resetAllWords_();
-    void getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
-                          float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV);
+    void getStats(float* accTrans, float* pWordsTrans, /*float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0,*/ string* misTrans,
+                          float* accTrans_IV, float* pWordsTrans_IV, /*float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV,*/ string* misTrans_IV);
 
     static void mouseCallBackFunc(int event, int x, int y, int flags, void* page_p);
     void showInteractive(int pageId);
     void writeTranscribed(string retrainFile);
+    string getName() const {return "CORPUS";}
 };
 
 }

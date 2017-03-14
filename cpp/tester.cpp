@@ -6,14 +6,16 @@
 
 void Tester::testSave()
 {
-    string savePrefix="save/0_BENTHAM"
+    string savePrefix="save/0_BENTHAM";
+    string transFile="save/0_BENTHAM_trans.dat";
     CrowdCAT* cattss = new CrowdCAT( "/home/brian/intel_index/data/wordsEnWithNames.txt",
                                 "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages",
                                 "/home/brian/intel_index/data/bentham/ben_cattss_c_corpus.gtp",
                                 "model/CrowdCAT_BENTHAM",
                                 savePrefix,
-                                30,
-                                0,
+                                transFile,
+                                //30,
+                                //0,
                                 0,
                                 100,
                                 100,

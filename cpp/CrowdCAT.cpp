@@ -10,10 +10,10 @@ void checkIncompleteSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus*
 #ifdef NO_NAN
     int count=0;
 #endif
-    while(!q->kill.load() && cattss->getCont()) {
+    while(cattss->getCont()) {
         //cout <<"begin sleep"<<endl;
         this_thread::sleep_for(chrono::minutes(CHECK_SAVE_TIME));
-        if (!q->kill.load() && cattss->getCont())
+        if (cattss->getCont())
         {
             cattss->save();
 #ifdef NO_NAN
@@ -21,11 +21,11 @@ void checkIncompleteSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus*
             if (++count % 39 == 0)
             {
                 q->checkIncomplete();
-                c->checkIncomplete();
+                //c->checkIncomplete();
             }
 #else
             q->checkIncomplete();
-            c->checkIncomplete();
+            //c->checkIncomplete();
 #endif
         }
     }
@@ -37,9 +37,9 @@ void showSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c, int hei
 #ifdef NO_NAN
     int count=0;
 #endif
-    while(!q->kill.load() && cattss->getCont()) {
+    while(cattss->getCont()) {
         this_thread::sleep_for(chrono::milliseconds(milli));
-        if (!q->kill.load() && cattss->getCont())
+        if (cattss->getCont())
         {
             c->showProgress(height,width);
 #ifdef NO_NAN
@@ -51,10 +51,10 @@ void showSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c, int hei
                 string misTrans_IV;
                 float accTrans_IV,pWordsTrans_IV;
                 float pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV;
-                c->getStats(&accTrans,&pWordsTrans, &pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0, &misTrans,
-                            &accTrans_IV,&pWordsTrans_IV, &pWords80_100_IV, &pWords60_80_IV, &pWords40_60_IV, &pWords20_40_IV, &pWords0_20_IV, &pWords0_IV, &misTrans_IV);
-                GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0, misTrans,
-                                                accTrans_IV,pWordsTrans_IV, pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV, misTrans_IV);
+                c->getStats(&accTrans,&pWordsTrans, /*&pWords80_100, &pWords60_80, &pWords40_60, &pWords20_40, &pWords0_20, &pWords0,*/ &misTrans,
+                            &accTrans_IV,&pWordsTrans_IV,/* &pWords80_100_IV, &pWords60_80_IV, &pWords40_60_IV, &pWords20_40_IV, &pWords0_20_IV, &pWords0_IV,*/ &misTrans_IV);
+                GlobalK::knowledge()->saveTrack(accTrans,pWordsTrans, /*pWords80_100, pWords60_80, pWords40_60, pWords20_40, pWords0_20, pWords0,*/ misTrans,
+                                                accTrans_IV,pWordsTrans_IV, /*pWords80_100_IV, pWords60_80_IV, pWords40_60_IV, pWords20_40_IV, pWords0_20_IV, pWords0_IV,*/ misTrans_IV);
             }
 #endif
         }
@@ -63,7 +63,7 @@ void showSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c, int hei
 
 CrowdCAT::CrowdCAT( string lexiconFile, 
                 string pageImageDir, 
-                //string segmentationFile, 
+                string segmentationFile, 
                 string transcriberPrefix,
                 string savePrefix,
                 string transLoadSaveFile,
@@ -78,8 +78,8 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     cont.store(1);
     sem_init(&semLock, 0, 0);
 
-    string featurizerModel=transcriberPrefix+"featurizer.prototxt";
-    string embedderModel=transcriberPrefix+"embedder.prototxt";
+    string featurizerModel=transcriberPrefix+"_featurizer.prototxt";
+    string embedderModel=transcriberPrefix+"_embedder.prototxt";
     string netWeights =transcriberPrefix+".caffemodel";
 
     ifstream in (savePrefix+"_CrowdCAT.sav");
@@ -90,11 +90,12 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         corpus = new Knowledge::Corpus(in);
         //corpus->loadSpotter(spottingModelPrefix);
         masterQueue = new MasterQueue(in,corpus);
-        delete corpusRef;
-        delete pageRef;
+        //delete corpusRef;
+        
+        //delete pageRef;
         //spottingQueue = new SpottingQueue(in,masterQueue);
-        stromg line;
-        readline(in,line);
+        string line;
+        getline(in,line);
         cout<<"Loaded. Begins from time: "<<line<<endl;
         in.close();
     }
@@ -102,9 +103,9 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     {
     
         Lexicon::instance()->readIn(lexiconFile);
-        corpus = new Knowledge::Corpus(contextPad, avgCharWidth);
+        corpus = new Knowledge::Corpus(contextPad);//, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
-        masterQueue = new MasterQueue(contextPad,corpus->getWords());
+        masterQueue = new MasterQueue(corpus,contextPad);
         transcriber = new CNNSPPSpotter(featurizerModel, embedderModel, netWeights);
         
         //spotter = new ??;
@@ -127,7 +128,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
                     float score;
                     string text;
                     transIn >> score;
-                    readline(transIn,text);
+                    getline(transIn,text);
                     corpus_transcribed.at(i).emplace(score,text);
                 }
             }
@@ -136,7 +137,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         else
         {
             cout<<"Transcribing ["<<transLoadSaveFile<<"]..."<<endl;
-            corpus_transcribed = transcriber->transcribe(corpus);
+            corpus_transcribed = ((CNNSPPSpotter*)transcriber)->transcribe(corpus);
             cout<<" writing ["<<transLoadSaveFile<<"]..."<<endl;
             ofstream transOut(transLoadSaveFile);
             transOut<<corpus_transcribed.size()<<"\n";
@@ -325,7 +326,7 @@ void CrowdCAT::misc(string task)
             showChecker = new thread(showSleeper,masterQueue,corpus,height,width,milli);
             showChecker->detach();
         }*/
-        else if (task.compare("stopSpotting")==0)
+        /*else if (task.compare("stopSpotting")==0)
         {
             spottingQueue->stop();
             stop();
@@ -334,20 +335,20 @@ void CrowdCAT::misc(string task)
         {
             masterQueue->setFinish(true);
             cout<<"Manual Finish engaged."<<endl;
-        }
+        }*/
         else if (task.compare("save")==0)
         {
             save();
         }
 #ifdef TEST_MODE
-        else if (task.length()>11 && task.substr(0,11).compare("forceNgram:")==0)
+        /*else if (task.length()>11 && task.substr(0,11).compare("forceNgram:")==0)
         {
             masterQueue->forceNgram = task.substr(11);
         }
         else if (task.compare("unforce")==0 || task.compare("unforceNgram")==0)
         {
             masterQueue->forceNgram="";
-        }
+        }*/
 #endif
         /*else if (task.length()>14 && task.substr(0,14).compare("startSpotting:")==0)
         {
@@ -398,12 +399,12 @@ void CrowdCAT::stop()
 }
 
 //For data collection, when I deleted all my trans... :(
-void CrowdCAT::resetAllWords_()
+/*void CrowdCAT::resetAllWords_()
 {
     vector<TranscribeBatch*> bs = corpus->resetAllWords_();
     vector<unsigned long> toRemoveBatches;        
     masterQueue->enqueueTranscriptionBatches(bs,&toRemoveBatches);
-}
+}*/
 
 void CrowdCAT::threadLoop()
 {
@@ -440,7 +441,7 @@ void CrowdCAT::threadLoop()
                 }
                 else if (updateTask->type==SAVE_RETRAIN_DATA_TASK)
                 {
-                    
+                    string retrainFile = savePrefix+"_retrainData.spec";
                     corpus->writeTranscribed(retrainFile);
                     cout<<"Finished saving retrain data."<<endl;
                 }

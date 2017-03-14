@@ -59,5 +59,12 @@ public:
     void setFinish(bool v) {finish.store(v);}
 
     bool goodEnough(Word* word);
+
+    MasterQueueState getState()
+    {
+        queueLock.lock();
+        MasterQueueState ret = state;
+        queueLock.unlock();
+    }
 };
 #endif

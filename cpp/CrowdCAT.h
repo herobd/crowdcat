@@ -6,7 +6,8 @@
 #include "Knowledge.h"
 #include "Lexicon.h"
 #include "BatchWraper.h"
-#include "CNNSPPSpotter.h"
+#include "Transcriber.h"
+#include "cnnspp_spotter.h"
 #include "opencv2/core/core.hpp"
 #include <exception>
 #include <pthread.h>
@@ -86,8 +87,9 @@ class CrowdCAT
 {
     private:
     MasterQueue* masterQueue;
-    SpottingQueue* spottingQueue;
+    //SpottingQueue* spottingQueue;
     Knowledge::Corpus* corpus;
+    Transcriber* transcriber;
     thread* incompleteChecker;
     thread* showChecker;
 
@@ -110,10 +112,11 @@ class CrowdCAT
     CrowdCAT( string lexiconFile,
             string pageImageDir, 
             string segmentationFile, 
-            string spottingModelPrefix,
+            string transcriberPrefix,
             string savePrefix,
-            int avgCharWidth,
-            int numSpottingThreads,
+            string transLoadSaveFile,
+            //int avgCharWidth,
+            //int numSpottingThreads,
             int numTaskThreads,
             int showHeight,     //Height of showProgress image
             int showWidth,      //Width of showProgress image
@@ -125,7 +128,7 @@ class CrowdCAT
         delete showChecker;
         delete masterQueue;
         delete corpus;
-        delete spottingQueue;
+        //delete spottingQueue;
         for (thread* t : taskThreads)
             delete t;
         for (UpdateTask* t : taskQueue)
@@ -147,7 +150,6 @@ class CrowdCAT
     friend class Tester;
 #endif
 
-    //For data collection, when I deleted all my trans... :(
-    void resetAllWords_();
+    
 };
 #endif

@@ -108,7 +108,7 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
             crowdcat-> updateNewExemplars(id,labels,0);
             prevNgram=ngrams.back();
         }
-        else*/ if (batch->getType()==TRANSCRIPTION)
+        else*/ if (batch->getType()==BW_TRANSCRIPTION)
         {
             string batchId;
             int wordIndex;
@@ -132,7 +132,7 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
 #endif
             crowdcat->updateTranscription(thread,batchId,trans,manual);
         }
-        else if (batch->getType()==RAN_OUT)
+        else if (batch->getType()==BW_RAN_OUT)
         {
             //this_thread::sleep_for(chrono::minutes(15));
             //slept+=15;
@@ -167,6 +167,7 @@ int main(int argc, char** argv)
 {
     int numSimThreads=1;
 
+    /*
     string dataname="BENTHAM";
     string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
     string pageImageDir = "/home/brian/intel_index/data/bentham/BenthamDatasetR0-Images/Images/Pages";
@@ -174,12 +175,24 @@ int main(int argc, char** argv)
     string charSegFile = "/home/brian/intel_index/data/bentham/manual_segmentations.csv";
     string spottingModelPrefix = "model/CrowdCAT_BENTHAM";
     string savePrefix = "save/sim_BENTHAM";
+    string transcriberPrefix = "";
+    string transSaveFile =  "save/sim_BENTHAM_trans_phocnet_msf.dat";
+    */
+    string dataname="GW";
+    string lexiconFile = "/home/brian/intel_index/data/wordsEnWithNames.txt";
+    string pageImageDir = "/home/brian/intel_index/data/gw_20p_wannot/";
+    string segmentationFile = "/home/brian/intel_index/data/gw_20p_wannot/queries_test.gtp";
+    //string charSegFile = "/home/brian/intel_index/data/bentham/manual_segmentations.csv";
+    string spottingModelPrefix = "model/CrowdCAT_GW";
+    string savePrefix = "save/sim_GW";
+    string transcriberPrefix = "/home/brian/intel_index/data/gw_20p_wannot/network/phocnet_msf";
+    string transSaveFile =  "save/sim_GW_trans_phocnet_msf.dat";
     if (argc>1)
         savePrefix=argv[1];
     if (argc>2)
         GlobalK::knowledge()->setSimSave(argv[2]);
     else
-        GlobalK::knowledge()->setSimSave("save/simulationTracking.csv");
+        GlobalK::knowledge()->setSimSave("save/simulationTracking_GW.csv");
     if (argc>3)
         numSimThreads=atoi(argv[3]);
 
@@ -203,9 +216,10 @@ int main(int argc, char** argv)
     int milli = 7000;
     CrowdCAT* crowdcat = new CrowdCAT(lexiconFile,
                         pageImageDir,
-                        //segmentationFile,
+                        segmentationFile,
                         transcriberPrefix,
                         savePrefix,
+                        transSaveFile,
                         //avgCharWidth,
                         //numSpottingThreads,
                         numTaskThreads,

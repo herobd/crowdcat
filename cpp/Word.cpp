@@ -270,11 +270,11 @@ Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* c
     getline(in,transcribedBy);
     getline(in,line);
     int sSize= stoi(line);
-    rejectedTrans.resize(sSize);
+    //rejectedTrans.resize(sSize);
     for (int i=0; i<sSize; i++)
     {
         getline(in,line);
-        rejectedTrans[i]=line;
+        rejectedTrans.insert(line);
     }
     getline(in,line);
     sSize=stoi(line);
@@ -294,7 +294,7 @@ Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* c
         getline(in,line);
         notSent.emplace(score,line);
     }
-    int sSize= stoi(line);
+    sSize= stoi(line);
     for (int i=0; i<sSize; i++)
     {
         getline(in,line);

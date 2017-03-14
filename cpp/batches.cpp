@@ -5,6 +5,7 @@ cv::Vec3f TranscribeBatch::wordHighlight(0.9,1.2,1.2);
 atomic_ulong TranscribeBatch::_id(0);//I'm assuming 0 is the default value
 atomic_ulong SpottingsBatch::_batchId;
 atomic_ulong NewExemplarsBatch::_batchId;
+atomic_ulong Spotting::_id;
 
 void TranscribeBatch::highlightPix(cv::Vec3b &p, cv::Vec3f color)
 {

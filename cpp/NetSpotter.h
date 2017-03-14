@@ -13,6 +13,7 @@ class NetSpotter : public Spotter
     private:
     CNNSPPSpotter* spotter;
     //AlmazanDataset* dataset;
+    int averageCharWidth;
 
     public:
     NetSpotter(const Dataset* corpus, string modelDir);
@@ -24,7 +25,7 @@ class NetSpotter : public Spotter
     vector<SpottingResult> runQuery(SpottingQuery* query) const;
     float score(string text, const cv::Mat& image) const;
     float score(string text, int wordIndex) const;
-    double getAverageCharWidth() const { return spotter->getAverageCharWidth(); }
+    double getAverageCharWidth() const { return averageCharWidth; }
 };
 
 #endif

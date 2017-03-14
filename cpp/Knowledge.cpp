@@ -3,14 +3,14 @@
 
 int Knowledge::Page::_id=0;
 
-Knowledge::Corpus::Corpus(int contextPad, int averageCharWidth) 
+Knowledge::Corpus::Corpus(int contextPad)//, int averageCharWidth) 
 {
     pthread_rwlock_init(&pagesLock,NULL);
-    pthread_rwlock_init(&spottingsMapLock,NULL);
-    averageCharWidth=averageCharWidth;
+    //pthread_rwlock_init(&spottingsMapLock,NULL);
+    averageCharWidth=-1;//averageCharWidth;
     countCharWidth=0;
     threshScoring= 1.0;
-    manQueue.setContextPad(contextPad);
+    //manQueue.setContextPad(contextPad);
 }
 //void Knowledge::Corpus::loadSpotter(string modelPrefix)
 //{
@@ -728,7 +728,7 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
                 pthread_rwlock_wrlock(&pagesLock);
                 writing=true;
             }*/
-            page = new Page(&spotter,imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
+            page = new Page(/*&spotter,*/imageLoc+"/"+imageFile,&averageCharWidth,&countCharWidth,pageId);
             pages[page->getId()] = page;
             //cout<<"new page "<<pageId<<endl;
         }
@@ -889,19 +889,19 @@ const Mat Knowledge::Corpus::image(unsigned int i) const
 //{
 //    return _words[i]->getId();
 //}
-Knowledge::Word* Knowledge::Corpus::getWord(unsigned int i) const
+Word* Knowledge::Corpus::getWord(unsigned int i) const
 {
     //TODO, resource lock
     return _words.at(i);
 }
-Word* word(unsigned int i)
+Word* Knowledge::Corpus::word(unsigned int i)
 {
     //TODO, resource lock
     if (_words.find(i)==_words.end())
         return NULL;
     return _words.at(i);
 }
-const Word* word(unsigned int i) const
+const Word* Knowledge::Corpus::word(unsigned int i) const
 {
     //TODO, resource lock
     if (_words.find(i)==_words.end())
@@ -950,13 +950,13 @@ void Knowledge::Corpus::recreateDatasetVectors(bool lockPages)
     
 }
 
-vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
+/*vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
 {
     vector<SpottingResult> res = spotter->runQuery(query);
     vector<Spotting>* ret = new vector<Spotting>(res.size());
     for (int i=0; i<res.size(); i++)
     {
-        Knowledge::Word* w = getWord(res[i].imIdx);
+        Word* w = getWord(res[i].imIdx);
         int tlx, tly, brx, bry;
         bool done;
         int gt=0;//UNKNOWN_GT;
@@ -979,18 +979,11 @@ vector<Spotting>* Knowledge::Corpus::runQuery(SpottingQuery* query)// const
 
         ret->at(i) = Spotting(res[i].startX+tlx, tly, res[i].endX+tlx, bry, w->getPageId(), w->getPage(), query->getNgram(), res[i].score, gt);
         assert(i==0 || ret->at(i).id != ret->at(i-1).id);
-        if (done)
-            w->preapproveSpotting(&ret->at(i));
-        /*if (word.done)
-        {
-            if (word->hasNgram(&ret->at(i)))
-                ret->at(i).type=SPOTTING_TYPE_TRUE;
-            else
-                ret->at(i).type=SPOTTING_TYPE_FALSE;
-        }*/
+        //if (done)
+        //    w->preapproveSpotting(&ret->at(i));
     }
     return ret;
-}
+}*/
 
 void Knowledge::Corpus::writeTranscribed(string retrainFile)
 {
@@ -998,7 +991,7 @@ void Knowledge::Corpus::writeTranscribed(string retrainFile)
     pthread_rwlock_rdlock(&pagesLock);
     for (auto p : _words)
     {
-        Word* word = p->second;
+        Word* word = p.second;
         int tlx, tly, brx, bry;
         bool done;
         word->getBoundsAndDone(&tlx,&tly,&brx,&bry,&done);
@@ -1006,20 +999,21 @@ void Knowledge::Corpus::writeTranscribed(string retrainFile)
         {
             string trans = word->getTranscription();
             //toWrite[trans].push_back(pages.at(pageId)->getPageImgLoc()+" "+to_string(tlx)+" "+to_string(tly)+" "+to_string(brx)+" "+to_string(bry)+" "+trans);
-            out << pages.at(pageId)->getPageImgLoc()<<" "<<tlx<<" "<<tly<<" "<<brx<<" "<<bry<<" "<<trans<<endl;;
+            out << pages.at(word->getPageId())->getPageImgLoc()<<" "<<tlx<<" "<<tly<<" "<<brx<<" "<<bry<<" "<<trans<<endl;
         }
+            
     }
     pthread_rwlock_unlock(&pagesLock);
     out.close();
 }
 
 
-CorpusRef* Knowledge::Corpus::getCorpusRef()
+/*CorpusRef* Knowledge::Corpus::getCorpusRef()
 {
     CorpusRef* ret = new CorpusRef();
     for (int i=0; i<_words.size(); i++)
     {
-        ret->addWord(i,_words.at(i),_words.at(i)->getPage(),_words.at(i)->getSpottingsPointer());
+        ret->addWord(i,_words.at(i),_words.at(i)->getPage());
         int x1,y1,x2,y2;
         bool toss;
         _words.at(i)->getBoundsAndDone(&x1,&y1,&x2,&y2,&toss);
@@ -1045,7 +1039,7 @@ PageRef* Knowledge::Corpus::getPageRef()
     }
 
     return ret;
-}
+}*/
 
 void Knowledge::Page::save(ofstream& out)
 {
@@ -1059,7 +1053,7 @@ void Knowledge::Page::save(ofstream& out)
     out<<id<<"\n";
 }
 
-Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+Knowledge::Page::Page(ifstream& in, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth) : /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
     string line;
@@ -1073,7 +1067,7 @@ Knowledge::Page::Page(ifstream& in, const Spotter* const* spotter, float* averag
     _lines.resize(sizeLines);
     for (int i=0; i<sizeLines; i++)
     {
-        _lines.at(i) = new Line(in,&pageImg,spotter,averageCharWidth,countCharWidth);
+        _lines.at(i) = new Line(in,&pageImg,/*spotter,*/averageCharWidth,countCharWidth);
     }
     getline(in,line);
     _id=stoul(line);
@@ -1095,7 +1089,7 @@ void Knowledge::Line::save(ofstream& out)
     out<<pageId<<"\n";
 }
 
-Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const* spotter, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), spotter(spotter), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
+Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, /*const Spotter* const* spotter,*/ float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), /*spotter(spotter),*/ averageCharWidth(averageCharWidth), countCharWidth(countCharWidth)
 {
     pthread_rwlock_init(&lock,NULL);
     string line;
@@ -1106,7 +1100,7 @@ Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     _words.resize(wordSize);
     for (int i=0; i<wordSize; i++)
     {
-        _words.at(i)=new Word(in, pagePnt, spotter, averageCharWidth, countCharWidth);
+        _words.at(i)=new Word(in, pagePnt, averageCharWidth, countCharWidth);
     }
     getline(in,line);
     ty = stoi(line);
@@ -1116,7 +1110,7 @@ Knowledge::Line::Line(ifstream& in, const cv::Mat* pagePnt, const Spotter* const
     pageId = stoi(line);
 }
 
-void Corpus::save(ofstream& out)
+void Knowledge::Corpus::save(ofstream& out)
 {
     out<<"CORPUS"<<endl;
     out<<averageCharWidth<<"\n"<<countCharWidth<<"\n"<<threshScoring<<"\n";
@@ -1135,13 +1129,13 @@ void Corpus::save(ofstream& out)
     out<<numWordsReadIn<<"\n";
     pthread_rwlock_unlock(&pagesLock);
 
-    pthread_rwlock_rdlock(&spottingsMapLock);
+    /*pthread_rwlock_rdlock(&spottingsMapLock);
     out<<spottingsToWords.size()<<"\n";
     for (auto p : spottingsToWords)
     {
         out<<p.first<<"\n"<<p.second.size()<<"\n";
         for (Word* w : p.second)
-            out<<w->getSpottingIndex()<<"\n";
+            out<<w->getId()<<"\n";
     }
     pthread_rwlock_unlock(&spottingsMapLock);
 
@@ -1156,11 +1150,11 @@ void Corpus::save(ofstream& out)
     //just call recreateDatasetVectors
 }
 
-Corpus::Corpus(ifstream& in)
+Knowledge::Corpus::Corpus(ifstream& in)
 {
 
     pthread_rwlock_init(&pagesLock,NULL);
-    pthread_rwlock_init(&spottingsMapLock,NULL);
+    //pthread_rwlock_init(&spottingsMapLock,NULL);
 
     string line;
     getline(in,line);
@@ -1177,7 +1171,7 @@ Corpus::Corpus(ifstream& in)
     {
         getline(in,line);
         int pageId = stoi(line);
-        Page* page = new Page(in,&spotter,&averageCharWidth,&countCharWidth);
+        Page* page = new Page(in,/*&spotter,*/&averageCharWidth,&countCharWidth);
         pages[pageId]=page;
     }
     getline(in,line);
@@ -1194,7 +1188,7 @@ Corpus::Corpus(ifstream& in)
     numWordsReadIn=stoi(line);
     recreateDatasetVectors(false);
 
-    getline(in,line);
+    /*getline(in,line);
     int spottingsToWordsSize=stoi(line);
     for (int i=0; i<spottingsToWordsSize; i++)
     {
@@ -1208,10 +1202,11 @@ Corpus::Corpus(ifstream& in)
             int spottingIndex=stoi(line);
             spottingsToWords[sid].push_back(_words[spottingIndex]);
         }
-    }
+    }*/
 }
 
 //For data collection, when I deleted all my trans... :(
+/*
 vector<TranscribeBatch*> Knowledge::Corpus::resetAllWords_()
 {
     vector<TranscribeBatch*> ret;
@@ -1223,19 +1218,19 @@ vector<TranscribeBatch*> Knowledge::Corpus::resetAllWords_()
             ret.push_back(b);
     }
     return ret;
-}
+}*/
 
-TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
+/*TranscribeBatch* Knowledge::Word::reset_(vector<Spotting*>* newExemplars)
 {
     done=false;
     loose=false;
     transcription="";
     query="";
     return queryForBatch(newExemplars);
-}
+}*/
 
-void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0, string* misTrans,
-                                 float* accTrans_IV, float* pWordsTrans_IV, float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV, string* misTrans_IV)
+void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, /*float* pWords80_100, float* pWords60_80, float* pWords40_60, float* pWords20_40, float* pWords0_20, float* pWords0,*/ string* misTrans,
+                                 float* accTrans_IV, float* pWordsTrans_IV, /*float* pWords80_100_IV, float* pWords60_80_IV, float* pWords40_60_IV, float* pWords20_40_IV, float* pWords0_20_IV, float* pWords0_IV,*/ string* misTrans_IV)
 {
     int trueTrans, cTrans, c80_100, c60_80, c40_60, c20_40, c0_20, c0;
     trueTrans= cTrans= c80_100= c60_80= c40_60= c20_40= c0_20= c0=0;
@@ -1247,11 +1242,12 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
     *misTrans_IV="";
     
     int numIV=0;
-    for (Word* w : _words)
+    for (auto p : _words)
     {
+        Word* w = p.second;
         bool done;
-        string gt, query;
-        w->getDoneAndGTAndQuery(&done,&gt,&query);
+        string gt;
+        w->getDoneAndGT(&done,&gt);
         for (int i=0; i<gt.length(); i++)
             gt[i]=tolower(gt[i]);
         bool inVocab = Lexicon::instance()->inVocab(gt);
@@ -1269,12 +1265,12 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
                 trueTrans++;
             else
             {
-                *misTrans+=trans+"("+gt+") ";
+                *misTrans+=trans+"("+gt+")_";
                 if (inVocab)
-                    *misTrans_IV+=trans+"("+gt+") ";
+                    *misTrans_IV+=trans+"("+gt+")_";
             }
         }
-        else if (query.length()==0)
+        /*else if (query.length()==0)
         {
             c0++;
             if (inVocab)
@@ -1355,29 +1351,30 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, float* pWo
                 if (inVocab)
                     c0_20_IV++;
             }
-        }
+        }*/
     }
     if (cTrans>0)
         *accTrans= trueTrans/(0.0+cTrans);
     else
         *accTrans=0;
     *pWordsTrans= cTrans/(0.0+_words.size());
-    *pWords80_100= c80_100/(0.0+_words.size());
+    /**pWords80_100= c80_100/(0.0+_words.size());
     *pWords60_80= c60_80/(0.0+_words.size());
     *pWords40_60= c40_60/(0.0+_words.size());
     *pWords20_40= c20_40/(0.0+_words.size());
     *pWords0_20= c0_20/(0.0+_words.size());
     *pWords0= c0/(0.0+_words.size());
-
+    */
     if (cTrans_IV>0)
         *accTrans_IV= trueTrans_IV/(0.0+cTrans_IV);
     else
         *accTrans_IV=0;
     *pWordsTrans_IV= cTrans_IV/(0.0+numIV);
-    *pWords80_100_IV= c80_100_IV/(0.0+numIV);
+    /**pWords80_100_IV= c80_100_IV/(0.0+numIV);
     *pWords60_80_IV= c60_80_IV/(0.0+numIV);
     *pWords40_60_IV= c40_60_IV/(0.0+numIV);
     *pWords20_40_IV= c20_40_IV/(0.0+numIV);
     *pWords0_20_IV= c0_20_IV/(0.0+numIV);
     *pWords0_IV= c0_IV/(0.0+numIV);
+    */
 }

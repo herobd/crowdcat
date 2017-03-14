@@ -158,14 +158,13 @@ public:
         *gt=this->gt;
         pthread_rwlock_unlock(&lock);
     }
-    /*void getDoneAndGTAndQuery(bool* isDone, string* gt, string* query)
+    void getDoneAndGT(bool* isDone, string* gt)
     {
         pthread_rwlock_rdlock(&lock);
 	*isDone=done;
         *gt=this->gt;
-        *query=this->query;
         pthread_rwlock_unlock(&lock);
-    }*/
+    }
     bool isDone()
     {
         pthread_rwlock_rdlock(&lock);

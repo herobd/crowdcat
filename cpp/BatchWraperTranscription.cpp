@@ -6,25 +6,24 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
 
     bool burn;
     int tlx, tly, brx, bry;
-    word->getBoundsAndDoneAndGT(&tlx, &tly, &brx, &bry, &burn, &gt)
+    word->getBoundsAndDoneAndGT(&tlx, &tly, &brx, &bry, &burn, &gt);
 
 
     int wordH = bry-tly+1;
     int wordW = brx-tlx+1;
 
     int topPad = min(contextPad, tly);
+    const Mat* origImg = word->getPage();
     int bottomPad = min(contextPad, origImg->rows-(bry+1));
     int wordHPad = wordH+topPad+bottomPad;
     //int textH= textImg.rows;
     //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
     int padLeft = max((((int)width)-wordW)/2,0);
-    for (SpottingPoint& sp : spottingPoints)
-        sp.setPad(padLeft);
     scale=1.0;
     Mat newWordImg;
     if (width>=wordW)
     {
-        newWordImg = cv::Mat::zeros(wordHPad,width,word->getPage()->type());
+        newWordImg = cv::Mat::zeros(wordHPad,width,origImg->type());
         if (width>wordW) {
             int cropX = (tlx-padLeft>=0)?tlx-padLeft:0;
             int pasteX = (tlx-padLeft>=0)?0:padLeft-tlx;
@@ -32,7 +31,7 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
             if (cropWidth+cropX>=(*origImg).cols) {
                 cropWidth=(*origImg).cols-cropX;
             }
-            word->getPage()(cv::Rect(cropX,tly-topPad,cropWidth,wordHPad)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordHPad)));
+            (*origImg)(cv::Rect(cropX,tly-topPad,cropWidth,wordHPad)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordHPad)));
 
         }
     }
@@ -40,7 +39,7 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
     {
         
         newWordImg = cv::Mat::zeros(wordHPad,wordW,origImg->type());
-        word->getPage()(cv::Rect(tlx,tly-topPad,wordW,wordHPad)).copyTo(newWordImg(cv::Rect(0, 0, wordW, wordHPad)));
+        (*origImg)(cv::Rect(tlx,tly-topPad,wordW,wordHPad)).copyTo(newWordImg(cv::Rect(0, 0, wordW, wordHPad)));
         scale = width/(0.0+wordW);//we save the scale to allow a proper display of ngram locations
         cv::resize(newWordImg, newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
     }
@@ -58,7 +57,7 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
     E.encode(ss, encoded);
     string dataBase64 = encoded.str();
     wordImgStr=dataBase64;
-    retPoss = batch->getTopXPossibilities(NUM_TRANS_POSS);
+    retPoss = word->popTopXPossibilities(NUM_TRANS_POSS);
 //#ifdef NO_NAN
 //    images.resize(1);
 //    images[0]=batch->getImage();
