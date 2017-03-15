@@ -14,15 +14,15 @@ using namespace v8;
 
 class TranscriptionBatchUpdateWorker : public AsyncWorker {
     public:
-        TranscriptionBatchUpdateWorker(Callback *callback, CATTSS* cattss, string id, string transcription, bool manual=false)
-        : AsyncWorker(callback), cattss(cattss), id(id), transcription(transcription), manual(manual) {}
+        TranscriptionBatchUpdateWorker(Callback *callback, CATTSS* cattss, string userId, string id, string transcription, bool manual)
+        : AsyncWorker(callback), cattss(cattss), userId(userId), id(id), transcription(transcription), manual(manual) {}
 
         ~TranscriptionBatchUpdateWorker() {}
 
 
         void Execute () 
         {
-            cattss->updateTranscription(id,transcription,manual);
+            cattss->updateTranscription(userId,id,transcription,manual);
         }
 
         // We have the results, and we're back in the event loop.
@@ -37,6 +37,7 @@ class TranscriptionBatchUpdateWorker : public AsyncWorker {
         }
     private:
         CATTSS* cattss;
+        string userId;
         string id;
         string transcription;
         bool manual;

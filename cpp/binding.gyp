@@ -2,50 +2,38 @@
 {
   "targets": [
     {
-      "target_name": "spottingaddon",
-      "sources": [  "SpottingAddon.cpp", 
+      "target_name": "transcriberaddon",
+      "sources": [  "TranscriberAddon.cpp", 
                     "BatchRetrieveWorker.cpp", 
-                    "SpottingBatchUpdateWorker.cpp", 
                     "MasterQueue.h", "MasterQueue.cpp", 
-                    "SpottingResults.h", "SpottingResults.cpp", 
                     "BatchWraper.h", 
-                    "BatchWraperSpottings.h", "BatchWraperSpottings.cpp", 
                     "BatchWraperTranscription.h", "BatchWraperTranscription.cpp", 
-                    "TranscribeBatchQueue.h", "TranscribeBatchQueue.cpp", 
                     "Knowledge.h","Knowledge.cpp", 
                     "Lexicon.h", "Lexicon.cpp", 
                     "MiscWorker.cpp", 
-                    "CATTSS.h", "CATTSS.cpp", 
+                    "CrowdCAT.h", "CrowdCAT.cpp", 
                     "Global.h", "Global.cpp", 
                     "Lexicon.h", "Lexicon.cpp", 
-                    "NewExemplarsBatchQueue.h", "NewExemplarsBatchQueue.cpp", 
-                    "BatchWraperNewExemplars.h", "BatchWraperNewExemplars.cpp", 
-                    "NewExemplarsBatchUpdateWorker.cpp", 
-                    "maxflow/graph.h", "maxflow/graph.cpp", "maxflow/block.h", "maxflow/instances.inc", "maxflow/maxflow.cpp", 
                     "batches.h", "batches.cpp", 
                     "spotting.h", 
-                    "CorpusRef.h", "PageRef.h",
-                    "WordBackPointer.h",
-                    "SpottingQuery.h"
-                    "SpottingQueue.h", "SpottingQueue.cpp",
-                    "Spotter.h", "AlmazanSpotter.h", "AlmazanSpotter.cpp",
-                    "AlmazanDataset.h", "AlmazanDataset.cpp",
+                    "NetSpotter.h", "NetSpotter.cpp",
+                    "Word.h", "Word.cpp",
+                    "CorpusDataset.cpp",
 
                     "SpecialInstances.h",
                     "TestingInstances.h", "TestingInstances.cpp",
                     "TrainingInstances.h", "TrainingInstances.cpp",
-                    "TrainingBatchWraperSpottings.h", "TrainingBatchWraperSpottings.cpp",
                     "TrainingBatchWraperTranscription.h", "TrainingBatchWraperTranscription.cpp",
                     "SpecialBatchRetrieveWorker.cpp"
                 ],
-      "cflags": ["-Wall", "-std=c++11", "-fexceptions" ],
+      "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DOPENCV2"],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
-      "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/intel_index/EmbAttSpotter"],
+      "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter"],
       "libraries": [
             "-lopencv_highgui", "-lb64", "-pthread", "-lopencv_imgproc", "-fopenmp", 
-            "-L/home/brian/intel_index/EmbAttSpotter", "-lembattspotter",
-            "-L/home/brian/intel_index/EmbAttSpotter/vlfeat-0.9.20/bin/glnxa64/", "-l:libvl.so"
+            "-L/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter", "-lcnnspp_spotter",
+            "-L/home/brian/Projects/brian_caffe/build/lib", "-lcaffe", "-l boost_system"
           ],
       "conditions": [
         [ 'OS=="mac"', {

@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "CATTSS.h"
+#include "CrowdCAT.h"
 #include "BatchWraper.h"
 using namespace Nan;
 using namespace std;
@@ -13,14 +13,14 @@ using namespace v8;
 
 class BatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, CATTSS* cattss, int width, int color, string prevNgram, int num)
-        : AsyncWorker(callback), width(width), color(color), prevNgram(prevNgram), num(num), cattss(cattss), batch(NULL) {}
+        BatchRetrieveWorker(Callback *callback, CrowdCAT* crowdcat, int width, int color, string prevNgram, int num)
+        : AsyncWorker(callback), userId(userId), width(width), crowdcat(crowdcat), batch(NULL) {}
 
         ~BatchRetrieveWorker() {}
 
 
         void Execute () {
-            batch = cattss->getBatch(num,width,color,prevNgram);
+            batch = crowdcat->getBatch(userId,width);
         }
 
         // We have the results, and we're back in the event loop.
@@ -33,10 +33,8 @@ class BatchRetrieveWorker : public AsyncWorker {
         BatchWraper* batch;
         //input
         int width;
-        int color;
-        string prevNgram;
-        int num;
-        CATTSS* cattss;
+        string userId;
+        CrowdCAT* crowdcat;
         
         
 };
