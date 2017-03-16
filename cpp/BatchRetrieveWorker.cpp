@@ -13,7 +13,7 @@ using namespace v8;
 
 class BatchRetrieveWorker : public AsyncWorker {
     public:
-        BatchRetrieveWorker(Callback *callback, CrowdCAT* crowdcat, int width, int color, string prevNgram, int num)
+        BatchRetrieveWorker(Callback *callback, CrowdCAT* crowdcat, string userId, int width)
         : AsyncWorker(callback), userId(userId), width(width), crowdcat(crowdcat), batch(NULL) {}
 
         ~BatchRetrieveWorker() {}

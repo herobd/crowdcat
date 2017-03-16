@@ -31,7 +31,7 @@ class TrainingInstances : public SpecialInstances
         Spotting spotting_5;
         Spotting spotting_6;
         Spotting spotting_7;
-        Knowledge::Word* word;
+        Word* word;
         Spotting spotting_8a;
         Spotting spotting_9b;
         Spotting spotting_10b;

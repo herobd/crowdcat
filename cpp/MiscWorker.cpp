@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "opencv2/highgui/highgui.hpp"
 
-#include "CATTSS.h"
+#include "CrowdCAT.h"
 #include "Knowledge.h"
 
 using namespace Nan;
@@ -13,15 +13,15 @@ using namespace v8;
 
 class MiscWorker : public AsyncWorker {
     public:
-        MiscWorker(Callback *callback, CATTSS* cattss, string task)
-        : AsyncWorker(callback), task(task), cattss(cattss) {}
+        MiscWorker(Callback *callback, CrowdCAT* crowdcat, string task)
+        : AsyncWorker(callback), task(task), crowdcat(crowdcat) {}
 
         ~MiscWorker() {}
 
 
         void Execute () {
-            if (cattss!=NULL)
-                cattss->misc(task);
+            if (crowdcat!=NULL)
+                crowdcat->misc(task);
         }
 
         // We have the results, and we're back in the event loop.
@@ -35,7 +35,7 @@ class MiscWorker : public AsyncWorker {
 
         }
     private:
-        CATTSS* cattss;
+        CrowdCAT* crowdcat;
         string task;
         
 };

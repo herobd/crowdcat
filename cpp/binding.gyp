@@ -18,8 +18,10 @@
                     "spotting.h", 
                     "NetSpotter.h", "NetSpotter.cpp",
                     "Word.h", "Word.cpp",
-                    "CorpusDataset.cpp",
+                    "CorpusDataset.h"
 
+                ],
+      "_former_sources":[
                     "SpecialInstances.h",
                     "TestingInstances.h", "TestingInstances.cpp",
                     "TrainingInstances.h", "TrainingInstances.cpp",
@@ -27,9 +29,13 @@
                     "SpecialBatchRetrieveWorker.cpp"
                 ],
       "cflags": ["-Wall", "-std=c++11", "-fexceptions", "-DOPENCV2"],
-      'cflags!': [ '-fno-exceptions' ],
-      'cflags_cc!': [ '-fno-exceptions' ],
-      "include_dirs" : ["<!(node -e \"require('nan')\")", "/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter"],
+      'cflags!': [ '-fno-exceptions', '-fno-rtti' ],
+      'cflags_cc!': [ '-fno-exceptions', '-fno-rtti' ],
+      "include_dirs" : [
+            "<!(node -e \"require('nan')\")", 
+            "/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter",
+            "/home/brian/Projects/brian_caffe/include"
+          ],
       "libraries": [
             "-lopencv_highgui", "-lb64", "-pthread", "-lopencv_imgproc", "-fopenmp", 
             "-L/home/brian/Projects/brian_caffe/scripts/cnnspp_spotter", "-lcnnspp_spotter",

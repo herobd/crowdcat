@@ -13,14 +13,14 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
     int wordW = brx-tlx+1;
 
     int topPad = min(contextPad, tly);
-    const Mat* origImg = word->getPage();
+    const cv::Mat* origImg = word->getPage();
     int bottomPad = min(contextPad, origImg->rows-(bry+1));
     int wordHPad = wordH+topPad+bottomPad;
     //int textH= textImg.rows;
     //newTextImg = cv::Mat::zeros(textH,width,CV_8UC3);
     int padLeft = max((((int)width)-wordW)/2,0);
     scale=1.0;
-    Mat newWordImg;
+    cv::Mat newWordImg;
     if (width>=wordW)
     {
         newWordImg = cv::Mat::zeros(wordHPad,width,origImg->type());
@@ -79,7 +79,7 @@ void BatchWraperTranscription::doCallback(Callback *callback)
     Local<Value> argv[] = {
 	Nan::Null(),
 	Nan::New(batchId).ToLocalChecked(),
-        Nan::New(batchType).ToLocalChecked()
+        Nan::New(batchType).ToLocalChecked(),
 	Nan::New(wordImgStr).ToLocalChecked(),
 	Nan::New(possibilities),
         Nan::New(gt).ToLocalChecked()
