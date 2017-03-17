@@ -107,6 +107,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         masterQueue = new MasterQueue(corpus,contextPad);
         transcriber = new CNNSPPSpotter(featurizerModel, embedderModel, netWeights);
+        transcriber->addLexicon(Lexicon::instance()->get());
         
         //spotter = new ??;
         //corpus->loadSpotter(spotter);//spottingModelPrefix);

@@ -161,12 +161,15 @@ function batchShiftAndSend(batchId,callback) {
         batches[batchId].sent=true;
     } else if (info.type=='t' || info.type=='m') {
         var query='?type=transcription';
-        if (info.type=='m') {
-            query+='Manual';
-        }
+        //if (info.type=='m') {
+        //    query+='Manual';
+        //}
         query+=standardQuery(info);
-        var toSend = {batchId:info.id,label:info.transcription};
-        if (timingTestMode && info.type=='t') {
+        var retWasManual=0;
+        if (info.type=='m' && info.wasManual)
+            retWasManual=1;
+        var toSend = {batchId:info.id,label:info.transcription,wasManual:retWasManual};
+        if (timingTestMode /*&& info.type=='t'*/) {
             toSend.prevWasTrans=false;
             if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='t')
                 toSend.prevWasTrans=true;
@@ -174,13 +177,13 @@ function batchShiftAndSend(batchId,callback) {
             toSend.positionCorrect=info.positionCorrect;
             toSend.batchTime=new Date().getTime()-info.startTime;
             toSend.undos=info.countUndos;
-        } else if (timingTestMode && info.type=='m') {
+        } /*else if (timingTestMode && info.type=='m') {
             toSend.prevWasManual=false;
             if (lastRemovedBatchInfo.length>1 && lastRemovedBatchInfo[lastRemovedBatchInfo.length-2].type=='m')
                 toSend.prevWasManual=true;
             toSend.batchTime=new Date().getTime()-info.startTime;
             toSend.undos=info.countUndos;
-        }
+        }*/
         httpPostAsync('/app/submitBatch'+query,toSend,function (res){
             
             var jres=JSON.parse(res);
@@ -735,10 +738,10 @@ function handleTranscriptionBatch(jres) {
     var wordImg = new Image();
     wordImg.src='data:image/png;base64,'+jres.wordImg;
 
-    theWindow.insertBefore(createTranscriptionSelector('t'+jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
+    theWindow.insertBefore(createTranscriptionSelector('t'+jres.batchId,wordImg,jres.possibilities,jres.manual),theWindow.childNodes[0]);
     spinner.hidden=true;
 }
-function handleManualBatch(jres) {
+/*function handleManualBatch(jres) {
         
     if (jres.batchId!=='R' && jres.batchId!=='X') {
         batchQueue.push({type:'m', id:jres.batchId, transcription:'#'});
@@ -750,7 +753,7 @@ function handleManualBatch(jres) {
     wordImg.src='data:image/png;base64,'+jres.wordImg;
     theWindow.insertBefore(createManualTranscriptionSelector('m'+jres.batchId,wordImg,jres.ngrams,jres.possibilities),theWindow.childNodes[0]);
     spinner.hidden=true;
-}
+}*/
 
 
 function handleNewExemplarsBatch(jres) {
@@ -982,10 +985,10 @@ function isBatchDone(batchId) {
     }
 }
 
-function classify(id,word) {
-    return classifyR(id,function(){return word;});
+function classifySelected(id,word) {
+    return classifyR(id,function(){return word;},false);
 }
-function classifyR(id,vFunc) {
+function classifyR(id,vFunc,manual) {
     return function(ele) {
         if (!ondeck)
             highlightLast();
@@ -1005,6 +1008,7 @@ function classifyR(id,vFunc) {
             console.log(batchQueue);
         }
         batchQueue[0].transcription=vFunc();
+        batchQueue[0].wasManual=manual
         ondeck.classList.toggle('batchEl');
         ondeck.classList.toggle('collapser');
         isBatchDone(id);
@@ -1030,11 +1034,12 @@ function adjustChain(chain) {
     }
 }
 
-function makeTranscriptionDiv(id,wordImg,ngrams) {
+function makeTranscriptionDiv(id,wordImg) {
     var genDiv = document.createElement("div");
     genDiv.classList.toggle('transcription');
     genDiv.classList.toggle('batchEl');
     genDiv.appendChild(wordImg);
+    /*
     if (ngrams.length>0) {
         for (var i=0; i<ngrams.length; i++) {
             //if (!ngrams[i].scale)
@@ -1077,6 +1082,7 @@ function makeTranscriptionDiv(id,wordImg,ngrams) {
         }
         genDiv.appendChild(ngramDiv);
     }
+    */
     genDiv.id='bt'+id;
     genDiv.batch=id;
     genDiv.style['max-height']=(screenHeight-menuHeaderHeight)+'px';
@@ -1216,9 +1222,9 @@ function addWordButtons(dest,words,id) {
     }
 }
 
-function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
+function createTranscriptionSelector(id,wordImg,possibilities,manual) {
     
-    var genDiv = makeTranscriptionDiv(id,wordImg,ngrams);
+    var genDiv = makeTranscriptionDiv(id,wordImg);
 
     var totalHeight = wordImg.height + 75;//ngramDiv.offsetHeight;//ngramImg.height;
     var selectionDiv = document.createElement("div");
@@ -1229,7 +1235,24 @@ function createTranscriptionSelector(id,wordImg,ngrams,possibilities) {
 
     if (manual)
     {
-        //TODO insert text box
+        //type box
+        var input = document.createElement('input');
+        input.id='in_'+id;
+        input.autocomplete="off"
+        input.classList.toggle('transInput');
+        input.type = "text";
+        input.onkeyup = inputBoxFunc(input,possibilities,possDiv,id,classifyR(id,function(){return input.value;},true));
+        //submit button
+        var submit = document.createElement("div");
+        submit.classList.toggle('transSubmit');
+        submit.innerHTML='&gt;';
+        submit.addEventListener('mouseup', classifyR(id,function(){return input.value;},true), false);
+
+        var manualDiv = document.createElement("div");
+        manualDiv.classList.toggle('selection');
+        manualDiv.appendChild(input);
+        manualDiv.appendChild(submit);
+        selectionDiv.appendChild(manualDiv);
     }
 
     var errDiv = document.createElement("div");
