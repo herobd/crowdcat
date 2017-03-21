@@ -9,7 +9,8 @@ GlobalK::GlobalK()
         string ngram;
         while(getline(in,ngram))
         {   
-            transform(ngram.begin(), ngram.end(), ngram.begin(), ::tolower);
+            //transform(ngram.begin(), ngram.end(), ngram.begin(), ::tolower);
+            ngram=lowercaseAndStrip(ngram);
             ngramRanks[i+MIN_N].push_back(ngram);
         }
         in.close();
@@ -27,6 +28,16 @@ GlobalK::~GlobalK()
     for (auto p : accumRes)
         delete p.second;
 #endif
+}
+string GlobalK::lowercaseAndStrip(string s)
+{
+    string ret="";
+    for (int i=0; i<s.length(); i++)
+    {
+        if (s[i]!=' ' && s[i]!='\n' &&  s[i]!='\t' &&  s[i]!='\r')
+            ret+=tolower(s[i]);
+    }
+    return ret;
 }
 
 GlobalK* GlobalK::knowledge()

@@ -15,8 +15,8 @@
 
 Simulator::Simulator(string dataname, string segCSV)
 {
-    //TODO read in seg GT
-    ifstream in (segCSV);
+    // read in seg GT
+    /*ifstream in (segCSV);
     string line;
     //getline(in,line);//header
     while (getline(in,line))
@@ -56,7 +56,7 @@ Simulator::Simulator(string dataname, string segCSV)
     in.close();
     //sending corpus word is purely for error checking
     GlobalK::knowledge()->setCorpusXLetterBounds(&corpusXLetterStartBoundsRel,&corpusXLetterEndBoundsRel,&corpusWord);
-
+    */
     if (dataname.compare("test")==0)
     {
         spottingAverageMilli=1;
@@ -80,7 +80,7 @@ Simulator::Simulator(string dataname, string segCSV)
         manMilli_m=1;
         manErrorProb=0;
     }
-    else if (dataname.compare("BENTHAM")==0)
+    else if (dataname.compare("BENTHAM")==0 || dataname.compare("GW")==0)
     {
         spottingAverageMilli=14235;
         spottingAverageMilli_prev=-4338;
@@ -361,7 +361,7 @@ string Simulator::transcription(int wordIndex, vector<SpottingPoint> spottings, 
             }
         }
 
-        if (ret.length()==0)
+        if (ret.length()==0 && spottings.size()>0)
         {
             if (RAND_PROB < transErrorProbNotAvail)
                 ret="$REMOVE:"+spottings.front().getId()+"$";//If an error is made, I'm just removing a spottings. Not sure what actually should happen

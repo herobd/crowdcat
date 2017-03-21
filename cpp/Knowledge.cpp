@@ -606,6 +606,9 @@ void Knowledge::Corpus::showProgress(int height, int width)
     int xPos=0;
     int yPos=0;
     int across=0;
+    int numDone=0;
+    int numRight=0;
+    int numTot=0;
     for (auto p : pages)
     {
         Page* page = p.second;
@@ -623,18 +626,38 @@ void Knowledge::Corpus::showProgress(int height, int width)
             vector<Word*> wordsForLine = line->wordsAndBounds(&line_ty,&line_by);
             for (Word* word : wordsForLine)
             {
+                numTot++;
                 int tlx,tly,brx,bry;
                 bool done;
-                word->getBoundsAndDone(&tlx, &tly, &brx, &bry, &done);
+                string gt;
+                word->getBoundsAndDoneAndGT(&tlx, &tly, &brx, &bry, &done, &gt);
                 if (done)
                 {
+                    numDone++;
+                    gt = GlobalK::lowercaseAndStrip(gt);
+                    string trans = GlobalK::lowercaseAndStrip(word->getTranscription());
+                    bool correct=false;
+                    if (gt.compare(trans)==0)
+                    {
+                        correct=true;
+                        numRight++;
+                    }
                     for (int x=tlx; x<=brx; x++)
                         for (int y=tly; y<=bry; y++)
                         {
                             assert(x<workingIm.cols && y<workingIm.rows);
-                            workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
-                            workingIm.at<cv::Vec3b>(y,x)[1] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
-                            workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
+                            if (correct)
+                            {
+                                workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
+                                workingIm.at<cv::Vec3b>(y,x)[1] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
+                                workingIm.at<cv::Vec3b>(y,x)[2] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
+                            }
+                            else
+                            {
+                                workingIm.at<cv::Vec3b>(y,x)[0] = 0.5*workingIm.at<cv::Vec3b>(y,x)[0];
+                                workingIm.at<cv::Vec3b>(y,x)[2] = min(255,workingIm.at<cv::Vec3b>(y,x)[1]+120);
+                                workingIm.at<cv::Vec3b>(y,x)[1] = 0.5*workingIm.at<cv::Vec3b>(y,x)[2];
+                            }
                         }
                 }
                 /*else
@@ -666,6 +689,8 @@ void Knowledge::Corpus::showProgress(int height, int width)
             across=0;
         }
     }
+    cv::putText(draw,to_string(numDone)+"/"+to_string(numTot),cv::Point(20,60),cv::FONT_HERSHEY_TRIPLEX,1.0,cv::Scalar(50,50,255));
+    cv::putText(draw,"accuracy: "+to_string((numRight+0.0)/numDone),cv::Point(20,160),cv::FONT_HERSHEY_TRIPLEX,1.0,cv::Scalar(50,50,255));
     //cv::imshow("progress",draw);
     //cv::waitKey(2000);
     cv::imwrite("progress/show.jpg",draw);
@@ -703,9 +728,9 @@ void Knowledge::Corpus::addWordSegmentaionAndGT(string imageLoc, string queriesF
         string imageFile = strV[0];
         string pageName = (strV[0]);
         string gt = strV[5];
-#ifdef NO_NAN
-        assert(gt.compare(GlobalK::knowledge()->getSegWord(numWordsReadIn))==0);
-#endif
+//#ifdef NO_NAN
+//        assert(gt.compare(GlobalK::knowledge()->getSegWord(numWordsReadIn))==0);
+//#endif
         int tlx=stoi(strV[1]);
         int tly=stoi(strV[2]);
         int brx=stoi(strV[3]);
@@ -1248,8 +1273,7 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, /*float* p
         bool done;
         string gt;
         w->getDoneAndGT(&done,&gt);
-        for (int i=0; i<gt.length(); i++)
-            gt[i]=tolower(gt[i]);
+        gt = GlobalK::lowercaseAndStrip(gt);
         bool inVocab = Lexicon::instance()->inVocab(gt);
         if (inVocab)
             numIV++;
@@ -1258,9 +1282,7 @@ void Knowledge::Corpus::getStats(float* accTrans, float* pWordsTrans, /*float* p
             cTrans++;
             if (inVocab)
                 cTrans_IV++;
-            string trans = w->getTranscription();
-            for (int i=0; i<trans.length(); i++)
-                trans[i] = tolower(trans[i]);
+            string trans = GlobalK::lowercaseAndStrip(w->getTranscription());
             if (gt.compare(trans)==0)
                 trueTrans++;
             else

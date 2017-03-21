@@ -119,6 +119,7 @@ class GlobalK
         static void saveImage(const cv::Mat& im, ofstream& out);
         static void loadImage(cv::Mat& im, ifstream& in);
         static string currentDateTime();
+        static string lowercaseAndStrip(string s);
 
 #ifdef NO_NAN
         void setSimSave(string file);

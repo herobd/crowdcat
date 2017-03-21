@@ -806,7 +806,7 @@ var ControllerApp = function(port) {
                         */
                     }
                     else if (req.query.type=='transcription') {
-                        transcriberaddon.transcriptionBatchDone(req.user,req.body.batchId,req.body.label,wasManual,printErr);
+                        transcriberaddon.transcriptionBatchDone(req.user,req.body.batchId,req.body.label,req.body.wasManual,printErr);
                         if (saveMode && req.query.save && req.body.label!=='$PASS$') {
                             /*if (self.saveTransQueue[req.body.batchId].label!=req.body.label) {
                                 console.log('WARNING label dif on trans['+req.body.batchId']: '+self.saveTransQueue[req.body.batchId].label+' != '+req.body.label);

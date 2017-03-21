@@ -1,5 +1,5 @@
 #include "CrowdCAT.h"
-//
+
 
 void checkIncompleteSleeper(CrowdCAT* cattss, MasterQueue* q, Knowledge::Corpus* c)
 {
@@ -106,7 +106,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         corpus = new Knowledge::Corpus(contextPad);//, avgCharWidth);
         corpus->addWordSegmentaionAndGT(pageImageDir, segmentationFile);
         masterQueue = new MasterQueue(corpus,contextPad);
-        transcriber = new CNNSPPSpotter(featurizerModel, embedderModel, netWeights);
+        transcriber = new CNNSPPSpotter(featurizerModel, embedderModel, netWeights,true,0.25,33,4,transcriberPrefix);
         transcriber->addLexicon(Lexicon::instance()->get());
         
         //spotter = new ??;
@@ -126,10 +126,14 @@ CrowdCAT::CrowdCAT( string lexiconFile,
                 transIn >> size2;
                 for (int j=0; j<size2; j++)
                 {
+                    //string text;
+                    //getline(transIn,text);
+                    //float score= stof(text);
+                    //getline(transIn,text);
                     float score;
-                    string text;
                     transIn >> score;
-                    getline(transIn,text);
+                    string text;
+                    transIn >> text;
                     corpus_transcribed.at(i).emplace(score,text);
                 }
             }
@@ -139,6 +143,9 @@ CrowdCAT::CrowdCAT( string lexiconFile,
         {
             cout<<"Transcribing ["<<transLoadSaveFile<<"]..."<<endl;
             corpus_transcribed = ((CNNSPPSpotter*)transcriber)->transcribe(corpus);
+            //((CNNSPPSpotter*)transcriber)->setCorpus_dataset(corpus,true);
+            //cout<<"transcribing..."<<endl;
+            //corpus_transcribed = ((CNNSPPSpotter*)transcriber)->transcribeCorpus();
             cout<<" writing ["<<transLoadSaveFile<<"]..."<<endl;
             ofstream transOut(transLoadSaveFile);
             transOut<<corpus_transcribed.size()<<"\n";
@@ -209,6 +216,7 @@ CrowdCAT::CrowdCAT( string lexiconFile,
     //spottingQueue->run(numSpottingThreads);
 //#endif
     run(numTaskThreads);
+    cout<<"Running "<<numTaskThreads<<" task threads."<<endl;
     //test
     /*
         Spotting s1(1000, 1458, 1154, 1497, 2720272, corpus->imgForPageId(2720272), "ma", 0.01);

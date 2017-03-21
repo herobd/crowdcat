@@ -111,9 +111,9 @@ public:
     }
     bool userOK(string userId)
     {
-        pthread_rwlock_unlock(&lock);
-        bool ret = bannedUsers.find(userId) == bannedUsers.end();
         pthread_rwlock_rdlock(&lock);
+        bool ret = bannedUsers.find(userId) == bannedUsers.end();
+        pthread_rwlock_unlock(&lock);
         return ret;
     }
     void banUser(string userId)
@@ -191,6 +191,7 @@ public:
     {
         pthread_rwlock_wrlock(&lock);
         notSent = scores;
+        assert(notSent.size()>5);
         pthread_rwlock_unlock(&lock);
     }
     float topScore()

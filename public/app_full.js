@@ -1216,7 +1216,7 @@ function addWordButtons(dest,words,id) {
         var wordDiv = document.createElement("div");
         wordDiv.classList.toggle('selection');
         wordDiv.innerHTML='<div>'+words[i]+'</div>';
-        wordDiv.addEventListener('mouseup', classify(id,words[i]), false);
+        wordDiv.addEventListener('mouseup', classifySelected(id,words[i]), false);
         //wordDiv.addEventListener('touchstart', classify(id,words[i]), false);
         dest.appendChild(wordDiv);
     }
@@ -1261,12 +1261,12 @@ function createTranscriptionSelector(id,wordImg,possibilities,manual) {
     if (manual)
     {
         errDiv.innerHTML="<div>[Error]</div>";
-        errDiv.addEventListener('mouseup', classify(id,'$ERROR$'), false);
+        errDiv.addEventListener('mouseup', classifySelected(id,'$ERROR$'), false);
     }
     else
     {
         errDiv.innerHTML="<div>[None]</div>";
-        errDiv.addEventListener('mouseup', classify(id,'$NONE$'), false);
+        errDiv.addEventListener('mouseup', classifySelected(id,'$NONE$'), false);
     }
     //errDiv.addEventListener('touchstart', classify(id,'$ERROR$'), false);
     selectionDiv.appendChild(errDiv);

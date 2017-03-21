@@ -24,9 +24,10 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
     if (width>=wordW)
     {
         newWordImg = cv::Mat::zeros(wordHPad,width,origImg->type());
+        int pasteX=0;
         if (width>wordW) {
             int cropX = (tlx-padLeft>=0)?tlx-padLeft:0;
-            int pasteX = (tlx-padLeft>=0)?0:padLeft-tlx;
+            pasteX = (tlx-padLeft>=0)?0:padLeft-tlx;
             int cropWidth = (tlx-padLeft>=0)?width:width+(tlx-padLeft);
             if (cropWidth+cropX>=(*origImg).cols) {
                 cropWidth=(*origImg).cols-cropX;
@@ -34,6 +35,13 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
             (*origImg)(cv::Rect(cropX,tly-topPad,cropWidth,wordHPad)).copyTo(newWordImg(cv::Rect(pasteX, 0, cropWidth, wordHPad)));
 
         }
+        //highlight
+        if (newWordImg.channels()!=3)
+            cv::cvtColor(newWordImg,newWordImg,CV_GRAY2BGR);
+        //newWordImg(cv::Rect(padLeft,0,wordW,wordH)) -= cv::Vec3b(50,0,0);
+        for (int r=0; r<wordH; r++)
+            for (int c=0; c<wordW; c++)
+                newWordImg.at<cv::Vec3b>(r,c+padLeft+pasteX) -= cv::Vec3b(50,0,0);
     }
     else
     {
@@ -42,6 +50,13 @@ BatchWraperTranscription::BatchWraperTranscription(Word* word, int width, int co
         (*origImg)(cv::Rect(tlx,tly-topPad,wordW,wordHPad)).copyTo(newWordImg(cv::Rect(0, 0, wordW, wordHPad)));
         scale = width/(0.0+wordW);//we save the scale to allow a proper display of ngram locations
         cv::resize(newWordImg, newWordImg, cv::Size(), scale,scale, cv::INTER_CUBIC );
+        //highlight
+        if (newWordImg.channels()!=3)
+            cv::cvtColor(newWordImg,newWordImg,CV_GRAY2BGR);
+        //newWordImg -= cv::Vec3b(50,0,0);
+        for (int r=0; r<newWordImg.rows; r++)
+            for (int c=0; c<newWordImg.cols; c++)
+                newWordImg.at<cv::Vec3b>(r,c) -= cv::Vec3b(50,0,0);
     }
 
     base64::encoder E;

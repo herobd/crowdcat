@@ -33,7 +33,7 @@ class BatchWraper
         virtual int getType()=0;
         virtual void getSpottings(string* resId,string* ngram, vector<string>* ids, vector<Location>* locs, vector<string>* gt) {}
         virtual void getNewExemplars(string* batchId,vector<string>* ngrams, vector<Location>* locs) {}
-        virtual void getTranscription(string* batchId,int* wordIndex, vector<SpottingPoint>* spottings, vector<string>* poss, bool* manual, string* gt) {}
+        virtual void getTranscription(int* batchId, vector<string>* poss, bool* manual, string* gt) {};
         virtual vector<Mat> getImages()
         {
             return images;

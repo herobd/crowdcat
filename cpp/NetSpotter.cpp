@@ -8,7 +8,7 @@ NetSpotter::NetSpotter(const Dataset* corpus, string modelPrefix)
     spotter = new CNNSPPSpotter(modelPrefix+"_featurizer.prototxt", modelPrefix+"_embedder.prototxt", modelPrefix+"_wieghts.caffemodel", true, 0.25, windowWidth, 4, modelPrefix+"_cnnsppspotter");
     
     //dataset = new AlmazanDataset(corpus);
-    spotter->setCorpus_dataset(corpus);
+    spotter->setCorpus_dataset(corpus,false);
 }
 
 vector<SpottingResult> NetSpotter::runQuery(SpottingQuery* query) const

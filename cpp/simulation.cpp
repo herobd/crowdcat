@@ -116,7 +116,7 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
             vector<string> poss;
             bool manual;
             string gt;
-            batch->getTranscription(&batchId,&wordIndex,&spottings,&poss,&manual,&gt);
+            batch->getTranscription(&wordIndex,&poss,&manual,&gt);
             string trans;
             if (manual)
             {
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
         numSimThreads=atoi(argv[3]);
 
 //#ifndef DEBUG_AUTO
-    Simulator sim(dataname,charSegFile);
+    Simulator sim(dataname,"");
 //#else
 //    Simulator sim("test",charSegFile);
 //#endif

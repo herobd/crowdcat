@@ -257,7 +257,6 @@ Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* c
     topBaseline = stoi(line);
     getline(in,line);
     botBaseline = stoi(line);
-    getline(in,line);
     
     getline(in,line);
     done= stoi(line);
@@ -294,6 +293,7 @@ Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* c
         getline(in,line);
         notSent.emplace(score,line);
     }
+    getline(in,line);
     sSize= stoi(line);
     for (int i=0; i<sSize; i++)
     {
