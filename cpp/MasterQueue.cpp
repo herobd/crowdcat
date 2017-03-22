@@ -32,11 +32,12 @@ MasterQueue::MasterQueue(CorpusDataset* words, int contextPad) : words(words), c
 }
 
 
-BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
+BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth, bool lock)
 {
 
     BatchWraper* ret=NULL;
-    queueLock.lock();
+    if (lock)
+        queueLock.lock();
     if (wordsByScore.size()>0)
     {
         auto iter = wordsByScore.begin();
@@ -79,30 +80,61 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth)
 
                     
             }
-            else if (state==REMAINDER)
+            else if (state==CLEAN_UP)
             {
                 state=DONE;
             }
         }
+#ifdef NO_NAN
+        GlobalK::knowledge()->sentTrans();
+#endif
     }
     else if (state==PAUSED)
         ret = new BatchWraperPaused();
     else if (state==DONE)
         ret = new BatchWraperDone();
+    else if (state==REMAINDER)
+    {
+        //enqueue all not done words
+        state=CLEAN_UP;
+        for (int i=0; i<words->size(); i++)
+        {
+            if (!words->word(i)->isDone() && timeMap.find(i)==timeMap.end())
+            {
+                wordsByScore.emplace(words->word(i)->topScore(),words->word(i));
+            }
+        }
+        
+        ret = getBatch(userId, maxWidth,false);   
+    }
+    else if (state==CLEAN_UP)
+    {
+        state=DONE;
+        ret = new BatchWraperDone();
+    }
     
 
-    queueLock.unlock();
+    if (lock)
+        queueLock.unlock();
+#ifdef NO_NAN
+        GlobalK::knowledge()->masterState(state);
+#endif
     return ret;
 } 
 
 
 
 
-void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string transcription) 
+void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string transcription, bool manual) 
 {
     Word* word = words->word(id);
     if (word!=NULL)
     {
+        
+#ifdef NO_NAN
+        if (manual)
+            GlobalK::knowledge()->manTransBatch();
+#endif
         if (transcription.find('\n') != string::npos)
             transcription="$PASS$";
         queueLock.lock();
@@ -117,6 +149,9 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
             }
             else if (transcription.compare("$NONE$")==0)
             {
+#ifdef NO_NAN
+                GlobalK::knowledge()->badTransBatch();
+#endif
                 if (state!=CLEAN_UP)
                 {
                     queueLock.unlock();
@@ -135,6 +170,9 @@ void MasterQueue::transcriptionFeedback(string userId, unsigned long id, string 
             }
             else if (transcription.compare("$ERROR$")==0)
             {
+#ifdef NO_NAN
+        GlobalK::knowledge()->badTransBatch();
+#endif
                     queueLock.unlock();
                     //??
                     word->setTrans(userId,"$ERROR$");
@@ -223,4 +261,6 @@ MasterQueue::MasterQueue(ifstream& in, CorpusDataset* words) : words(words)
     contextPad = stoi(line);
     getline(in,line);
     state = (MasterQueueState) stoi(line);
+    if (state==PAUSED)
+        state=REMAINDER;
 }

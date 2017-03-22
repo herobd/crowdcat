@@ -335,8 +335,11 @@ vector<int> Simulator::newExemplars(vector<string> ngrams, vector<Location> locs
     return labels;
 }
 
-string Simulator::transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool lastWasTrans)
+string Simulator::transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool manual, bool* didManual)
 {
+    *didManual=false;
+    bool lastWasTrans=true;
+    bool lastWasMan=false;
     string ret ="";
     int milli;
     transform(gt.begin(), gt.end(), gt.begin(), ::tolower);
@@ -350,34 +353,52 @@ string Simulator::transcription(int wordIndex, vector<SpottingPoint> spottings, 
     }
     if (ret.length()==0)
     {
-        milli=transMilli_notAvail;
-
-        for (SpottingPoint sp : spottings)
+        if (manual)
         {
-            if (0==getSpottingLabel(sp.getNgram(),Location(sp.page,sp.x1,sp.y1,sp.x2,sp.y2)))
-            {
-                ret="$REMOVE:"+sp.getId()+"$";
-                break;
-            }
-        }
 
-        if (ret.length()==0 && spottings.size()>0)
-        {
-            if (RAND_PROB < transErrorProbNotAvail)
-                ret="$REMOVE:"+spottings.front().getId()+"$";//If an error is made, I'm just removing a spottings. Not sure what actually should happen
-            else
-                ret="$ERROR$";
+            milli=max(transMilli_notAvail,manMilli_b)+manMilli_m*gt.length();
+
+            ret=gt;
+            if (RAND_PROB < manErrorProb)
+                ret[0]='!';
+            *didManual=true;
         }
         else
         {
-            if (RAND_PROB < transErrorProbNotAvail)
-                ret="$ERROR$";//Assume that user misses that there ngram is wrong
+            milli=transMilli_notAvail;
+
+            
+            /*for (SpottingPoint sp : spottings)
+            {
+                if (0==getSpottingLabel(sp.getNgram(),Location(sp.page,sp.x1,sp.y1,sp.x2,sp.y2)))
+                {
+                    ret="$REMOVE:"+sp.getId()+"$";
+                    break;
+                }
+            }
+
+            if (ret.length()==0 && spottings.size()>0)
+            {
+                if (RAND_PROB < transErrorProbNotAvail)
+                    ret="$REMOVE:"+spottings.front().getId()+"$";//If an error is made, I'm just removing a spottings. Not sure what actually should happen
+                else
+                    ret="$ERROR$";
+            }
+            else
+            {
+                if (RAND_PROB < transErrorProbNotAvail)
+                    ret="$NONE$";//Assume that user misses that there ngram is wrong
+            }*/
+            ret="$NONE$";
         }
     }
     else
     {
         if (RAND_PROB < transErrorProbAvail)
-            ret="$ERROR$";//Assume user didn't see correct trans
+            if (manual)
+                ret="$ERROR$";
+            else
+                ret="$NONE$";//Assume user didn't see correct trans
     }
             
     this_thread::sleep_for(chrono::milliseconds(milli));

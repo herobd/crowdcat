@@ -78,8 +78,13 @@ class GlobalK
         map<int, vector<string> > ngramRanks;
         //int contextPad;
 #ifdef NO_NAN
+        atomic_int state;
         atomic_int transSent;
         atomic_int transBadBatch;
+        atomic_int transManBatch;
+        atomic_int transSent_ac;
+        atomic_int transBadBatch_ac;
+        atomic_int transManBatch_ac;
         atomic_int transBadNgram;
         atomic_int spotSent;
         atomic_int spotAccept;
@@ -124,8 +129,10 @@ class GlobalK
 #ifdef NO_NAN
         void setSimSave(string file);
         void sentSpottings();
+        void masterState(int s) {state=s;}
         void sentTrans();
         void badTransBatch();
+        void manTransBatch();
         void badTransNgram();
         void accepted();
         void rejected();

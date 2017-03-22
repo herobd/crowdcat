@@ -106,7 +106,7 @@ class CrowdCAT
     UpdateTask* dequeue();
     void enqueue(UpdateTask* task);
     void run(int numThreads);
-    void stop();
+    void printRemainderPage();
 
     public:
     CrowdCAT( string lexiconFile,
@@ -135,6 +135,7 @@ class CrowdCAT
             delete t;
     } 
     void save();
+    void stop();
 
     BatchWraper* getBatch(string userId, int width);
     //void updateSpottings(string resultsId, vector<string> ids, vector<int> labels, int resent);

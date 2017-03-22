@@ -46,10 +46,10 @@ public:
     MasterQueue(ifstream& in, CorpusDataset* words);
     void save(ofstream& out);
 
-    BatchWraper* getBatch(string userId, unsigned int maxWidth);
+    BatchWraper* getBatch(string userId, unsigned int maxWidth, bool lock=true);
     
     
-    void transcriptionFeedback(string userId, unsigned long id, string transcription);
+    void transcriptionFeedback(string userId, unsigned long id, string transcription, bool manual);
     void setTranscriptions();
 
     virtual ~MasterQueue()

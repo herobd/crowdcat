@@ -51,16 +51,17 @@ GlobalK* GlobalK::knowledge()
 void GlobalK::setSimSave(string file)
 {
     spottingFile = file+".spots";
-    transBadBatch=transBadNgram=transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
+    transBadBatch=transManBatch=transBadNgram=transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
+    transBadBatch_ac=transManBatch_ac=transSent_ac=0;
     struct stat buffer;
     bool appending = (stat (file.c_str(), &buffer) == 0);
     trackFile.open(file,ofstream::app|ofstream::out);
     if (!appending)
     {
-        trackFile<<"time,accuracyTrans,pWordsTrans,"/*pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,*/"transSent,badTransBatchs,"/*badTransNgram,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted,badPrunes,"*/;
+        trackFile<<"time,accuracyTrans,pWordsTrans,"/*pWords80_100,pWords60_80,pWords40_60,pWords20_40,pWords0_20,pWords0,*/"state,transSent,badTransBatchs,manTransBatches,transSent_ac,badTransBatchs_ac,manTransBatches_ac,"/*badTransNgram,spotSent,spotAccept,spotReject,spotAutoAccept,spotAutoReject,newExemplarsSpotted,badPrunes,"*/;
         trackFile<<"accuracyTrans_IV,pWordsTrans_IV,"/*pWords80_100_IV,pWords60_80_IV,pWords40_60_IV,pWords20_40_IV,pWords0_20_IV,pWords0_IV,*/"misTrans"<<endl;
     }
-
+    /*
     ifstream in (spottingFile);
     if (!in.good())
         in.open(spottingFile+".bck");
@@ -137,7 +138,8 @@ void GlobalK::setSimSave(string file)
         }
         spotMut.unlock();
         in.close();
-    }
+        
+    }*/
 }
 #endif
 
@@ -255,10 +257,17 @@ void GlobalK::sentSpottings()
 void GlobalK::sentTrans()
 {
     transSent++;
+    transSent_ac++;
 }
 void GlobalK::badTransBatch()
 {
     transBadBatch++;
+    transBadBatch_ac++;
+}
+void GlobalK::manTransBatch()
+{
+    transManBatch++;
+    transManBatch_ac++;
 }
 void GlobalK::badTransNgram()
 {
@@ -287,10 +296,23 @@ void GlobalK::newExemplar()
 void GlobalK::saveTrack(float accTrans, float pWordsTrans, /*float pWords80_100, float pWords60_80, float pWords40_60, float pWords20_40, float pWords0_20, float pWords0,*/ string misTrans,
                        float accTrans_IV, float pWordsTrans_IV, /*float pWords80_100_IV, float pWords60_80_IV, float pWords40_60_IV, float pWords20_40_IV, float pWords0_20_IV, float pWords0_IV,*/ string misTrans_IV)
 {
-    track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<</*pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<*/transSent<<","<<transBadBatch/*<<","<<transBadNgram<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<","<<badPrunes<<","*/;
+    string stateStr;
+    if (state == (int)EMPTY)
+        stateStr="EMPTY";
+    else if (state == (int)TOP_RESULTS)
+        stateStr="TOP_RESULTS";
+    else if (state == (int)PAUSED)
+        stateStr="PAUSED";
+    else if (state == (int)REMAINDER)
+        stateStr="REMAINDER";
+    else if (state == (int)CLEAN_UP)
+        stateStr="CLEAN_UP";
+    else if (state == (int)DONE)
+        stateStr="DONE";
+    track<<currentDateTime()<<","<<accTrans<<","<<pWordsTrans<<","<</*pWords80_100<<","<<pWords60_80<<","<<pWords40_60<<","<<pWords20_40<<","<<pWords0_20<<","<<pWords0<<","<<*/stateStr<<","<<transSent<<","<<transBadBatch<<","<<transManBatch<<","<<transSent_ac<<","<<transBadBatch_ac<<","<<transManBatch_ac/*<<","<<transBadNgram<<","<<spotSent<<","<<spotAccept<<","<<spotReject<<","<<spotAutoAccept<<","<<spotAutoReject<<","<<newExemplarSpotted<<","<<badPrunes<<","*/;
     track << accTrans_IV<<","<<pWordsTrans_IV<<","<</*pWords80_100_IV<<","<<pWords60_80_IV<<","<<pWords40_60_IV<<","<<pWords20_40_IV<<","<<pWords0_20_IV<<","<<pWords0_IV<<","<<*/misTrans<<endl;//","<<misTrans_IV<<endl;
     //track+=currentDateTime()+","+accTrans+","+pWordsTrans+","+pWords80_100+","+pWords60_80+","+pWords40_60+","+pWords20_40+","+pWords0_20+","+pWords0+","+transSent+","+spotSent+","+spotAccept+","+spotReject+","+spotAutoAccept+","+spotAutoReject+","+newExemplarSpotted+"\n";
-    transBadBatch=transBadNgram=transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
+    transBadBatch=transManBatch=transBadNgram=transSent=spotSent=spotAccept=spotReject=spotAutoAccept=spotAutoReject=newExemplarSpotted=0;
 
 }
 
@@ -300,7 +322,7 @@ void GlobalK::writeTrack()
     track.str(string());
     track.clear();
 
-    rename( spottingFile.c_str() , (spottingFile+".bck").c_str() );
+    /*rename( spottingFile.c_str() , (spottingFile+".bck").c_str() );
     ofstream out(spottingFile);
     spotMut.lock();
     out<<"[accums]\n"<<spottingAccums.size()<<endl;
@@ -337,6 +359,7 @@ void GlobalK::writeTrack()
     }
     spotMut.unlock();
     out.close();
+    */
 }
 
 void GlobalK::storeSpottingAccum(string ngram, float ap)

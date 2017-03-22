@@ -17,7 +17,8 @@ void controlLoop(CrowdCAT* crowdcat, atomic_bool* cont)
         getline(cin, line);
         if (line.compare("quit")==0)
         {
-            crowdcat->misc("stopSpotting");
+            //crowdcat->misc("stopSpotting");
+            crowdcat->stop();
             cont->store(false);
             break;
         }
@@ -110,15 +111,17 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
         }
         else*/ if (batch->getType()==BW_TRANSCRIPTION)
         {
-            string batchId;
+            //string batchId;
             int wordIndex;
             vector<SpottingPoint> spottings;
             vector<string> poss;
             bool manual;
+            bool didManual;
             string gt;
             batch->getTranscription(&wordIndex,&poss,&manual,&gt);
             string trans;
-            if (manual)
+            trans=sim->transcription(wordIndex,spottings,poss,gt,manual,&didManual);
+            /*if (manual)
             {
                 trans=sim->manual(wordIndex,poss,gt,prevNgram.compare("#")==0);
                 prevNgram="#";
@@ -127,10 +130,8 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
             {
                 trans=sim->transcription(wordIndex,spottings,poss,gt,prevNgram.compare("!")==0);
                 prevNgram="!";
-            }
-#ifdef DEBUG_AUTO
-#endif
-            crowdcat->updateTranscription(thread,batchId,trans,manual);
+            }*/
+            crowdcat->updateTranscription(thread,to_string(wordIndex),trans,didManual);
         }
         else if (batch->getType()==BW_RAN_OUT)
         {
@@ -140,15 +141,30 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
             cout<<"ran out, so manual finish."<<endl;
             crowdcat->misc("manualFinish");
         }
+        else if (batch->getType()==BW_DONE)
+        {
+            //crowdcat->misc("stopSpotting");
+            cont->store(false);
+            crowdcat->stop();
+            cout<<"Entered DONE state."<<endl;
+        }
+        else if (batch->getType()==BW_PAUSED)
+        {
+            //crowdcat->misc("stopSpotting");
+            cont->store(false);
+            crowdcat->stop();
+            cout<<"Entered PAUSED state."<<endl;
+        }
         else
         {
             cout<<"Blank batch given to sim"<<endl;
-            this_thread::sleep_for(chrono::minutes(5));
-            slept+=5;
+            this_thread::sleep_for(chrono::minutes(1));
+            slept+=1;
             if (prevNgram.compare("-")==0)
             {
-                crowdcat->misc("stopSpotting");
+                //crowdcat->misc("stopSpotting");
                 cont->store(false);
+                crowdcat->stop();
             }
 
             prevNgram="-";
@@ -245,7 +261,10 @@ int main(int argc, char** argv)
     cout<<"---DONE---"<<endl;
     //delete crowdcat;
     for (int i=0; i<numSimThreads; i++)
+    {
+        taskThreads[i]->join();
         delete taskThreads[i];
-    this_thread::sleep_for(chrono::seconds(40));
+    }
+    //this_thread::sleep_for(chrono::seconds(40));
     delete crowdcat;
 }

@@ -99,6 +99,17 @@ public:
         }
         return toRet;
     }
+    vector<string> peakTopXPossibilities(int x)
+    {
+        vector<string> toRet;
+        auto iter=notSent.begin();
+        for (int i=0; i<min(x,(int)(notSent.size())); i++)
+        {
+            toRet.push_back(iter->second);
+            sentPoss.insert(*iter);
+        }
+        return toRet;
+    }
     
     
     void setTrans(string userId, string trans)

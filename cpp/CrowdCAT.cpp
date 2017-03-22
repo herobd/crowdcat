@@ -405,6 +405,11 @@ void CrowdCAT::stop()
     cont.store(0);
     for (int i=0; i<taskThreads.size(); i++)
         sem_post(&semLock);
+    for (int i=0; i<taskThreads.size(); i++)
+    {
+        taskThreads[i]->join();
+        delete taskThreads[i];
+    }
 }
 
 //For data collection, when I deleted all my trans... :(
@@ -442,7 +447,7 @@ void CrowdCAT::threadLoop()
                     //clock_t t;
                     //t = clock();
 #endif
-                    masterQueue->transcriptionFeedback(updateTask->userId,stoul(updateTask->id),updateTask->strings.front());
+                    masterQueue->transcriptionFeedback(updateTask->userId,stoul(updateTask->id),updateTask->strings.front(),updateTask->resent_manual_bool);
 #ifdef TEST_MODE
                     //t = clock() - t;
                     //cout<<"END TranscriptionTask: ["<<updateTask->id<<"], took: "<<((float)t)/CLOCKS_PER_SEC<<" secs"<<endl;
@@ -453,6 +458,9 @@ void CrowdCAT::threadLoop()
                     string retrainFile = savePrefix+"_retrainData.spec";
                     corpus->writeTranscribed(retrainFile);
                     cout<<"Finished saving retrain data."<<endl;
+#ifdef NO_NAN
+                    printRemainderPage();
+#endif
                 }
                 else
                 {
@@ -531,3 +539,45 @@ void CrowdCAT::save()
 #endif
     }
 }
+
+#ifdef NO_NAN
+void CrowdCAT::printRemainderPage()
+{
+    ofstream out ("remainder.html");
+    out<<"<html>"<<endl;
+    out<<"<body>"<<endl;
+    for (int i=0; i<corpus->size(); i++)
+    {
+        Word* word = corpus->word(i);
+        int x1, y1, x2, y2;
+        string gt;
+        bool done;
+        word->getBoundsAndDoneAndGT(&x1, &y1, &x2, &y2, &done, &gt);
+        if (!done)
+        {
+            out<<"<div class='word'>"<<endl;
+            string imageName = "word_"+to_string(i)+".png";
+            out<<"<h2>"<<imageName<<"</h2>"<<endl;
+            out<<"<img src='remainders/"<<imageName<<"'>"<<endl;
+            out<<"<p>GT: "<<gt<<"<br>"<<endl;
+            out<<"In vocab: "<<(Lexicon::instance()->inVocab(gt)?"yes":"no")<<"<br>"<<endl;
+            out<<"Top 5: ";
+            vector<string> top = word->peakTopXPossibilities(5);
+            for (string p : top)
+            {
+                if (p.compare(gt)==0)
+                    out<<"<b>"<<p<<"</b>, ";
+                else
+                    out<<p<<", ";
+            }
+            out<<"</p>"<<endl;
+            out<<"</div>"<<endl;
+            out<<"<br>"<<endl;
+            Mat img = word->getImg();
+            imwrite("public/remainders/"+imageName,img);
+        }
+    }
+    out<<"</body>"<<endl;
+    out<<"</html>"<<endl;
+}
+#endif

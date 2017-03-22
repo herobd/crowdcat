@@ -51,7 +51,7 @@ class Simulator
     Simulator(string dataname, string segCSV);
     vector<int> spottings(string ngram, vector<Location> locs, vector<string> gt, string prevNgram);
     vector<int> newExemplars(vector<string> ngrams, vector<Location> locs, string prevNgram);
-    string transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool lastWasTrans);
+    string transcription(int wordIndex, vector<SpottingPoint> spottings, vector<string> poss, string gt, bool manual, bool* didManual);
     string manual(int wordIndex, vector<string> poss, string gt, bool lastWasMan);
 
     private:
