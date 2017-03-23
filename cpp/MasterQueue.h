@@ -65,6 +65,7 @@ public:
         queueLock.lock();
         MasterQueueState ret = state;
         queueLock.unlock();
+        return ret;
     }
 };
 #endif

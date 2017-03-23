@@ -272,9 +272,6 @@ BatchWraper* CrowdCAT::getBatch(string userId, int width)
         //cout<<"getBatch, color:"<<color<<", prev:"<<prevNgram<<endl;
 #endif
         BatchWraper* ret= masterQueue->getBatch(userId, width);
-#ifdef TEST_MODE_C
-        return ret;
-#endif
         if (ret!=NULL)
         {
             if (masterQueue->getState()==PAUSED)
@@ -335,12 +332,12 @@ void CrowdCAT::misc(string task)
             showChecker = new thread(showSleeper,masterQueue,corpus,height,width,milli);
             showChecker->detach();
         }*/
-        /*else if (task.compare("stopSpotting")==0)
+        else if (task.compare("stop")==0)
         {
-            spottingQueue->stop();
+            //spottingQueue->stop();
             stop();
         }
-        else if (task.compare("manualFinish")==0)
+        /*else if (task.compare("manualFinish")==0)
         {
             masterQueue->setFinish(true);
             cout<<"Manual Finish engaged."<<endl;
@@ -396,7 +393,7 @@ void CrowdCAT::run(int numThreads)
     for (int i=0; i<numThreads; i++)
     {
         taskThreads[i] = new thread(threadTask,this);
-        taskThreads[i]->detach();
+        //taskThreads[i]->detach();
         
     }
 }
@@ -407,6 +404,7 @@ void CrowdCAT::stop()
         sem_post(&semLock);
     for (int i=0; i<taskThreads.size(); i++)
     {
+        cout<<"CrowdCAT joining thread "<<i<<endl;
         taskThreads[i]->join();
         delete taskThreads[i];
     }
@@ -431,12 +429,6 @@ void CrowdCAT::threadLoop()
         {
 #endif
             updateTask = dequeue();
-            if (!cont.load())
-            {
-                if (updateTask!=NULL)
-                    delete updateTask;
-                break; //END
-            }
             
             if (updateTask!=NULL)
             {
@@ -455,11 +447,12 @@ void CrowdCAT::threadLoop()
                 }
                 else if (updateTask->type==SAVE_RETRAIN_DATA_TASK)
                 {
-                    string retrainFile = savePrefix+"_retrainData.spec";
+                    string retrainFile = savePrefix+"_retrainData.gtp";
                     corpus->writeTranscribed(retrainFile);
                     cout<<"Finished saving retrain data."<<endl;
 #ifdef NO_NAN
                     printRemainderPage();
+                    cout<<"Finished remainder page"<<endl;
 #endif
                 }
                 else
@@ -471,6 +464,12 @@ void CrowdCAT::threadLoop()
             }
             else
                 break; //END
+            if (!cont.load())
+            {
+                //if (updateTask!=NULL)
+                //    delete updateTask;
+                break; //END
+            }
 #if !defined(TEST_MODE) && !defined(NO_NAN)
         }
         catch (exception& e)
@@ -579,5 +578,6 @@ void CrowdCAT::printRemainderPage()
     }
     out<<"</body>"<<endl;
     out<<"</html>"<<endl;
+    out.close();
 }
 #endif

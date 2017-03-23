@@ -145,14 +145,14 @@ void threadLoop(CrowdCAT* crowdcat, Simulator* sim, atomic_bool* cont)
         {
             //crowdcat->misc("stopSpotting");
             cont->store(false);
-            crowdcat->stop();
+            //crowdcat->stop();
             cout<<"Entered DONE state."<<endl;
         }
         else if (batch->getType()==BW_PAUSED)
         {
             //crowdcat->misc("stopSpotting");
             cont->store(false);
-            crowdcat->stop();
+            //crowdcat->stop();
             cout<<"Entered PAUSED state."<<endl;
         }
         else
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
     for (int i=0; i<numSimThreads; i++)
     {
         taskThreads[i] = new thread(threadLoop,crowdcat,&sim,&cont);
-        taskThreads[i]->detach();
+        //taskThreads[i]->detach();
         
     }
     controlLoop(crowdcat,&cont);
@@ -262,6 +262,7 @@ int main(int argc, char** argv)
     //delete crowdcat;
     for (int i=0; i<numSimThreads; i++)
     {
+        cout<<"simulation joining thread "<<i<<endl;
         taskThreads[i]->join();
         delete taskThreads[i];
     }

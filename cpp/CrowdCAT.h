@@ -129,8 +129,8 @@ class CrowdCAT
         delete masterQueue;
         delete corpus;
         //delete spottingQueue;
-        for (thread* t : taskThreads)
-            delete t;
+        //for (thread* t : taskThreads)
+        //    delete t;
         for (UpdateTask* t : taskQueue)
             delete t;
     } 

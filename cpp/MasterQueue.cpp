@@ -64,6 +64,7 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth, bool lo
                 //???
                 //Wait for spotter/transcriber to stop, enqueue undoneWords.
                 state=PAUSED;
+                cout<<"MasterQueue entered PAUSED state."<<endl;
             }
             else if (state==REMAINDER)
             {
@@ -90,7 +91,10 @@ BatchWraper* MasterQueue::getBatch(string userId, unsigned int maxWidth, bool lo
 #endif
     }
     else if (state==PAUSED)
+    {
         ret = new BatchWraperPaused();
+        cout<<"MasterQueue is PAUSED."<<endl;
+    }
     else if (state==DONE)
         ret = new BatchWraperDone();
     else if (state==REMAINDER)

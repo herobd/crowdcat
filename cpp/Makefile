@@ -1,7 +1,7 @@
 CXX = g++-4.9 
 LINK = g++-4.9
 CXX_FLAGS_NO_G =  -std=c++11 -pthread -DOPENCV2  -DNO_NAN #-DTEST_MODE #-ansi -fexceptions -fPIC -fno-omit-frame-pointer -pthread
-CXX_FLAGS =  $(CXX_FLAGS_NO_G) -O3 #-g
+CXX_FLAGS =  $(CXX_FLAGS_NO_G) -g #-O3 #-g
 
 LIBS += -lpthread
 
