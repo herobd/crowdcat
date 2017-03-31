@@ -72,6 +72,7 @@ PREPROCESSEDS = pp/TranscribeBatchQueue.cpp \
 
 bin: $(PROGRAM_NAME)
 all: $(PROGRAM_NAME) simulation
+spot: spottingTest
 tr: train
 data: makeData
 sim: simulation
@@ -113,6 +114,9 @@ simulation: $(OBJECTS) simulation.cpp
 
 simulation2: $(OBJECTS2) simulation.cpp
 	$(LINK) $(CXX_FLAGS) -o simulation2 simulation.cpp $(INCLUDE) $(OBJECTS2) $(LIBS)
+
+spottingTest: $(OBJECTS) spottingTest.cpp
+	$(LINK) $(CXX_FLAGS) -o spottingTest spottingTest.cpp $(INCLUDE) $(OBJECTS) $(LIBS)
 
 train: $(OBJECTS)
 	$(LINK) $(CXX_FLAGS) -o train train.cpp $(INCLUDE) $(OBJECTS) $(LIBS)

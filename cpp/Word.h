@@ -56,6 +56,7 @@ private:
 
     set<string> bannedUsers;
     unsigned int id;
+    int gtRank;
 protected:
     static atomic_uint _id;
 
@@ -65,19 +66,20 @@ public:
     //    pthread_rwlock_init(&lock,NULL);
     //}    
     
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), gt(""), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), gt(""), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1), gtRank(999999999)
     {
         //meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         id = _id++;
     }
-    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId),  gt(gt), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1)
+    Word(int tlx, int tly, int brx, int bry, const cv::Mat* pagePnt, const float* averageCharWidth, int* countCharWidth, int pageId, string gt) : tlx(tlx), tly(tly), brx(brx), bry(bry), pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), pageId(pageId), done(false),  sentBatchId(0), topBaseline(-1), botBaseline(-1), gtRank(999999999)
     {
         //meta = SearchMeta(THRESH_LEXICON_LOOKUP_COUNT);
         pthread_rwlock_init(&lock,NULL);
         assert(tlx>=0 && tly>=0 && brx<pagePnt->cols && bry<pagePnt->rows);
         id = _id++;
+        this->gt = GlobalK::lowercaseAndStrip(gt);
     }
     Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth);
     void save(ofstream& out);
@@ -89,6 +91,7 @@ public:
 
     vector<string> popTopXPossibilities(int x)
     {
+        pthread_rwlock_wrlock(&lock);
         vector<string> toRet;
         auto iter=notSent.begin();
         for (int i=0; i<min(x,(int)(notSent.size())); i++)
@@ -96,18 +99,22 @@ public:
             toRet.push_back(iter->second);
             sentPoss.insert(*iter);
             iter = notSent.erase(iter);
+            gtRank--;
         }
+        pthread_rwlock_unlock(&lock);
         return toRet;
     }
     vector<string> peakTopXPossibilities(int x)
     {
+        pthread_rwlock_rdlock(&lock);
         vector<string> toRet;
         auto iter=notSent.begin();
         for (int i=0; i<min(x,(int)(notSent.size())); i++)
         {
             toRet.push_back(iter->second);
-            sentPoss.insert(*iter);
+            iter++;
         }
+        pthread_rwlock_unlock(&lock);
         return toRet;
     }
     
@@ -203,7 +210,24 @@ public:
         pthread_rwlock_wrlock(&lock);
         notSent = scores;
         assert(notSent.size()>5);
+        int i=0;
+        for (auto p : notSent)
+        {
+            if (p.second.compare(gt)==0)
+            {
+                gtRank=i;
+                break;
+            }
+            i++;
+        }
         pthread_rwlock_unlock(&lock);
+    }
+    int getGTRank()
+    {
+        pthread_rwlock_rdlock(&lock);
+        int ret=gtRank;
+        pthread_rwlock_unlock(&lock);
+        return ret;
     }
     float topScore()
     {
@@ -215,7 +239,7 @@ public:
     const cv::Mat* getPage() const {return pagePnt;}
     int getPageId() const {return pageId;}
     const cv::Mat getImg();// const;
-    string getTranscription() 
+    string getTranscription()
     {
 #ifdef TEST_MODE
         //cout<<"[read] "<<gt<<" ("<<tlx<<","<<tly<<") getTranscription"<<endl;
@@ -232,8 +256,8 @@ public:
 #endif
         return ret;
     }
-    string getGT() {return gt;}
-    unsigned int getId(){return id;}
+    string getGT() const {return gt;}
+    unsigned int getId() const {return id;}
 
 };
 

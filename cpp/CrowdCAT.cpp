@@ -276,8 +276,16 @@ BatchWraper* CrowdCAT::getBatch(string userId, int width)
         {
             if (masterQueue->getState()==PAUSED)
             {
+                cont.store(0);
+                save();
                 cout<<"Saving retrain data..."<<endl;
                 enqueue(SaveRetrainDataTask);
+            }
+            else if (masterQueue->getState()==DONE)
+            {
+                cont.store(0);
+                save();
+                calcAccuracy();
             }
             return ret;
         }
@@ -542,7 +550,9 @@ void CrowdCAT::save()
 #ifdef NO_NAN
 void CrowdCAT::printRemainderPage()
 {
-    ofstream out ("remainder.html");
+    int num=0;
+    int inTop5=0;
+    ofstream out ("public/remainder.html");
     out<<"<html>"<<endl;
     out<<"<body>"<<endl;
     for (int i=0; i<corpus->size(); i++)
@@ -554,18 +564,22 @@ void CrowdCAT::printRemainderPage()
         word->getBoundsAndDoneAndGT(&x1, &y1, &x2, &y2, &done, &gt);
         if (!done)
         {
+            num++;
             out<<"<div class='word'>"<<endl;
             string imageName = "word_"+to_string(i)+".png";
             out<<"<h2>"<<imageName<<"</h2>"<<endl;
             out<<"<img src='remainders/"<<imageName<<"'>"<<endl;
             out<<"<p>GT: "<<gt<<"<br>"<<endl;
-            out<<"In vocab: "<<(Lexicon::instance()->inVocab(gt)?"yes":"no")<<"<br>"<<endl;
+            out<<"In vocab: "<<(Lexicon::instance()->inVocab(gt)?"<b style='color:green;'>yes</b>":"no")<<"<br>"<<endl;
             out<<"Top 5: ";
             vector<string> top = word->peakTopXPossibilities(5);
             for (string p : top)
             {
                 if (p.compare(gt)==0)
+                {
+                    inTop5++;
                     out<<"<b>"<<p<<"</b>, ";
+                }
                 else
                     out<<p<<", ";
             }
@@ -576,8 +590,28 @@ void CrowdCAT::printRemainderPage()
             imwrite("public/remainders/"+imageName,img);
         }
     }
+    out<<"<p>"<<inTop5<<" / "<<num<<"<br>"<<(100*(0.0+inTop5)/num)<<"%</p>"<<endl;
     out<<"</body>"<<endl;
     out<<"</html>"<<endl;
     out.close();
 }
 #endif
+void CrowdCAT::calcAccuracy()
+{
+    int right=0;
+    for (int i=0; i<corpus->size(); i++)
+    {
+        Word* word = corpus->word(i);
+        //int x1, y1, x2, y2;
+        string gt;
+        bool done;
+        word->getDoneAndGT(&done, &gt);
+        //word->getBoundsAndDoneAndGT(&x1, &y1, &x2, &y2, &done, &gt);
+        assert(done);
+        string trans = GlobalK::lowercaseAndStrip(word->getTranscription());
+        if (trans.compare(GlobalK::lowercaseAndStrip(gt))==0)
+            right++;
+    }
+    cout<<"Accuracy: "<<((0.0+right)/corpus->size())<<endl;
+
+}

@@ -228,6 +228,8 @@ void Word::save(ofstream& out)
         out<<s<<endl;
     }
 
+    out <<gtRank<<endl;
+
     pthread_rwlock_unlock(&lock);
 }
 Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* countCharWidth) : pagePnt(pagePnt), averageCharWidth(averageCharWidth), countCharWidth(countCharWidth), sentBatchId(0)
@@ -300,4 +302,7 @@ Word::Word(ifstream& in, const cv::Mat* pagePnt, float* averageCharWidth, int* c
         getline(in,line);
         bannedUsers.insert(line);
     }
+
+    getline(in,line);
+    gtRank= stoi(line);
 }

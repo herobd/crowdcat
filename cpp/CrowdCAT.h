@@ -106,7 +106,9 @@ class CrowdCAT
     UpdateTask* dequeue();
     void enqueue(UpdateTask* task);
     void run(int numThreads);
+#ifdef NO_NAN
     void printRemainderPage();
+#endif
 
     public:
     CrowdCAT( string lexiconFile,
@@ -150,6 +152,7 @@ class CrowdCAT
 #ifdef NO_NAN
     friend class Tester;
 #endif
+    void calcAccuracy();
 
     
 };
